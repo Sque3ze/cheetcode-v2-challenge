@@ -11,3 +11,4 @@ package-lock.json
 .vercel
 /.claude
 /local-dev
+/eval-results
