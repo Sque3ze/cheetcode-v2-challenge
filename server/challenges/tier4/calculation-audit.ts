@@ -55,7 +55,13 @@ function getTieredRate(
   tieredRates: Record<string, Record<string, number>>,
   brackets: TierBracket[],
 ): number {
-  const bracket = brackets.find((b) => subtotal >= b.min && subtotal <= b.max)!;
+  // Use threshold comparison to avoid floating-point gaps between brackets
+  const rounded = Math.round(subtotal * 100) / 100;
+  const bracket = rounded <= brackets[0].max
+    ? brackets[0]
+    : rounded <= brackets[1].max
+      ? brackets[1]
+      : brackets[2];
   return tieredRates[category][bracket.label];
 }
 
@@ -133,7 +139,8 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
       let displayedTotal: number;
       if (errorIndices.has(i)) {
         // Error: use a DIFFERENT bracket's rate for the same category
-        const correctBracketIdx = brackets.findIndex((b) => subtotal >= b.min && subtotal <= b.max);
+        const rounded = Math.round(subtotal * 100) / 100;
+        const correctBracketIdx = rounded <= brackets[0].max ? 0 : rounded <= brackets[1].max ? 1 : 2;
         const otherBracketIndices = [0, 1, 2].filter((idx) => idx !== correctBracketIdx);
         const wrongBracketIdx = data.pick(otherBracketIndices);
         const wrongRate = tieredTaxRates[category][brackets[wrongBracketIdx].label];

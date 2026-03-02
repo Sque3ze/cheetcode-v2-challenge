@@ -188,10 +188,25 @@ export const constraintSolverChallenge: ChallengeDefinition<ConstraintSolverPage
       return true;
     };
 
+    // Ensure target item passes final constraints (aggregates may have shifted)
+    if (!passesAllFinal(targetItem)) {
+      if (relativeConstraintType === "below_avg_price") {
+        targetItem.price = Math.round((avgPriceFinal - 1) * 100) / 100;
+      }
+      if (relativeConstraintType === "above_avg_rating") {
+        targetItem.rating = Math.round((avgRatingFinal + 0.1) * 10) / 10;
+      }
+      if (targetItem.weight > weightMax) {
+        targetItem.weight = weightMax - 1;
+      }
+    }
+
     const finalPassing = items.filter(passesAllFinal);
-    const winner = finalPassing.reduce((best, item) =>
-      item[optimizationField] < best[optimizationField] ? item : best
-    );
+    const winner = finalPassing.length > 0
+      ? finalPassing.reduce((best, item) =>
+          item[optimizationField] < best[optimizationField] ? item : best
+        )
+      : targetItem;
 
     return {
       pageData: {
