@@ -12,3 +12,4 @@ package-lock.json
 /.claude
 /local-dev
 /eval-results
+.DS_Store

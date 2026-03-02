@@ -12,9 +12,16 @@ interface LineItem {
   displayedTotal: number;
 }
 
+interface TierBracket {
+  label: string;
+  min: number;
+  max: number;
+}
+
 interface CalculationAuditPageData {
   lineItems: LineItem[];
-  taxRates: Record<string, number>;
+  tieredTaxRates: Record<string, Record<string, number>>;
+  brackets: TierBracket[];
   summaryTotal: number;
   variantIndex: number;
 }
@@ -31,21 +38,41 @@ export default function CalculationAuditChallenge({ pageData, answerRef }: Props
     answerRef.current = answer;
   }, [answer, answerRef]);
 
-  const taxEntries = Object.entries(pageData.taxRates || {});
+  const categories = Object.keys(pageData.tieredTaxRates || {});
+  const brackets = pageData.brackets || [];
 
   return (
     <div>
-      {/* Tax Rate Schedule */}
-      {taxEntries.length > 0 && (
+      {/* Tiered Tax Rate Schedule */}
+      {categories.length > 0 && brackets.length > 0 && (
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-6" {...testAttr('tax-rate-legend')}>
-          <h3 className="text-sm font-medium text-amber-400 mb-3">Tax Rate Schedule</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {taxEntries.map(([category, rate]) => (
-              <div key={category} className="flex justify-between text-sm" {...testAttr('tax-rate', category)}>
-                <span className="text-gray-400">{category}</span>
-                <span className="font-mono text-gray-200" {...testAttr('tax-rate-value')}>{rate}%</span>
-              </div>
-            ))}
+          <h3 className="text-sm font-medium text-amber-400 mb-3">Tiered Tax Rate Schedule</h3>
+          <p className="text-xs text-gray-500 mb-3">Rate depends on category AND subtotal bracket (qty × unit price)</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" {...testAttr('tax-rate-table')}>
+              <thead>
+                <tr>
+                  <th className="px-3 py-2 text-left text-gray-400 font-medium text-xs">Category</th>
+                  {brackets.map((b) => (
+                    <th key={b.label} className="px-3 py-2 text-right text-gray-400 font-medium text-xs" {...testAttr('bracket-header', b.label)}>
+                      {b.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {categories.map((cat) => (
+                  <tr key={cat} className="border-t border-gray-800" {...testAttr('tax-rate-row', cat)}>
+                    <td className="px-3 py-2 text-gray-300 font-medium text-xs">{cat}</td>
+                    {brackets.map((b) => (
+                      <td key={b.label} className="px-3 py-2 text-right font-mono text-gray-200 text-xs" {...testAttr('tax-rate-cell', `${cat}|${b.label}`)}>
+                        {pageData.tieredTaxRates[cat][b.label]}%
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -40,7 +40,7 @@ export default function RedHerringChallenge({ pageData, answerRef }: Props) {
 
   return (
     <div>
-      {/* Prominent fake result card — the red herring */}
+      {/* Prominent fake result card — decoy value */}
       <div className="bg-gradient-to-r from-green-900/40 to-emerald-900/40 rounded-xl border-2 border-green-500/50 p-6 mb-6 text-center">
         <p className="text-sm text-green-400 mb-1">Pre-computed Result</p>
         <p className="text-4xl font-bold font-mono text-green-300" {...testAttr('fake-result')}>

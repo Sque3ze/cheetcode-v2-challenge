@@ -1027,21 +1027,61 @@ async function solveConstraintSolver(page: Page): Promise<string> {
 async function solveCalculationAudit(page: Page): Promise<string> {
   await page.waitForSelector("[data-expense-card]");
 
-  // Read tax rates from the legend
-  const taxRates: Record<string, number> = {};
-  const taxRateLegend = page.locator("[data-tax-rate-legend]");
-  if (await taxRateLegend.count() > 0) {
-    const taxEntries = page.locator("[data-tax-rate]");
-    const entryCount = await taxEntries.count();
-    for (let i = 0; i < entryCount; i++) {
-      const entry = taxEntries.nth(i);
-      const category = (await entry.getAttribute("data-tax-rate")) ?? "";
-      const rateStr = (await entry.locator("[data-tax-rate-value]").textContent())?.trim() ?? "0";
-      taxRates[category] = parseFloat(rateStr.replace("%", ""));
+  // Read tiered tax rates from the table (category × bracket → rate%)
+  // Structure: { "Operations": { "≤$500": 6, "$501–$2000": 9, ">$2000": 12 } }
+  const tieredRates: Record<string, Record<string, number>> = {};
+  const bracketLabels: string[] = [];
+
+  const rateTable = page.locator("[data-tax-rate-table]");
+  if (await rateTable.count() > 0) {
+    // Read bracket headers
+    const headers = rateTable.locator("[data-bracket-header]");
+    const headerCount = await headers.count();
+    for (let i = 0; i < headerCount; i++) {
+      const label = (await headers.nth(i).getAttribute("data-bracket-header")) ?? "";
+      bracketLabels.push(label);
+    }
+
+    // Read per-category rates
+    const rows = rateTable.locator("[data-tax-rate-row]");
+    const rowCount = await rows.count();
+    for (let i = 0; i < rowCount; i++) {
+      const row = rows.nth(i);
+      const category = (await row.getAttribute("data-tax-rate-row")) ?? "";
+      tieredRates[category] = {};
+      const cells = row.locator("[data-tax-rate-cell]");
+      const cellCount = await cells.count();
+      for (let j = 0; j < cellCount; j++) {
+        const cellKey = (await cells.nth(j).getAttribute("data-tax-rate-cell")) ?? "";
+        // cellKey is "Category|BracketLabel"
+        const bracketLabel = cellKey.split("|")[1] ?? bracketLabels[j];
+        const rateStr = (await cells.nth(j).textContent())?.trim() ?? "0";
+        tieredRates[category][bracketLabel] = parseFloat(rateStr.replace("%", ""));
+      }
     }
   }
 
-  const hasTaxRates = Object.keys(taxRates).length > 0;
+  // Parse bracket thresholds from labels (e.g., "≤$500", "$501–$2000", ">$2000")
+  const brackets: Array<{ label: string; min: number; max: number }> = [];
+  for (const label of bracketLabels) {
+    const nums = label.replace(/[$,≤>]/g, "").replace(/\u2013/g, "-").match(/(\d+)/g);
+    if (label.startsWith("≤") || label.startsWith("<")) {
+      brackets.push({ label, min: 0, max: parseInt(nums?.[0] ?? "0") });
+    } else if (label.startsWith(">")) {
+      brackets.push({ label, min: parseInt(nums?.[0] ?? "0") + 1, max: 999999 });
+    } else if (nums && nums.length >= 2) {
+      brackets.push({ label, min: parseInt(nums[0]), max: parseInt(nums[1]) });
+    }
+  }
+
+  const hasTieredRates = Object.keys(tieredRates).length > 0 && brackets.length > 0;
+
+  // Look up rate for a category + subtotal
+  const getRate = (category: string, subtotal: number): number => {
+    const bracket = brackets.find((b) => subtotal >= b.min && subtotal <= b.max);
+    if (!bracket || !tieredRates[category]) return 0;
+    return tieredRates[category][bracket.label] ?? 0;
+  };
 
   // Read all expense cards in order
   const cards = page.locator("[data-expense-card]");
@@ -1059,13 +1099,14 @@ async function solveCalculationAudit(page: Page): Promise<string> {
     const qty = parseInt(qtyStr);
     const unitPrice = parseFloat(unitPriceStr.replace("$", ""));
     const displayedTotal = parseFloat(displayedTotalStr.replace("$", ""));
+    const subtotal = qty * unitPrice;
 
     let expectedTotal: number;
-    if (hasTaxRates && category in taxRates) {
-      const rate = taxRates[category];
-      expectedTotal = Math.round(qty * unitPrice * (1 + rate / 100) * 100) / 100;
+    if (hasTieredRates) {
+      const rate = getRate(category, subtotal);
+      expectedTotal = Math.round(subtotal * (1 + rate / 100) * 100) / 100;
     } else {
-      expectedTotal = Math.round(qty * unitPrice * 100) / 100;
+      expectedTotal = Math.round(subtotal * 100) / 100;
     }
 
     if (Math.abs(displayedTotal - expectedTotal) < 0.001) {

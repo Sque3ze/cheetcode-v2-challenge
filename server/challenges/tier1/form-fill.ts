@@ -88,30 +88,39 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
     const person = data.person();
     const variantIndex = data.int(0, 3);
 
-    // Pick 1 transformation type
-    const transformationType = data.pick(["salary_band", "start_quarter", "dept_code"] as const);
-
-    // Map transformation to the field it replaces
+    // Map each transformation to the field it replaces
     const transformFieldMap: Record<TransformationType, { originalField: string; newLabel: string }> = {
       salary_band: { originalField: "salary", newLabel: "salary band" },
       start_quarter: { originalField: "startDate", newLabel: "start quarter" },
       dept_code: { originalField: "department", newLabel: "dept code" },
     };
 
-    const transform = transformFieldMap[transformationType];
+    // Pick 2 transformations (guarantees agent must always transform)
+    const allTransformTypes: TransformationType[] = ["salary_band", "start_quarter", "dept_code"];
+    const chosenTransforms = data.pickN(allTransformTypes, 2);
 
-    // Pick fields: 1 visible + all 3 hidden fields
-    const visibleField = data.pick(ALWAYS_VISIBLE.filter((f) => f !== "name"));
+    // Build the set of transformed fields
+    const transformedOriginals = new Set(chosenTransforms.map((t) => transformFieldMap[t].originalField));
 
-    // Build field list, replacing the transformed field's label
+    // Pick 1 visible field that is NOT being transformed (for variety)
+    const availableVisible = ALWAYS_VISIBLE.filter(
+      (f) => f !== "name" && !transformedOriginals.has(f),
+    );
+    const visibleField = availableVisible.length > 0
+      ? data.pick(availableVisible)
+      : data.pick(ALWAYS_VISIBLE.filter((f) => f !== "name"));
+
+    // Build field list: 1 visible + 3 hidden
     const rawFields = [
       visibleField as string,
       ...HIDEABLE_FIELDS.map((h) => h.field),
     ];
 
-    // Replace the original field name with the transformed label
+    // Replace transformed fields with their new labels
     const fieldsToFill = rawFields.map((f) => {
-      if (f === transform.originalField) return transform.newLabel;
+      for (const t of chosenTransforms) {
+        if (f === transformFieldMap[t].originalField) return transformFieldMap[t].newLabel;
+      }
       return f;
     });
 
@@ -123,7 +132,10 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
       type: h.disclosureType,
     }));
 
-    const transformations = [{ field: transform.originalField, type: transformationType }];
+    const transformations = chosenTransforms.map((t) => ({
+      field: transformFieldMap[t].originalField,
+      type: t,
+    }));
 
     // Build field values, applying transformation where needed
     const fieldValues: Record<string, string> = {

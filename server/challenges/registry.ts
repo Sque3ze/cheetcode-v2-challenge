@@ -48,7 +48,7 @@ const CHALLENGES: ChallengeDefinition<any>[] = [
   dataDashboardChallenge,
   constraintSolverChallenge,
 
-  // Tier 4 — Adversarial & Judgment
+  // Tier 4 — Advanced Analysis
   calculationAuditChallenge,
   redHerringChallenge,
 ];

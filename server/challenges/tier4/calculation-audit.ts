@@ -1,10 +1,11 @@
 /**
- * Tier 4 Challenge: Calculation Audit (Round 4 — Per-Category Tax Rates)
+ * Tier 4 Challenge: Calculation Audit (Round 5 — Tiered Tax Rates)
  *
- * Each line item has a category with a specific tax rate shown in a legend.
- * Correct total: round(qty × unitPrice × (1 + taxRate/100), 2).
- * Error rows use either wrong base math or wrong category's tax rate.
- * Answer: sum of displayedTotal where displayedTotal === correctTaxedTotal.
+ * Each line item has a category and a subtotal (qty × unitPrice).
+ * Tax rates depend on BOTH category AND subtotal bracket (3 tiers).
+ * Correct total: round(subtotal × (1 + tieredRate/100), 2).
+ * Error rows use the wrong tier bracket's rate for their category.
+ * Answer: sum of displayedTotal where displayedTotal === correctTieredTotal.
  */
 
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
@@ -19,9 +20,18 @@ interface LineItem {
   displayedTotal: number;
 }
 
+/** 3 subtotal brackets × 5 categories → 15 distinct rates */
+interface TierBracket {
+  label: string;
+  min: number;
+  max: number; // Infinity for last bracket
+}
+
 interface CalculationAuditPageData {
   lineItems: LineItem[];
-  taxRates: Record<string, number>;
+  /** Category → bracket label → rate%. E.g. { "Operations": { "≤$500": 6, "$501–$2000": 9, ">$2000": 12 } } */
+  tieredTaxRates: Record<string, Record<string, number>>;
+  brackets: TierBracket[];
   summaryTotal: number;
   variantIndex: number;
 }
@@ -38,32 +48,41 @@ const EXPENSE_CATEGORIES = [
   "Operations", "Technology", "Marketing", "Professional Services", "Facilities",
 ] as const;
 
+/** Look up the tiered rate for a category + subtotal combination */
+function getTieredRate(
+  category: string,
+  subtotal: number,
+  tieredRates: Record<string, Record<string, number>>,
+  brackets: TierBracket[],
+): number {
+  const bracket = brackets.find((b) => subtotal >= b.min && subtotal <= b.max)!;
+  return tieredRates[category][bracket.label];
+}
+
 export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPageData> = {
   id: "tier4-calculation-audit",
   title: "Calculation Audit",
   tier: 4,
   points: 4,
-  description: "Audit an expense report — verify line-item totals include the correct per-category tax rate, sum only correct rows.",
+  description: "Audit an expense report — verify line-item totals using the tiered tax rate schedule, sum only correct rows.",
 
   instructions: (pageData) => {
     const variants = [
-      `Review the expense report below. Each line item has a category with a specific tax rate (see the Tax Rate Schedule). ` +
-      `A row's total should equal: qty × unit price × (1 + category tax rate / 100), rounded to 2 decimal places. ` +
-      `Sum ONLY the displayed totals of rows where this formula holds. Submit rounded to 2 decimal places.`,
+      `Review the expense report below. Tax rates depend on both category AND subtotal bracket (see the Tiered Tax Rate Schedule). ` +
+      `For each row, compute: subtotal = qty × unit price, then find the bracket for that subtotal, look up the rate for the row's category in that bracket. ` +
+      `Correct total = round(subtotal × (1 + rate / 100), 2). Sum ONLY displayed totals of correctly calculated rows. Submit rounded to 2 decimal places.`,
 
-      `Audit this expense report. Each category has a tax rate shown in the Tax Rate Schedule. ` +
-      `For each row, the correct total is qty × unit price × (1 + tax rate / 100), rounded to 2 decimals. ` +
-      `Some rows have errors — wrong base calculation or wrong tax rate applied. ` +
-      `Sum the displayed totals of correctly calculated rows only. Round to 2 decimal places.`,
+      `Audit this expense report. The Tax Rate Schedule has different rates depending on category AND subtotal range. ` +
+      `Step 1: subtotal = qty × unit price. Step 2: find which bracket the subtotal falls into. Step 3: look up the rate for that category + bracket. ` +
+      `Step 4: correct total = round(subtotal × (1 + rate/100), 2). Sum correct rows only. Round to 2 decimal places.`,
 
-      `Each expense row should reflect: quantity × unit price × (1 + category tax rate / 100). ` +
-      `Look up each row's category in the Tax Rate Schedule to find the applicable rate. ` +
-      `Include only rows where the displayed total matches this formula (to 2 decimal places). ` +
-      `Submit the sum of correct rows, rounded to 2 decimal places.`,
+      `Each expense row's total should equal: round((qty × unit price) × (1 + tiered rate / 100), 2). ` +
+      `The tiered rate depends on the row's category AND subtotal bracket — check the schedule. ` +
+      `Include only rows where the displayed total matches this formula. Submit the sum, rounded to 2 decimal places.`,
 
-      `The expense report below uses per-category tax rates. Check the Tax Rate Schedule for each category's rate. ` +
-      `A valid row has displayed total = round(qty × unit price × (1 + rate/100), 2). ` +
-      `Sum the displayed totals of valid rows. Round to 2 decimal places.`,
+      `The expense report uses tiered tax rates — the rate varies by both category and subtotal amount. ` +
+      `Compute each row's subtotal (qty × unit price), determine the bracket, look up the rate, then verify: ` +
+      `displayed total = round(subtotal × (1 + rate/100), 2). Sum the displayed totals of valid rows. Round to 2 decimal places.`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -71,12 +90,27 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
   generate(data: ChallengeData) {
     const variantIndex = data.int(0, 3);
     const itemCount = data.int(12, 18);
-    const errorCount = data.int(2, 4);
+    const errorCount = data.int(3, 5);
 
-    // Generate per-category tax rates (5-15%)
-    const taxRates: Record<string, number> = {};
+    // Generate 3 subtotal brackets with random thresholds
+    const threshold1 = data.int(300, 700);   // e.g., $500
+    const threshold2 = data.int(1500, 3000);  // e.g., $2000
+    const brackets: TierBracket[] = [
+      { label: `≤$${threshold1}`, min: 0, max: threshold1 },
+      { label: `$${threshold1 + 1}–$${threshold2}`, min: threshold1 + 1, max: threshold2 },
+      { label: `>$${threshold2}`, min: threshold2 + 1, max: 999999 },
+    ];
+
+    // Generate tiered rates: 5 categories × 3 brackets = 15 rates (each 4-18%)
+    const tieredTaxRates: Record<string, Record<string, number>> = {};
     for (const cat of EXPENSE_CATEGORIES) {
-      taxRates[cat] = data.int(5, 15);
+      tieredTaxRates[cat] = {};
+      // Rates generally increase with higher brackets (but not strictly)
+      let baseRate = data.int(4, 8);
+      for (const bracket of brackets) {
+        tieredTaxRates[cat][bracket.label] = baseRate;
+        baseRate += data.int(1, 5); // step up for next bracket
+      }
     }
 
     // Pick which rows will have errors (not row 0)
@@ -92,28 +126,21 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
       const quantity = data.int(1, 25);
       const unitPrice = data.int(10, 500) + data.int(0, 99) / 100;
       const category = data.pick(EXPENSE_CATEGORIES);
-      const rate = taxRates[category];
-      const correctTotal = Math.round(quantity * unitPrice * (1 + rate / 100) * 100) / 100;
+      const subtotal = quantity * unitPrice;
+      const rate = getTieredRate(category, subtotal, tieredTaxRates, brackets);
+      const correctTotal = Math.round(subtotal * (1 + rate / 100) * 100) / 100;
 
       let displayedTotal: number;
       if (errorIndices.has(i)) {
-        const errorType = data.pick(["wrong_base", "wrong_tax"] as const);
-        if (errorType === "wrong_base") {
-          // Perturb the base (qty × unitPrice) by 3-10% before applying tax
-          const errorPercent = data.int(3, 10);
-          const direction = data.pick([1, -1] as const);
-          const wrongBase = quantity * unitPrice * (1 + direction * errorPercent / 100);
-          displayedTotal = Math.round(wrongBase * (1 + rate / 100) * 100) / 100;
-        } else {
-          // Apply a different category's tax rate
-          const otherCategories = EXPENSE_CATEGORIES.filter((c) => c !== category);
-          const wrongCat = data.pick(otherCategories);
-          const wrongRate = taxRates[wrongCat];
-          displayedTotal = Math.round(quantity * unitPrice * (1 + wrongRate / 100) * 100) / 100;
-        }
+        // Error: use a DIFFERENT bracket's rate for the same category
+        const correctBracketIdx = brackets.findIndex((b) => subtotal >= b.min && subtotal <= b.max);
+        const otherBracketIndices = [0, 1, 2].filter((idx) => idx !== correctBracketIdx);
+        const wrongBracketIdx = data.pick(otherBracketIndices);
+        const wrongRate = tieredTaxRates[category][brackets[wrongBracketIdx].label];
+        displayedTotal = Math.round(subtotal * (1 + wrongRate / 100) * 100) / 100;
         // Ensure error row actually differs from correct
         if (displayedTotal === correctTotal) {
-          displayedTotal = Math.round((correctTotal + 0.01) * 100) / 100;
+          displayedTotal = Math.round((correctTotal + data.int(1, 5) * 0.01) * 100) / 100;
         }
       } else {
         displayedTotal = correctTotal;
@@ -129,16 +156,17 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
       });
     }
 
-    // Sum of ALL displayed totals (the trap — shown in summary card)
+    // Sum of ALL displayed totals (shown in summary card)
     const summaryTotal = Math.round(
       lineItems.reduce((sum, item) => sum + item.displayedTotal, 0) * 100
     ) / 100;
 
-    // Correct answer: sum of rows where displayedTotal === correctTaxedTotal
+    // Correct answer: sum of rows where displayedTotal === correctTieredTotal
     let correctSum = 0;
     for (const item of lineItems) {
-      const rate = taxRates[item.category];
-      const expectedTotal = Math.round(item.quantity * item.unitPrice * (1 + rate / 100) * 100) / 100;
+      const subtotal = item.quantity * item.unitPrice;
+      const rate = getTieredRate(item.category, subtotal, tieredTaxRates, brackets);
+      const expectedTotal = Math.round(subtotal * (1 + rate / 100) * 100) / 100;
       if (Math.abs(item.displayedTotal - expectedTotal) < 0.001) {
         correctSum += item.displayedTotal;
       }
@@ -147,7 +175,7 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
     const answer = (Math.round(correctSum * 100) / 100).toFixed(2);
 
     return {
-      pageData: { lineItems, taxRates, summaryTotal, variantIndex },
+      pageData: { lineItems, tieredTaxRates, brackets, summaryTotal, variantIndex },
       answer,
     };
   },

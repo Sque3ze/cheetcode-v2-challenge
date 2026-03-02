@@ -15,8 +15,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CheetCode v2",
-  description: "Agent-focused coding challenges. Build an agent. Beat the clock.",
+  title: "CheetCode | Firecrawl Agent Challenge",
+  description:
+    "Build an AI agent that navigates the web, extracts data, and solves challenges against the clock. A Firecrawl recruiting challenge.",
+  openGraph: {
+    title: "CheetCode | Firecrawl Agent Challenge",
+    description:
+      "Build an AI agent that navigates the web, extracts data, and solves challenges against the clock.",
+    siteName: "CheetCode",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CheetCode | Firecrawl Agent Challenge",
+    description:
+      "Build an AI agent that navigates the web, extracts data, and solves challenges against the clock.",
+  },
 };
 
 export default function RootLayout({

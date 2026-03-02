@@ -34,7 +34,7 @@ const TIER_LABELS: Record<number, string> = {
   1: "Browser Fundamentals",
   2: "Multi-Step Workflow",
   3: "Complex Synthesis",
-  4: "Adversarial",
+  4: "Advanced Analysis",
 };
 
 const TIER_COLORS: Record<number, string> = {
@@ -196,7 +196,7 @@ export default function ChallengeLayout({
                   ? "bg-gray-800 text-gray-500 cursor-not-allowed"
                   : submitting
                     ? "bg-gray-700 text-gray-400 cursor-wait"
-                    : "bg-white text-gray-900 hover:bg-gray-200 active:bg-gray-300"
+                    : "btn-heat"
             }`}
           >
             {submitting

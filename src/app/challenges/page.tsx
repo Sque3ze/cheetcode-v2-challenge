@@ -37,14 +37,14 @@ const TIER_LABELS: Record<number, string> = {
   1: "Browser Fundamentals",
   2: "Multi-Step Workflow",
   3: "Complex Synthesis",
-  4: "Adversarial",
+  4: "Advanced Analysis",
 };
 
-const TIER_COLORS: Record<number, string> = {
-  1: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  2: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  3: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  4: "bg-red-500/10 text-red-400 border-red-500/20",
+const TIER_BADGE_CLASS: Record<number, string> = {
+  1: "tier-badge-1",
+  2: "tier-badge-2",
+  3: "tier-badge-3",
+  4: "tier-badge-4",
 };
 
 export default function ChallengesPage() {
@@ -55,7 +55,6 @@ export default function ChallengesPage() {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [finishing, setFinishing] = useState(false);
 
-  // Fetch session data
   const DEV_USER = process.env.NEXT_PUBLIC_DEV_USER;
   useEffect(() => {
     if (!authSession?.user && !DEV_USER) return;
@@ -77,7 +76,6 @@ export default function ChallengesPage() {
       });
   }, [authSession]);
 
-  // Countdown timer (cosmetic)
   useEffect(() => {
     if (timeRemaining <= 0) return;
     const interval = setInterval(() => {
@@ -118,18 +116,56 @@ export default function ChallengesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">Loading session...</p>
+      <div
+        className="min-h-screen"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p
+          style={{
+            color: "rgba(38, 38, 38, 0.4)",
+            fontSize: 14,
+            lineHeight: "20px",
+          }}
+        >
+          Loading session...
+        </p>
       </div>
     );
   }
 
   if (error || !sessionData) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error || "No session data"}</p>
-          <a href="/" className="text-blue-400 hover:underline">
+      <div
+        className="min-h-screen"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <p
+            style={{
+              color: "#eb3424",
+              marginBottom: 16,
+              fontSize: 14,
+              lineHeight: "20px",
+            }}
+          >
+            {error || "No session data"}
+          </p>
+          <a
+            href="/"
+            style={{
+              color: "#fa5d19",
+              fontSize: 14,
+              textDecoration: "none",
+            }}
+          >
             Go home
           </a>
         </div>
@@ -143,42 +179,109 @@ export default function ChallengesPage() {
   const isExpired = timeRemaining <= 0;
   const isUrgent = totalSecs <= 30;
 
-  // Group challenges by tier
   const tiers = [1, 2, 3, 4] as const;
   const statusMap = new Map(
     sessionData.challengeStatuses.map((s) => [s.challengeId, s])
   );
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
-      {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <a href="/" className="text-gray-400 hover:text-gray-200 text-sm">
+    <div className="min-h-screen">
+      {/* ── Header ── */}
+      <header
+        className="nav-header"
+        style={{ position: "sticky", top: 0, zIndex: 10 }}
+      >
+        <div
+          style={{
+            maxWidth: 720,
+            margin: "0 auto",
+            padding: "12px 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <a
+              href="/"
+              style={{
+                color: "rgba(38, 38, 38, 0.4)",
+                fontSize: 13,
+                lineHeight: "18px",
+                textDecoration: "none",
+                transition: "color 0.2s ease",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.color = "#262626")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.color = "rgba(38, 38, 38, 0.4)")
+              }
+            >
               &larr; Home
             </a>
-            <h1 className="text-lg font-semibold">Challenges</h1>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="text-sm">
-              <span className="text-gray-400">Score: </span>
-              <span className="font-mono text-emerald-400">
-                {sessionData.score.percentage.toFixed(1)}%
-              </span>
-              <span className="text-gray-600 ml-1">
-                ({sessionData.score.earned}/{sessionData.score.total} pts)
-              </span>
-            </div>
-            <div
-              className={`font-mono text-sm ${isExpired ? "text-red-400" : isUrgent ? "text-red-400" : "text-gray-400"}`}
+            <span
+              style={{ fontSize: 14, fontWeight: 450, lineHeight: "20px" }}
             >
-              {isExpired ? "Time's up!" : `${mins}:${String(secs).padStart(2, "0")}`}
-            </div>
+              Challenges
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Score badge */}
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "4px 12px",
+                borderRadius: 999,
+                fontSize: 13,
+                fontWeight: 500,
+                fontFamily: "var(--font-geist-mono), monospace",
+                background: "rgba(250, 93, 25, 0.08)",
+                color: "#fa5d19",
+                lineHeight: "18px",
+              }}
+            >
+              {sessionData.score.percentage.toFixed(1)}%
+            </span>
+            {/* Timer badge */}
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "4px 12px",
+                borderRadius: 999,
+                fontSize: 13,
+                fontWeight: 500,
+                fontFamily: "var(--font-geist-mono), monospace",
+                background:
+                  isExpired || isUrgent
+                    ? "rgba(235, 52, 36, 0.10)"
+                    : "rgba(0, 0, 0, 0.04)",
+                color:
+                  isExpired || isUrgent
+                    ? "#eb3424"
+                    : "rgba(38, 38, 38, 0.5)",
+                lineHeight: "18px",
+              }}
+            >
+              {isExpired
+                ? "Time's up!"
+                : `${mins}:${String(secs).padStart(2, "0")}`}
+            </span>
+            {/* Finish */}
             <button
               onClick={handleFinish}
               disabled={finishing}
-              className="px-4 py-1.5 text-sm bg-gray-800 text-gray-300 rounded hover:bg-gray-700 transition-colors disabled:opacity-50"
+              className="btn-ghost"
+              style={{
+                height: 32,
+                padding: "8px 12px",
+                borderRadius: 8,
+                fontSize: 13,
+                lineHeight: "18px",
+                opacity: finishing ? 0.5 : 1,
+              }}
             >
               {finishing ? "Finishing..." : "Finish"}
             </button>
@@ -186,8 +289,8 @@ export default function ChallengesPage() {
         </div>
       </header>
 
-      {/* Challenge list */}
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      {/* ── Challenge list ── */}
+      <main style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px" }}>
         {tiers.map((tier) => {
           const tierChallenges = sessionData.challenges.filter(
             (c) => c.tier === tier
@@ -195,59 +298,128 @@ export default function ChallengesPage() {
           if (tierChallenges.length === 0) return null;
 
           return (
-            <div key={tier} className="mb-8">
-              <h2 className="text-sm font-medium text-gray-400 mb-3">
-                Tier {tier} — {TIER_LABELS[tier]}
+            <div key={tier} style={{ marginBottom: 32 }}>
+              <h2
+                style={{
+                  fontSize: 14,
+                  fontWeight: 450,
+                  lineHeight: "20px",
+                  color: "rgba(38, 38, 38, 0.4)",
+                  marginBottom: 12,
+                }}
+              >
+                Tier {tier} &mdash; {TIER_LABELS[tier]}
               </h2>
-              <div className="space-y-2">
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
                 {tierChallenges.map((challenge) => {
-                  const status = statusMap.get(challenge.id);
-                  const solved = status?.solved ?? false;
-                  const locked = status?.locked ?? false;
+                  const cStatus = statusMap.get(challenge.id);
+                  const solved = cStatus?.solved ?? false;
+                  const locked = cStatus?.locked ?? false;
 
                   return (
                     <a
                       key={challenge.id}
                       href={
-                        isExpired
-                          ? undefined
-                          : `/challenges/${challenge.id}`
+                        isExpired ? undefined : `/challenges/${challenge.id}`
                       }
-                      className={`block p-4 rounded-lg border transition-colors ${
-                        solved
-                          ? "bg-emerald-500/5 border-emerald-500/20"
-                          : locked
-                            ? "bg-gray-900/50 border-gray-800 opacity-50 cursor-not-allowed"
-                            : isExpired
-                              ? "bg-gray-900/50 border-gray-800 opacity-50"
-                              : "bg-gray-900 border-gray-800 hover:border-gray-700"
-                      }`}
+                      className="card-surface"
+                      style={{
+                        display: "block",
+                        padding: "16px 24px",
+                        borderRadius: 12,
+                        textDecoration: "none",
+                        color: "inherit",
+                        borderLeft: solved
+                          ? "3px solid #42c366"
+                          : undefined,
+                        opacity: locked || isExpired ? 0.4 : 1,
+                        cursor:
+                          locked || isExpired ? "not-allowed" : "pointer",
+                      }}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            minWidth: 0,
+                          }}
+                        >
                           <span
-                            className={`text-xs px-2 py-0.5 rounded border ${TIER_COLORS[tier]}`}
+                            className={TIER_BADGE_CLASS[tier]}
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 450,
+                              padding: "2px 8px",
+                              borderRadius: 4,
+                              flexShrink: 0,
+                              lineHeight: "16px",
+                            }}
                           >
                             T{tier}
                           </span>
-                          <span className="font-medium">{challenge.title}</span>
-                          <span className="text-gray-500 text-sm">
+                          <span
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 450,
+                              color: "#262626",
+                              lineHeight: "20px",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {challenge.title}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 13,
+                              lineHeight: "20px",
+                              color: "rgba(38, 38, 38, 0.4)",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             {challenge.description}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-400">
-                            {challenge.points} pt{challenge.points !== 1 ? "s" : ""}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            flexShrink: 0,
+                            marginLeft: 16,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 450,
+                              lineHeight: "16px",
+                              color: "rgba(38, 38, 38, 0.3)",
+                            }}
+                          >
+                            {challenge.points} pt
+                            {challenge.points !== 1 ? "s" : ""}
                           </span>
                           {solved && (
-                            <span className="text-emerald-400 text-sm">
-                              Solved
-                            </span>
+                            <span className="pill-solved">Solved</span>
                           )}
                           {locked && !solved && (
-                            <span className="text-red-400 text-sm">
-                              Locked
-                            </span>
+                            <span className="pill-locked">Locked</span>
                           )}
                         </div>
                       </div>
