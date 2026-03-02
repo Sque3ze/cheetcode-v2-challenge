@@ -1,67 +1,201 @@
 import { v } from "convex/values";
-import { internalMutation, action } from "./_generated/server";
+import { internalMutation, action, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
-import {
-  selectSessionProblems,
-  stripSolution,
-} from "../server/problems";
-import { validateGithub } from "../src/lib/validation";
 
-const SESSION_COOLDOWN_MS = 5_000;
+const SESSION_COOLDOWN_MS = 10_000;
 
-export const createInternal = internalMutation({
-  args: { github: v.string() },
+/**
+ * Create a new timed session.
+ * Server sets the clock — no client-reported timestamps trusted.
+ */
+export const create = internalMutation({
+  args: { github: v.string(), durationMs: v.number() },
   handler: async (ctx, args) => {
-    const ghResult = validateGithub(args.github);
-    if (ghResult.ok === false) throw new Error(ghResult.error);
-    const github = ghResult.value;
+    // Rate limit: reject if user has an active or very recent session
+    const active = await ctx.db
+      .query("sessions")
+      .withIndex("by_github_status", (q) =>
+        q.eq("github", args.github).eq("status", "active")
+      )
+      .first();
+    if (active) {
+      // If it's expired but not yet marked, mark it
+      if (Date.now() > active.expiresAt) {
+        await ctx.db.patch(active._id, { status: "expired" });
+      } else {
+        throw new Error("active session already exists");
+      }
+    }
 
-    // Rate limit: reject if user has a session created in the last few seconds
+    // Cooldown check
     const recent = await ctx.db
       .query("sessions")
-      .withIndex("by_github", (q) => q.eq("github", github))
+      .withIndex("by_github", (q) => q.eq("github", args.github))
       .order("desc")
       .first();
     if (recent && Date.now() - recent.startedAt < SESSION_COOLDOWN_MS) {
       throw new Error("rate limited — wait a few seconds");
     }
 
-    const picked = selectSessionProblems();
     const startedAt = Date.now();
-    const expiresAt = startedAt + 45_000;
+    const expiresAt = startedAt + args.durationMs;
+
     const sessionId = await ctx.db.insert("sessions", {
-      github,
-      problemIds: picked.map((problem) => problem.id),
+      github: args.github,
       startedAt,
       expiresAt,
+      status: "active",
     });
 
-    return {
-      sessionId,
-      startedAt,
-      expiresAt,
-      problems: picked.map(stripSolution),
-    };
+    return { sessionId, startedAt, expiresAt };
   },
 });
 
-/** Authenticated gateway — only the Next.js server can call this */
-export const create = action({
-  args: { secret: v.string(), github: v.string() },
+/**
+ * Get a session by ID.
+ */
+export const get = query({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.sessionId);
+  },
+});
+
+/**
+ * Get the active session for a user (if any).
+ */
+export const getActive = query({
+  args: { github: v.string() },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_github_status", (q) =>
+        q.eq("github", args.github).eq("status", "active")
+      )
+      .first();
+
+    if (!session) return null;
+
+    // Check if expired
+    if (Date.now() > session.expiresAt) {
+      return null; // Will be marked expired by the complete mutation
+    }
+
+    return session;
+  },
+});
+
+/**
+ * Mark a session as completed and compute final score.
+ */
+export const complete = internalMutation({
+  args: {
+    sessionId: v.id("sessions"),
+    github: v.string(),
+    earnedPoints: v.number(),
+    totalPoints: v.number(),
+    wrongAttempts: v.number(),
+    lastCorrectAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("session not found");
+    if (session.github !== args.github) throw new Error("github mismatch");
+
+    // Mark session completed
+    await ctx.db.patch(args.sessionId, { status: "completed" });
+
+    // Compute percentage score
+    const score =
+      args.totalPoints > 0
+        ? Math.round((args.earnedPoints / args.totalPoints) * 10000) / 100
+        : 0;
+
+    // Update leaderboard (only if this is a new best score)
+    const existing = await ctx.db
+      .query("leaderboard")
+      .withIndex("by_github", (q) => q.eq("github", args.github))
+      .first();
+
+    const entry = {
+      github: args.github,
+      score,
+      earnedPoints: args.earnedPoints,
+      totalPoints: args.totalPoints,
+      wrongAttempts: args.wrongAttempts,
+      lastCorrectAt: args.lastCorrectAt,
+      completedAt: Date.now(),
+      sessionId: args.sessionId,
+    };
+
+    if (!existing) {
+      if (args.earnedPoints > 0) {
+        await ctx.db.insert("leaderboard", entry);
+      }
+    } else if (
+      score > existing.score ||
+      (score === existing.score &&
+        args.wrongAttempts < existing.wrongAttempts)
+    ) {
+      await ctx.db.patch(existing._id, entry);
+    }
+
+    return { score, earnedPoints: args.earnedPoints, totalPoints: args.totalPoints };
+  },
+});
+
+/**
+ * Expire a session (called when time runs out).
+ */
+export const expire = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) return;
+    if (session.status === "active") {
+      await ctx.db.patch(args.sessionId, { status: "expired" });
+    }
+  },
+});
+
+// ─── Action gateways (callable from Next.js API routes) ────────
+
+/** Authenticated gateway for creating sessions */
+export const createSession = action({
+  args: { secret: v.string(), github: v.string(), durationMs: v.number() },
   handler: async (
     ctx,
-    args,
-  ): Promise<{
-    sessionId: string;
-    startedAt: number;
-    expiresAt: number;
-    problems: Record<string, unknown>[];
-  }> => {
+    args
+  ): Promise<{ sessionId: string; startedAt: number; expiresAt: number }> => {
     if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
       throw new Error("unauthorized");
     }
-    return await ctx.runMutation(internal.sessions.createInternal, {
+    return await ctx.runMutation(internal.sessions.create, {
       github: args.github,
+      durationMs: args.durationMs,
     });
+  },
+});
+
+/** Authenticated gateway for completing sessions */
+export const completeSession = action({
+  args: {
+    secret: v.string(),
+    sessionId: v.id("sessions"),
+    github: v.string(),
+    earnedPoints: v.number(),
+    totalPoints: v.number(),
+    wrongAttempts: v.number(),
+    lastCorrectAt: v.optional(v.number()),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ score: number; earnedPoints: number; totalPoints: number }> => {
+    if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
+      throw new Error("unauthorized");
+    }
+    const { secret: _, ...mutationArgs } = args;
+    return await ctx.runMutation(internal.sessions.complete, mutationArgs);
   },
 });

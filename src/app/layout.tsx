@@ -15,16 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://cheetcode-ctf.firecrawl.dev"),
-  title: "CheetCode CTF",
-  description: "10 problems. 45 seconds. Good luck.",
-  openGraph: {
-    title: "CheetCode CTF",
-    description: "10 problems. 45 seconds. Good luck.",
-    url: "https://cheetcode-ctf.firecrawl.dev",
-    siteName: "CheetCode CTF",
-    images: [{ url: "/opengraph-image" }],
-  },
+  title: "CheetCode v2",
+  description: "Agent-focused coding challenges. Build an agent. Beat the clock.",
 };
 
 export default function RootLayout({
