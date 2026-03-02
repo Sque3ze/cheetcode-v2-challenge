@@ -10,6 +10,7 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   displayedTotal: number;
+  runningTotal?: number;
 }
 
 interface CalculationAuditPageData {
@@ -30,6 +31,8 @@ export default function CalculationAuditChallenge({ pageData, answerRef }: Props
     answerRef.current = answer;
   }, [answer, answerRef]);
 
+  const hasRunningTotals = pageData.lineItems.some((item) => item.runningTotal !== undefined);
+
   return (
     <div>
       {/* Summary card — shows total of ALL rows (trap) */}
@@ -45,32 +48,44 @@ export default function CalculationAuditChallenge({ pageData, answerRef }: Props
         </div>
       </div>
 
-      {/* Expense report table */}
-      <div className="overflow-x-auto rounded-lg border border-gray-800 mb-6">
-        <table className="w-full text-sm" {...testAttr('table', 'expenses')}>
-          <thead>
-            <tr className="bg-gray-900">
-              <th className="px-3 py-2 text-left text-gray-400 font-medium">ID</th>
-              <th className="px-3 py-2 text-left text-gray-400 font-medium">Description</th>
-              <th className="px-3 py-2 text-left text-gray-400 font-medium">Category</th>
-              <th className="px-3 py-2 text-right text-gray-400 font-medium">Qty</th>
-              <th className="px-3 py-2 text-right text-gray-400 font-medium">Unit Price</th>
-              <th className="px-3 py-2 text-right text-gray-400 font-medium">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageData.lineItems.map((item) => (
-              <tr key={item.id} className="border-t border-gray-800" {...testAttr('row-id', item.id)}>
-                <td className="px-3 py-2 font-mono text-xs">{item.id}</td>
-                <td className="px-3 py-2" {...testAttr('description')}>{item.description}</td>
-                <td className="px-3 py-2 text-gray-400" {...testAttr('category')}>{item.category}</td>
-                <td className="px-3 py-2 text-right" {...testAttr('quantity')}>{item.quantity}</td>
-                <td className="px-3 py-2 text-right font-mono" {...testAttr('unit-price')}>${item.unitPrice.toFixed(2)}</td>
-                <td className="px-3 py-2 text-right font-mono" {...testAttr('displayed-total')}>${item.displayedTotal.toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Expense receipt cards grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6" {...testAttr('expense-grid')}>
+        {pageData.lineItems.map((item) => (
+          <div
+            key={item.id}
+            className="bg-gray-900 rounded-lg border border-gray-800 p-4"
+            {...testAttr('expense-card', item.id)}
+          >
+            {/* Header: ID + Category */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-mono text-xs text-gray-500">{item.id}</span>
+              <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded" {...testAttr('exp-category')}>{item.category}</span>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm text-gray-200 mb-3" {...testAttr('exp-description')}>{item.description}</p>
+
+            {/* Qty x Unit Price on left, Total on right */}
+            <div className="flex items-end justify-between border-t border-gray-800 pt-2">
+              <div className="text-xs text-gray-400">
+                Qty: <span className="font-mono text-gray-300" {...testAttr('exp-qty')}>{item.quantity}</span>
+                {" \u00d7 "}
+                <span className="font-mono text-gray-300" {...testAttr('exp-unit-price')}>${item.unitPrice.toFixed(2)}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-base font-bold font-mono text-gray-100" {...testAttr('exp-total')}>${item.displayedTotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Running total row */}
+            {hasRunningTotals && item.runningTotal !== undefined && (
+              <div className="flex justify-between mt-2 pt-1 border-t border-gray-800/50">
+                <span className="text-xs text-gray-500">Running Total</span>
+                <span className="text-xs font-mono text-gray-400" {...testAttr('exp-running-total')}>${item.runningTotal.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Answer input */}

@@ -1,16 +1,10 @@
 /**
- * Tier 4 Challenge: Calculation Audit
+ * Tier 4 Challenge: Calculation Audit (Round 3 — Running Totals)
  *
- * An expense report table with line items (item, qty, unit price, displayed total).
- * 3-5 rows have intentionally wrong calculations (off by 3-10%).
- * Agent must verify each row's math (qty × unitPrice) and sum only the correct ones.
- *
- * Why it's harder than prompt-injection:
- * - No explicit "ignore X" instruction — just says "verify each line item"
- * - Requires actual math per row (not just filtering by a status label)
- * - Errors are subtle (not color-coded) — no visual distinction
- * - Quick Summary card shows total of ALL rows (trap)
- * - Agents naturally trust displayed totals
+ * Each line item now has a running total. Error rows have wrong displayedTotal,
+ * which makes their running total AND all subsequent running totals wrong.
+ * New question: "Sum displayed totals of rows where BOTH the line-item math
+ * (qty × unitPrice) AND the running total are correct."
  */
 
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
@@ -23,6 +17,7 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   displayedTotal: number;
+  runningTotal: number;
 }
 
 interface CalculationAuditPageData {
@@ -48,26 +43,29 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
   title: "Calculation Audit",
   tier: 4,
   points: 4,
-  description: "Audit an expense report — verify each line item's math and sum only correctly calculated rows.",
+  description: "Audit an expense report — verify line-item math and running totals, sum only fully correct rows.",
 
   instructions: (pageData) => {
     const variants = [
-      `Review the expense report below. Each line item shows quantity, unit price, and a displayed total. ` +
-      `Verify each row by computing quantity × unit price. Some rows have incorrect totals. ` +
-      `Sum ONLY the displayed totals of rows where the displayed total exactly matches quantity × unit price. ` +
-      `Submit the sum rounded to 2 decimal places.`,
+      `Review the expense report below. Each line item shows quantity, unit price, a displayed total, and a running total. ` +
+      `A row is correct ONLY if: (1) displayed total = quantity × unit price, AND (2) the running total = previous running total + displayed total. ` +
+      `Note: if a row has a wrong displayed total, its running total and ALL subsequent running totals will also be wrong. ` +
+      `Sum ONLY the displayed totals of rows where BOTH checks pass. Submit rounded to 2 decimal places.`,
 
-      `Audit this expense report. For every line item, check whether displayed total equals qty × unit price. ` +
-      `Add up the displayed totals from correctly calculated rows only. Ignore rows where the math doesn't check out. ` +
-      `Round your answer to 2 decimal places.`,
+      `Audit this expense report. Each row has a running total that should equal the cumulative sum of displayed totals. ` +
+      `Verify: (1) displayed total matches qty × unit price, (2) running total matches previous + current displayed total. ` +
+      `An error propagates — once a row is wrong, all rows after it have incorrect running totals too. ` +
+      `Sum the displayed totals of fully verified rows only. Round to 2 decimal places.`,
 
-      `Each expense row shows a total, but not all are correct. Multiply quantity by unit price for each row. ` +
-      `If a row's displayed total matches that product, include it in your sum. Skip mismatched rows. ` +
+      `Each expense row has a line total and a running total. Check each row: ` +
+      `does the displayed total equal quantity × unit price? Does the running total equal the previous running total plus this row's displayed total? ` +
+      `Errors propagate through running totals. Include only rows where BOTH the line math and running total are correct. ` +
       `Submit the sum to 2 decimal places.`,
 
-      `The table below is an expense report. Some line totals contain errors. ` +
-      `For each row, verify: does displayed total = quantity × unit price? ` +
-      `Sum the displayed totals of verified (correct) rows only and submit, rounded to 2 decimals.`,
+      `The expense report below includes running totals. A row is valid only if its displayed total = qty × unit price AND ` +
+      `its running total = sum of all displayed totals up to and including this row. ` +
+      `Remember: a single error makes all subsequent running totals wrong. ` +
+      `Sum the displayed totals of valid rows. Round to 2 decimal places.`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -75,16 +73,18 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
   generate(data: ChallengeData) {
     const variantIndex = data.int(0, 3);
     const itemCount = data.int(12, 18);
-    const errorCount = data.int(3, 5);
+    const errorCount = data.int(2, 4);
 
-    // Pick which rows will have errors
+    // Pick which rows will have line-item errors (ensure first error is not row 0 to have some valid rows)
     const errorIndices = new Set<number>();
     while (errorIndices.size < errorCount) {
-      errorIndices.add(data.int(0, itemCount - 1));
+      errorIndices.add(data.int(1, itemCount - 1));
     }
 
     const descriptions = data.pickN(EXPENSE_ITEMS, itemCount);
     const lineItems: LineItem[] = [];
+    let correctRunningTotal = 0;
+    let displayedRunningTotal = 0;
 
     for (let i = 0; i < itemCount; i++) {
       const quantity = data.int(1, 25);
@@ -93,17 +93,18 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
 
       let displayedTotal: number;
       if (errorIndices.has(i)) {
-        // Apply a small multiplicative error (3-10%) — looks plausible
         const errorPercent = data.int(3, 10);
         const direction = data.pick([1, -1] as const);
         displayedTotal = Math.round(correctTotal * (1 + direction * errorPercent / 100) * 100) / 100;
-        // Ensure error is actually different
         if (displayedTotal === correctTotal) {
           displayedTotal = Math.round((correctTotal + direction * 0.01) * 100) / 100;
         }
       } else {
         displayedTotal = correctTotal;
       }
+
+      // Running total uses the DISPLAYED totals (so errors propagate)
+      displayedRunningTotal = Math.round((displayedRunningTotal + displayedTotal) * 100) / 100;
 
       lineItems.push({
         id: `EXP-${String(i + 1).padStart(3, "0")}`,
@@ -112,6 +113,7 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
         quantity,
         unitPrice,
         displayedTotal,
+        runningTotal: displayedRunningTotal,
       });
     }
 
@@ -120,14 +122,26 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
       lineItems.reduce((sum, item) => sum + item.displayedTotal, 0) * 100
     ) / 100;
 
-    // Correct answer: sum of only correctly calculated rows
-    const correctSum = lineItems.reduce((sum, item) => {
-      const expected = Math.round(item.quantity * item.unitPrice * 100) / 100;
-      if (item.displayedTotal === expected) {
-        return sum + item.displayedTotal;
+    // Correct answer: sum of rows where BOTH line-item math AND running total are correct
+    // A row's running total is correct only if ALL previous rows' displayed totals are correct too
+    let expectedRunning = 0;
+    let correctSum = 0;
+    let runningStillValid = true;
+
+    for (const item of lineItems) {
+      const expectedLineTotal = Math.round(item.quantity * item.unitPrice * 100) / 100;
+      const lineCorrect = item.displayedTotal === expectedLineTotal;
+      expectedRunning = Math.round((expectedRunning + item.displayedTotal) * 100) / 100;
+      const runningCorrect = Math.abs(item.runningTotal - expectedRunning) < 0.001;
+
+      if (!lineCorrect) {
+        runningStillValid = false;
       }
-      return sum;
-    }, 0);
+
+      if (lineCorrect && runningStillValid && runningCorrect) {
+        correctSum += item.displayedTotal;
+      }
+    }
 
     const answer = (Math.round(correctSum * 100) / 100).toFixed(2);
 

@@ -24,6 +24,7 @@ interface ModalInteractionPageData {
   targetField: string;
   targetCardName: string;
   targetCategory: string;
+  modalLoadDelay: number;
   variantIndex: number;
 }
 
@@ -110,6 +111,7 @@ export const modalInteractionChallenge: ChallengeDefinition<ModalInteractionPage
         targetField,
         targetCardName: targetCard.name,
         targetCategory,
+        modalLoadDelay: 800,
         variantIndex,
       },
       answer,

@@ -35,18 +35,18 @@ export const redHerringChallenge: ChallengeDefinition<RedHerringPageData> = {
     if (operation === "sum") {
       const qs = targetQuarters.join(" and ");
       const variants = [
-        `Find "${targetMetric}" and compute the sum of ${qs}. Use the raw data source to compute your answer — do not use summary reports or pre-computed values. Submit the result.`,
-        `Locate "${targetMetric}" in the raw data. Add the values for ${qs} together and submit the total. Ignore the summary table and pre-computed card.`,
-        `What is the combined ${qs} value for "${targetMetric}"? Use raw data only — summary reports may be inaccurate. Submit the sum.`,
-        `From the raw data source, find "${targetMetric}". Sum its ${qs} values. Do not rely on the summary or pre-computed figures.`,
+        `Find "${targetMetric}" and compute the sum of ${qs}. This page shows data from multiple sources — verify your figures before submitting.`,
+        `Locate "${targetMetric}" and add the values for ${qs} together. Multiple data views are available — make sure you use accurate figures.`,
+        `What is the combined ${qs} value for "${targetMetric}"? Cross-check your data source for accuracy before submitting.`,
+        `Look up "${targetMetric}" and sum its ${qs} values. The page presents several data views — ensure you pick the right one.`,
       ];
       return variants[pageData.variantIndex];
     }
     const variants = [
-      `Find "${targetMetric}" and compute the difference: ${targetQuarters[0]} minus ${targetQuarters[1]}. Use the raw data source to compute your answer — do not use summary reports or pre-computed values. Submit the result.`,
-      `In the raw data, look up "${targetMetric}". Subtract ${targetQuarters[1]} from ${targetQuarters[0]} and submit. Ignore the summary report.`,
-      `Compute ${targetQuarters[0]} - ${targetQuarters[1]} for "${targetMetric}" using raw data only. Do not trust summary or pre-computed values.`,
-      `From the raw data, find "${targetMetric}" and calculate the difference between ${targetQuarters[0]} and ${targetQuarters[1]}. Submit that number.`,
+      `Find "${targetMetric}" and compute the difference: ${targetQuarters[0]} minus ${targetQuarters[1]}. This page shows data from multiple sources — verify your figures before submitting.`,
+      `Look up "${targetMetric}". Subtract ${targetQuarters[1]} from ${targetQuarters[0]} and submit. Multiple data views are available — use accurate figures.`,
+      `Compute ${targetQuarters[0]} - ${targetQuarters[1]} for "${targetMetric}". Cross-check your data source for accuracy before submitting.`,
+      `Find "${targetMetric}" and calculate the difference between ${targetQuarters[0]} and ${targetQuarters[1]}. Ensure you verify which data source is accurate.`,
     ];
     return variants[pageData.variantIndex];
   },

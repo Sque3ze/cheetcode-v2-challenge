@@ -30,6 +30,7 @@ interface MultiStepWizardPageData {
   targetStatus: string;
   discountCondition: string;
   targetShipping: string;
+  budgetLimit?: number;
 }
 
 interface Props {
@@ -42,11 +43,29 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedDiscount, setSelectedDiscount] = useState<DiscountCode | null>(null);
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const [budgetError, setBudgetError] = useState(false);
   const [answer, setAnswer] = useState("");
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
+
+  // Check budget when entering step 3
+  const handleDiscountSelect = (dc: DiscountCode) => {
+    setSelectedDiscount(dc);
+    setBudgetError(false);
+
+    if (selectedOrder && pageData.budgetLimit) {
+      const subtotal = selectedOrder.quantity * selectedOrder.unitPrice;
+      const discountedSubtotal = subtotal * (1 - dc.percent / 100);
+      if (discountedSubtotal > pageData.budgetLimit) {
+        setBudgetError(true);
+        setStep(3); // Go to step 3 but show error
+        return;
+      }
+    }
+    setStep(3);
+  };
 
   return (
     <div>
@@ -137,10 +156,7 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
             {pageData.discountCodes.map((dc) => (
               <button
                 key={dc.code}
-                onClick={() => {
-                  setSelectedDiscount(dc);
-                  setStep(3);
-                }}
+                onClick={() => handleDiscountSelect(dc)}
                 className="p-4 rounded-lg border bg-gray-900 border-gray-800 hover:border-blue-500 text-left transition-colors"
                 {...testAttr('discount-code', dc.code)}
               >
@@ -155,35 +171,74 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
         </div>
       )}
 
-      {/* Step 3: Select shipping */}
+      {/* Step 3: Select shipping (with budget check) */}
       {step === 3 && selectedOrder && selectedDiscount && (
         <div>
           <h3 className="text-sm font-medium text-gray-400 mb-3">
             Step 3: Select <span className="text-white font-mono">&quot;{pageData.targetShipping}&quot;</span> shipping
           </h3>
-          <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-4">
-            <p className="text-sm text-gray-400">Order: <span className="font-mono text-white">{selectedOrder.id}</span></p>
-            <p className="text-sm text-gray-400 mt-1">Discount: <span className="font-mono text-white">{selectedDiscount.code} ({selectedDiscount.percent}%)</span></p>
-          </div>
-          <div className="space-y-2 mb-4">
-            {pageData.shippingOptions.map((opt) => (
+
+          {/* Budget limit info */}
+          {pageData.budgetLimit && (
+            <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-4">
+              <p className="text-sm text-gray-400">
+                Budget Limit: <span className="font-mono text-white" {...testAttr('budget-limit')}>${pageData.budgetLimit.toFixed(2)}</span>
+              </p>
+              <p className="text-sm text-gray-400 mt-1">Order: <span className="font-mono text-white">{selectedOrder.id}</span></p>
+              <p className="text-sm text-gray-400 mt-1">Discount: <span className="font-mono text-white">{selectedDiscount.code} ({selectedDiscount.percent}%)</span></p>
+              <p className="text-sm text-gray-400 mt-1">
+                Discounted Subtotal: <span className="font-mono text-white" {...testAttr('discounted-subtotal')}>
+                  ${(selectedOrder.quantity * selectedOrder.unitPrice * (1 - selectedDiscount.percent / 100)).toFixed(2)}
+                </span>
+              </p>
+            </div>
+          )}
+
+          {/* Budget exceeded error */}
+          {budgetError && (
+            <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4 mb-4" {...testAttr('budget-error')}>
+              <p className="text-red-400 font-medium">Budget Exceeded!</p>
+              <p className="text-sm text-red-300 mt-1">
+                The discounted subtotal exceeds the budget limit of ${pageData.budgetLimit?.toFixed(2)}. Please go back and select a different discount code.
+              </p>
               <button
-                key={opt.name}
                 onClick={() => {
-                  setSelectedShipping(opt);
-                  setStep(4);
+                  setBudgetError(false);
+                  setSelectedDiscount(null);
+                  setStep(2);
                 }}
-                className="w-full p-4 rounded-lg border bg-gray-900 border-gray-800 hover:border-blue-500 text-left transition-colors flex justify-between items-center"
-                {...testAttr('shipping', opt.name)}
+                className="mt-3 px-4 py-2 text-sm bg-red-800/50 text-red-200 rounded hover:bg-red-800 transition-colors"
+                {...testAttr('back-to-step2')}
               >
-                <span className="font-medium">{opt.name}</span>
-                <span className="font-mono text-gray-400" {...testAttr('shipping-cost', String(opt.cost))}>${opt.cost.toFixed(2)}</span>
+                &larr; Back to Step 2
               </button>
-            ))}
-          </div>
-          <button onClick={() => setStep(2)} className="text-sm text-gray-500 hover:text-gray-300">
-            &larr; Back to Step 2
-          </button>
+            </div>
+          )}
+
+          {/* Shipping options — only show if no budget error */}
+          {!budgetError && (
+            <>
+              <div className="space-y-2 mb-4">
+                {pageData.shippingOptions.map((opt) => (
+                  <button
+                    key={opt.name}
+                    onClick={() => {
+                      setSelectedShipping(opt);
+                      setStep(4);
+                    }}
+                    className="w-full p-4 rounded-lg border bg-gray-900 border-gray-800 hover:border-blue-500 text-left transition-colors flex justify-between items-center"
+                    {...testAttr('shipping', opt.name)}
+                  >
+                    <span className="font-medium">{opt.name}</span>
+                    <span className="font-mono text-gray-400" {...testAttr('shipping-cost', String(opt.cost))}>${opt.cost.toFixed(2)}</span>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setStep(2)} className="text-sm text-gray-500 hover:text-gray-300">
+                &larr; Back to Step 2
+              </button>
+            </>
+          )}
         </div>
       )}
 

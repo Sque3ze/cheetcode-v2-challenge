@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, MutableRefObject } from "react";
+import { useState, useEffect, useRef, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
 
 interface Item {
@@ -37,50 +37,79 @@ interface Props {
 
 export default function ConstraintSolverChallenge({ pageData, answerRef }: Props) {
   const [answer, setAnswer] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showPopover, setShowPopover] = useState(false);
+  const popoverAnchorRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
 
+  // Close popover on outside click
+  useEffect(() => {
+    if (!showPopover) return;
+    const handler = (e: MouseEvent) => {
+      if (popoverAnchorRef.current && !popoverAnchorRef.current.contains(e.target as Node)) {
+        const popover = document.getElementById("constraints-popover");
+        if (popover && !popover.contains(e.target as Node)) {
+          setShowPopover(false);
+        }
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showPopover]);
+
   return (
     <div>
-      {/* Inventory Table */}
+      {/* Inventory — horizontally scrollable card strip */}
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-400 mb-2">Inventory</h3>
-        <div className="overflow-x-auto rounded-lg border border-gray-800">
-          <table className="w-full text-sm" {...testAttr('table', 'inventory')}>
-            <thead>
-              <tr className="bg-gray-900">
-                <th className="px-3 py-2 text-left text-gray-400 font-medium">Name</th>
-                <th className="px-3 py-2 text-left text-gray-400 font-medium">Category</th>
-                <th className="px-3 py-2 text-right text-gray-400 font-medium">Price</th>
-                <th className="px-3 py-2 text-right text-gray-400 font-medium">Rating</th>
-                <th className="px-3 py-2 text-left text-gray-400 font-medium">Supplier</th>
-                <th className="px-3 py-2 text-center text-gray-400 font-medium">In Stock</th>
-                <th className="px-3 py-2 text-right text-gray-400 font-medium">Weight (kg)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.items.map((item) => (
-                <tr key={item.name} className="border-t border-gray-800" {...testAttr('item-name', item.name)}>
-                  <td className="px-3 py-2 font-medium">{item.name}</td>
-                  <td className="px-3 py-2 text-gray-400" {...testAttr('item-category')}>{item.category}</td>
-                  <td className="px-3 py-2 text-right font-mono" {...testAttr('item-price')}>${item.price.toFixed(2)}</td>
-                  <td className="px-3 py-2 text-right" {...testAttr('item-rating')}>{item.rating}</td>
-                  <td className="px-3 py-2 text-gray-400" {...testAttr('item-supplier')}>{item.supplier}</td>
-                  <td className="px-3 py-2 text-center" {...testAttr('item-stock')}>
+        <div
+          className="flex gap-4 overflow-x-auto pb-3"
+          style={{ scrollBehavior: "smooth" }}
+          {...testAttr('inventory-strip')}
+        >
+          {pageData.items.map((item) => (
+            <div
+              key={item.name}
+              className="flex-shrink-0 w-56 bg-gray-900 rounded-lg border border-gray-800 p-4"
+              {...testAttr('item-card', item.name)}
+            >
+              <h4 className="font-medium text-gray-100 mb-2 text-sm truncate">{item.name}</h4>
+              <dl className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Category</dt>
+                  <dd className="text-gray-300" {...testAttr('item-category')}>{item.category}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Price</dt>
+                  <dd className="text-gray-300 font-mono" {...testAttr('item-price')}>${item.price.toFixed(2)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Rating</dt>
+                  <dd className="text-gray-300" {...testAttr('item-rating')}>{item.rating}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Supplier</dt>
+                  <dd className="text-gray-300" {...testAttr('item-supplier')}>{item.supplier}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">In Stock</dt>
+                  <dd {...testAttr('item-stock')}>
                     {item.inStock ? (
                       <span className="text-green-400">Yes</span>
                     ) : (
                       <span className="text-red-400">No</span>
                     )}
-                  </td>
-                  <td className="px-3 py-2 text-right" {...testAttr('item-weight')}>{item.weight}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Weight</dt>
+                  <dd className="text-gray-300" {...testAttr('item-weight')}>{item.weight} kg</dd>
+                </div>
+              </dl>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -126,19 +155,23 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
         </div>
       </div>
 
-      {/* Advanced Filters accordion (collapsed by default) */}
-      <div className="mb-4">
+      {/* Additional Constraints — clickable link with popover */}
+      <div className="mb-4 relative">
         <button
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+          ref={popoverAnchorRef}
+          onClick={() => setShowPopover(!showPopover)}
+          className="text-sm text-purple-400 hover:text-purple-300 underline transition-colors cursor-pointer"
           {...testAttr('toggle-advanced')}
         >
-          <span className="text-xs">{showAdvanced ? "▼" : "▶"}</span>
-          Advanced Filters
+          Additional Constraints
         </button>
 
-        {showAdvanced && (
-          <div className="mt-2 bg-gray-900 rounded-lg border border-gray-800 p-4" {...testAttr('panel', 'advanced')}>
+        {showPopover && (
+          <div
+            id="constraints-popover"
+            className="absolute left-0 top-8 z-30 bg-gray-900 rounded-lg border border-gray-700 p-4 shadow-xl min-w-72"
+            {...testAttr('panel', 'advanced')}
+          >
             <ul className="space-y-2">
               {pageData.advancedConstraints.map((c, i) => (
                 <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>

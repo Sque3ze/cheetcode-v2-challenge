@@ -16,6 +16,7 @@ interface FilterSearchPageData {
   filterConditions: Array<{ field: string; value: string }>;
   aggregation: "count" | "total salary" | "average salary";
   employeesPerPage: number;
+  initialVisibleCount?: number;
 }
 
 interface Props {
@@ -26,7 +27,8 @@ interface Props {
 export default function FilterSearchChallenge({ pageData, answerRef }: Props) {
   const [filterText, setFilterText] = useState("");
   const [answer, setAnswer] = useState("");
-  const [currentPage, setCurrentPage] = useState(0);
+  const initialVisible = pageData.initialVisibleCount ?? 12;
+  const [visibleCount, setVisibleCount] = useState(initialVisible);
 
   useEffect(() => {
     answerRef.current = answer;
@@ -43,14 +45,13 @@ export default function FilterSearchChallenge({ pageData, answerRef }: Props) {
     );
   }, [pageData.employees, filterText]);
 
-  // Reset page when filter changes
+  // Reset visible count when filter changes
   useEffect(() => {
-    setCurrentPage(0);
-  }, [filterText]);
+    setVisibleCount(initialVisible);
+  }, [filterText, initialVisible]);
 
-  const perPage = pageData.employeesPerPage;
-  const totalPages = Math.ceil(filtered.length / perPage);
-  const pageSlice = filtered.slice(currentPage * perPage, (currentPage + 1) * perPage);
+  const visibleEmployees = filtered.slice(0, visibleCount);
+  const remaining = filtered.length - visibleCount;
 
   return (
     <div>
@@ -65,60 +66,53 @@ export default function FilterSearchChallenge({ pageData, answerRef }: Props) {
           {...testAttr('testid', 'filter-input')}
         />
         <p className="mt-1 text-xs text-gray-500">
-          Showing {filtered.length} of {pageData.employees.length} employees
+          Showing {Math.min(visibleCount, filtered.length)} of {filtered.length} matching ({pageData.employees.length} total)
         </p>
       </div>
 
-      {/* Employee table */}
-      <div className="overflow-x-auto rounded-lg border border-gray-800 mb-2">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-900">
-              <th className="px-4 py-3 text-left text-gray-400 font-medium">Name</th>
-              <th className="px-4 py-3 text-left text-gray-400 font-medium">Department</th>
-              <th className="px-4 py-3 text-right text-gray-400 font-medium">Salary</th>
-              <th className="px-4 py-3 text-left text-gray-400 font-medium">City</th>
-              <th className="px-4 py-3 text-right text-gray-400 font-medium">Age</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageSlice.map((emp, i) => (
-              <tr key={i} className="border-t border-gray-800">
-                <td className="px-4 py-3">{emp.name}</td>
-                <td className="px-4 py-3 text-gray-400">{emp.department}</td>
-                <td className="px-4 py-3 text-right font-mono">${emp.salary.toLocaleString()}</td>
-                <td className="px-4 py-3 text-gray-400">{emp.city}</td>
-                <td className="px-4 py-3 text-right text-gray-400">{emp.age}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Employee cards grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4" {...testAttr('employee-grid')}>
+        {visibleEmployees.map((emp, i) => (
+          <div
+            key={i}
+            className="bg-gray-900 rounded-lg border border-gray-800 p-4"
+            {...testAttr('employee-card', emp.name)}
+          >
+            <h4 className="font-medium text-gray-100 mb-3 text-base">{emp.name}</h4>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Department</span>
+                <span className="text-gray-300" {...testAttr('emp-department')}>{emp.department}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Salary</span>
+                <span className="text-gray-300 font-mono" {...testAttr('emp-salary')}>${emp.salary.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">City</span>
+                <span className="text-gray-300" {...testAttr('emp-city')}>{emp.city}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Age</span>
+                <span className="text-gray-300" {...testAttr('emp-age')}>{emp.age}</span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between mb-6">
-        <p className="text-xs text-gray-500">
-          Page {currentPage + 1} of {totalPages} ({filtered.length} results)
-        </p>
-        <div className="flex gap-2">
+      {/* Load More button — disappears when all loaded */}
+      {remaining > 0 && (
+        <div className="mb-6 text-center">
           <button
-            onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-            disabled={currentPage === 0}
-            className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
-            {...testAttr('page-prev')}
+            onClick={() => setVisibleCount((v) => v + initialVisible)}
+            className="px-6 py-2 text-sm bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors text-gray-300"
+            {...testAttr('load-more')}
           >
-            Previous
-          </button>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={currentPage === totalPages - 1}
-            className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
-            {...testAttr('page-next')}
-          >
-            Next
+            Load More ({remaining} remaining)
           </button>
         </div>
-      </div>
+      )}
 
       {/* Answer input */}
       <div>

@@ -37,27 +37,28 @@ async function getInstructions(page: Page): Promise<string> {
 
 // ─── Tier 1 Solvers ─────────────────────────────────────────────
 
+/**
+ * Table Sort: Sort by Annual Compensation (with hourly→annual conversion),
+ * paginate to find the Nth highest/lowest employee name.
+ */
 async function solveTableSort(page: Page): Promise<string> {
   await page.waitForSelector("table tbody tr");
   const instructions = await getInstructions(page);
 
-  // Broad match across variants — look for column name, position number, and direction
-  const colMatch = instructions.match(/by (Salary|Start Date)/i);
+  // Parse position and direction from instructions
   const posMatch = instructions.match(/(\d+)\w*\s+(highest|lowest)/i)
     || instructions.match(/position (\d+)/i);
   const dirMatch = instructions.match(/(highest|lowest)/i);
+  if (!posMatch || !dirMatch) throw new Error(`Could not parse instructions: ${instructions}`);
 
-  if (!colMatch || !posMatch || !dirMatch) throw new Error(`Could not parse instructions: ${instructions}`);
-
-  const sortColumn = colMatch[1].trim();
   const targetPosition = parseInt(posMatch[1]);
   const direction = dirMatch[1].toLowerCase();
 
-  // Click column header to sort
-  const header = page.locator("th", { hasText: sortColumn });
-  await header.click();
+  // Click "Annual Compensation" header to sort (component handles hourly conversion)
+  const header = page.locator("th", { hasText: "Annual Compensation" });
+  await header.click(); // ascending (lowest first)
   if (direction === "highest") {
-    await header.click();
+    await header.click(); // descending (highest first)
   }
 
   // Navigate to correct page (5 rows per page)
@@ -75,26 +76,24 @@ async function solveTableSort(page: Page): Promise<string> {
   return name.trim();
 }
 
+/**
+ * Form Fill: Read employee fields across multiple disclosure mechanisms
+ * (tabs, expandable sections, tooltips) and submit comma-separated values.
+ */
 async function solveFormFill(page: Page): Promise<string> {
   await page.waitForSelector("[data-field]");
   const instructions = await getInstructions(page);
 
-  // Match field names across instruction variants:
-  // V0: "...separated by a comma: email, city. Note:..."
-  // V1: "...What are their department, startDate? Provide..."
-  // V2: "...submit (comma-delimited): email, city. Some..."
-  // V3: "...joined by commas: email, city. Check..."
-  const match = instructions.match(/:\s*([a-zA-Z ,]+?)\.?\s*(?:Note|You|Some|Check)/i)
+  // Parse field names from instructions
+  const match = instructions.match(/:\s*([a-zA-Z ,]+?)\.\s/i)
     || instructions.match(/\btheir\s+(.+?)\?/i);
 
   let fieldNames: string[];
   if (match) {
     fieldNames = match[1].split(",").map((f) => f.trim().toLowerCase());
   } else {
-    // Fallback: look for known field names near commas
     const allFields = ["name", "email", "department", "role", "salary", "city", "start date", "startdate"];
     fieldNames = allFields.filter((f) => instructions.toLowerCase().includes(f));
-    // Only keep the ones that are in a comma-separated context
     if (fieldNames.length === 0) throw new Error(`Could not parse fields from: ${instructions}`);
   }
 
@@ -104,23 +103,64 @@ async function solveFormFill(page: Page): Promise<string> {
     startdate: "startDate",
   };
 
-  // Click "Details" toggle to reveal hidden fields
-  const detailsToggle = page.locator("[data-toggle-details]");
-  if (await detailsToggle.isVisible()) {
-    await detailsToggle.click();
-    await page.waitForSelector("[data-details-panel]");
-  }
+  // Check if we're in multi-disclosure mode (Profile/Contact tabs)
+  const hasFormTabs = await page.locator("[data-form-tab]").count() > 0;
 
-  const values: string[] = [];
-  for (const field of fieldNames) {
-    const key = labelToKey[field] || field;
-    const dd = page.locator(`[data-field="${key}"]`);
-    const value = await dd.textContent();
-    if (!value) throw new Error(`Could not read field: ${key}`);
-    values.push(value.trim());
-  }
+  if (hasFormTabs) {
+    // Reveal all hidden content on Profile tab (default tab)
+    const expandBtn = page.locator("[data-expand-details]");
+    if (await expandBtn.isVisible()) {
+      await expandBtn.click();
+      await page.waitForSelector('[data-field="role"]');
+    }
 
-  return values.join(", ");
+    const tooltipTrigger = page.locator("[data-tooltip-trigger]");
+    if (await tooltipTrigger.isVisible()) {
+      await tooltipTrigger.click();
+      await page.waitForSelector('[data-field="startDate"]');
+    }
+
+    // Read all Profile-tab fields
+    const fieldValues: Record<string, string> = {};
+    for (const key of ["name", "email", "department", "salary", "role", "startDate"]) {
+      const el = page.locator(`[data-field="${key}"]`);
+      if (await el.count() > 0) {
+        fieldValues[key] = (await el.textContent())?.trim() ?? "";
+      }
+    }
+
+    // Switch to Contact tab to read city
+    await page.locator('[data-form-tab="contact"]').click();
+    await page.waitForSelector("[data-contact-panel]");
+    fieldValues["city"] = (await page.locator('[data-field="city"]').textContent())?.trim() ?? "";
+
+    // Return requested fields in order
+    const values: string[] = [];
+    for (const field of fieldNames) {
+      const key = labelToKey[field] || field;
+      const value = fieldValues[key];
+      if (!value) throw new Error(`Could not read field: ${key}`);
+      values.push(value);
+    }
+    return values.join(", ");
+  } else {
+    // Legacy mode: "Details" toggle
+    const detailsToggle = page.locator("[data-toggle-details]");
+    if (await detailsToggle.isVisible()) {
+      await detailsToggle.click();
+      await page.waitForSelector("[data-details-panel]");
+    }
+
+    const values: string[] = [];
+    for (const field of fieldNames) {
+      const key = labelToKey[field] || field;
+      const dd = page.locator(`[data-field="${key}"]`);
+      const value = await dd.textContent();
+      if (!value) throw new Error(`Could not read field: ${key}`);
+      values.push(value.trim());
+    }
+    return values.join(", ");
+  }
 }
 
 async function solveDropdownSelect(page: Page): Promise<string> {
@@ -167,11 +207,16 @@ async function solveDropdownSelect(page: Page): Promise<string> {
   return targetName;
 }
 
+/**
+ * Tab Navigation: 2-level decision tree across tabs.
+ * Check key1 in tab1 against threshold1. If above, check key2 in tab2
+ * against threshold2. Three possible leaf results.
+ */
 async function solveTabNavigation(page: Page): Promise<string> {
   await page.waitForSelector("[data-tab]");
   const instructions = await getInstructions(page);
 
-  // Get actual tab labels from the page to distinguish tabs from keys
+  // Get tab labels from the page
   const tabElements = await page.locator("[data-tab]").all();
   const tabLabels = new Set<string>();
   for (const el of tabElements) {
@@ -179,45 +224,64 @@ async function solveTabNavigation(page: Page): Promise<string> {
     if (label) tabLabels.add(label);
   }
 
-  // Extract all quoted strings and threshold number
+  // Extract all quoted strings (11 total, with conditionKey repeated at index 8)
   const quoted = [...instructions.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  const threshMatch = instructions.match(/(?:above|exceeds|greater than|against)\s+(\d+)/i);
-  if (quoted.length < 6 || !threshMatch) throw new Error(`Could not parse instructions: ${instructions}`);
+  if (quoted.length < 11) throw new Error(`Expected 11 quoted strings, got ${quoted.length}: ${instructions}`);
 
-  const threshold = parseInt(threshMatch[1]);
+  // Group into semantic pairs — within each pair, identify tab vs key
+  const parsePair = (a: string, b: string) => {
+    if (tabLabels.has(a)) return { tab: a, key: b };
+    return { tab: b, key: a };
+  };
 
-  // First two quoted strings are the condition pair (key/tab in either order depending on variant)
-  let condKey: string, condTab: string;
-  if (tabLabels.has(quoted[0])) {
-    condTab = quoted[0];
-    condKey = quoted[1];
-  } else {
-    condKey = quoted[0];
-    condTab = quoted[1];
-  }
+  const condPair = parsePair(quoted[0], quoted[1]);          // First condition
+  const secCondPair = parsePair(quoted[2], quoted[3]);        // Second condition
+  const aboveAbovePair = parsePair(quoted[4], quoted[5]);     // Result: above + above
+  const aboveBelowPair = parsePair(quoted[6], quoted[7]);     // Result: above + below
+  // quoted[8] is repeat of conditionKey — skip
+  const belowPair = parsePair(quoted[9], quoted[10]);         // Result: below
 
-  // Remaining pairs are always key, tab
-  const [aboveKey, aboveTab, belowKey, belowTab] = quoted.slice(2);
+  // Extract threshold numbers (first two occurrences after threshold keywords)
+  const threshMatches = [...instructions.matchAll(
+    /(?:above|exceeds?|against|greater than|Compare it to)\s+(\d+)/gi
+  )];
+  if (threshMatches.length < 2) throw new Error(`Could not find 2 thresholds: ${instructions}`);
+  const threshold1 = parseInt(threshMatches[0][1]);
+  const threshold2 = parseInt(threshMatches[1][1]);
 
-  // Navigate to the condition tab and read the value
-  await page.locator(`[data-tab="${condTab}"]`).click();
-  const condValueEl = page.locator(`[data-value="${condKey}"]`);
-  await condValueEl.waitFor({ state: "visible" });
-  const condValueText = await condValueEl.textContent();
-  if (!condValueText) throw new Error(`Could not read value for: ${condKey}`);
-
-  const numericValue = parseNumericFromText(condValueText.trim());
+  // Step 1: Navigate to first condition tab and read value
+  await page.locator(`[data-tab="${condPair.tab}"]`).click();
+  const condEl = page.locator(`[data-value="${condPair.key}"]`);
+  await condEl.waitFor({ state: "visible" });
+  const condText = await condEl.textContent();
+  if (!condText) throw new Error(`Could not read value for: ${condPair.key}`);
+  const condValue = parseNumericFromText(condText.trim());
 
   let resultTab: string;
   let resultKey: string;
-  if (numericValue > threshold) {
-    resultTab = aboveTab;
-    resultKey = aboveKey;
+
+  if (condValue > threshold1) {
+    // Step 2: Navigate to second condition tab and read value
+    await page.locator(`[data-tab="${secCondPair.tab}"]`).click();
+    const secCondEl = page.locator(`[data-value="${secCondPair.key}"]`);
+    await secCondEl.waitFor({ state: "visible" });
+    const secCondText = await secCondEl.textContent();
+    if (!secCondText) throw new Error(`Could not read value for: ${secCondPair.key}`);
+    const secCondValue = parseNumericFromText(secCondText.trim());
+
+    if (secCondValue > threshold2) {
+      resultTab = aboveAbovePair.tab;
+      resultKey = aboveAbovePair.key;
+    } else {
+      resultTab = aboveBelowPair.tab;
+      resultKey = aboveBelowPair.key;
+    }
   } else {
-    resultTab = belowTab;
-    resultKey = belowKey;
+    resultTab = belowPair.tab;
+    resultKey = belowPair.key;
   }
 
+  // Step 3: Navigate to result tab and read value
   await page.locator(`[data-tab="${resultTab}"]`).click();
   const resultEl = page.locator(`[data-value="${resultKey}"]`);
   await resultEl.waitFor({ state: "visible" });
@@ -237,18 +301,51 @@ function parseNumericFromText(text: string): number {
   return 0;
 }
 
+/**
+ * Filter Search: CSS grid cards + "Load More" button.
+ * Load all employees, apply filter conditions, compute aggregation.
+ */
 async function solveFilterSearch(page: Page): Promise<string> {
-  await page.waitForSelector("table tbody tr");
+  await page.waitForSelector("[data-employee-card]");
   const instructions = await getInstructions(page);
 
-  // Parse conditions: all variants contain field = "value" patterns
+  // Click "Load More" until all employees are visible
+  while (true) {
+    const loadMoreBtn = page.locator("[data-load-more]");
+    if (await loadMoreBtn.count() === 0) break;
+    await loadMoreBtn.click();
+    await page.waitForTimeout(100);
+  }
+
+  // Read all employee cards
+  const cards = page.locator("[data-employee-card]");
+  const cardCount = await cards.count();
+
+  interface EmployeeRow { name: string; department: string; salary: number; city: string }
+  const employees: EmployeeRow[] = [];
+
+  for (let i = 0; i < cardCount; i++) {
+    const card = cards.nth(i);
+    const name = (await card.getAttribute("data-employee-card")) ?? "";
+    const department = (await card.locator("[data-emp-department]").textContent())?.trim() ?? "";
+    const salaryStr = (await card.locator("[data-emp-salary]").textContent())?.trim() ?? "0";
+    const city = (await card.locator("[data-emp-city]").textContent())?.trim() ?? "";
+    employees.push({
+      name,
+      department,
+      salary: parseInt(salaryStr.replace(/[$,]/g, "")),
+      city,
+    });
+  }
+
+  // Parse filter conditions
   const conditions: Array<{ field: string; value: string }> = [];
   const condMatches = [...instructions.matchAll(/(\w+)\s*=\s*"(.+?)"/g)];
   for (const m of condMatches) {
     conditions.push({ field: m[1], value: m[2] });
   }
 
-  // Determine aggregation from instruction keywords
+  // Determine aggregation
   let aggregation: "count" | "total salary" | "average salary";
   if (instructions.match(/\b(?:count|how many|total count)\b/i)) {
     aggregation = "count";
@@ -256,34 +353,6 @@ async function solveFilterSearch(page: Page): Promise<string> {
     aggregation = "average salary";
   } else {
     aggregation = "total salary";
-  }
-
-  // Read ALL employees from ALL pages
-  interface EmployeeRow { name: string; department: string; salary: number; city: string }
-  const employees: EmployeeRow[] = [];
-
-  const readCurrentPage = async () => {
-    const rows = page.locator("tbody tr");
-    const rowCount = await rows.count();
-    for (let i = 0; i < rowCount; i++) {
-      const cells = rows.nth(i).locator("td");
-      employees.push({
-        name: (await cells.nth(0).textContent())?.trim() ?? "",
-        department: (await cells.nth(1).textContent())?.trim() ?? "",
-        salary: parseInt(((await cells.nth(2).textContent())?.trim() ?? "0").replace(/[$,]/g, "")),
-        city: (await cells.nth(3).textContent())?.trim() ?? "",
-      });
-    }
-  };
-
-  await readCurrentPage();
-
-  while (true) {
-    const nextBtn = page.locator("[data-page-next]");
-    if (await nextBtn.isDisabled()) break;
-    await nextBtn.click();
-    await page.waitForTimeout(100);
-    await readCurrentPage();
   }
 
   const matching = employees.filter((e) => {
@@ -303,11 +372,15 @@ async function solveFilterSearch(page: Page): Promise<string> {
   }
 }
 
+/**
+ * Modal Interaction: Find product by category + price condition,
+ * open modal, wait for async load, switch to Details tab, read field.
+ */
 async function solveModalInteraction(page: Page): Promise<string> {
   await page.waitForSelector("[data-card-name]");
   const instructions = await getInstructions(page);
 
-  // All variants contain quoted category name and "lowest/highest price"
+  // Parse category, condition, and target field
   const catMatch = instructions.match(/"([^"]+)"\s*(?:category|products|section)/i)
     || instructions.match(/(?:category|categorized as)\s*"([^"]+)"/i);
   const condMatch = instructions.match(/(lowest price|highest price)/i);
@@ -318,6 +391,7 @@ async function solveModalInteraction(page: Page): Promise<string> {
   const condition = condMatch[1].toLowerCase();
   const targetField = fieldMatch[1];
 
+  // Find cards in target category
   const allCards = page.locator("[data-card-category]");
   const cardCount = await allCards.count();
 
@@ -339,8 +413,18 @@ async function solveModalInteraction(page: Page): Promise<string> {
     ? categoryCards.reduce((min, c) => (c.price < min.price ? c : min), categoryCards[0])
     : categoryCards.reduce((max, c) => (c.price > max.price ? c : max), categoryCards[0]);
 
+  // Open modal
   await page.locator(`[data-card-name="${target.name}"]`).first().click();
   await page.waitForSelector("[data-modal]");
+
+  // Wait for async loading to complete (spinner disappears, tabs appear)
+  await page.waitForSelector("[data-modal-tab]", { timeout: 5000 });
+
+  // Click "Details" tab to reveal SKU/supplier
+  await page.locator('[data-modal-tab="details"]').click();
+  await page.waitForSelector('[data-modal-panel="details"]');
+
+  // Read the target field
   const fieldEl = page.locator(`[data-field="${targetField}"]`);
   const value = await fieldEl.textContent();
   if (!value) throw new Error(`Could not read field: ${targetField}`);
@@ -350,11 +434,15 @@ async function solveModalInteraction(page: Page): Promise<string> {
 
 // ─── Tier 2 Solvers ─────────────────────────────────────────────
 
+/**
+ * Multi-Step Wizard: Select order → apply discount (with budget check) →
+ * select shipping → compute final total. Handles budget backtracking.
+ */
 async function solveMultiStepWizard(page: Page): Promise<string> {
   await page.waitForSelector("[data-order-id]");
   const instructions = await getInstructions(page);
 
-  // All variants contain "highest/lowest subtotal", status in quotes, discount condition, shipping in quotes
+  // Parse conditions from instructions
   const orderCondMatch = instructions.match(/(highest subtotal|lowest subtotal)/i);
   const statusMatch = instructions.match(/"(Pending|Processing)"/);
   const discountCondMatch = instructions.match(/(highest discount percentage|lowest discount percentage)/i);
@@ -392,7 +480,7 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
   const targetOrder = statusOrders[0];
   await page.locator(`[data-select-order="${targetOrder.id}"]`).click();
 
-  // Step 2: Read discount codes
+  // Step 2: Read discount codes and sort by condition
   await page.waitForSelector("[data-discount-code]");
   const discountButtons = page.locator("[data-discount-code]");
   const discountCount = await discountButtons.count();
@@ -409,7 +497,20 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
   discounts.sort((a, b) =>
     discountCondition === "highest discount percentage" ? b.percent - a.percent : a.percent - b.percent
   );
-  await page.locator(`[data-discount-code="${discounts[0].code}"]`).click();
+
+  // Try discounts in order — backtrack if budget exceeded
+  for (let di = 0; di < discounts.length; di++) {
+    await page.locator(`[data-discount-code="${discounts[di].code}"]`).click();
+    await page.waitForTimeout(300);
+
+    // Check for budget error
+    if (await page.locator("[data-budget-error]").isVisible()) {
+      await page.locator("[data-back-to-step2]").click();
+      await page.waitForSelector("[data-discount-code]");
+      continue;
+    }
+    break;
+  }
 
   // Step 3: Select shipping
   await page.waitForSelector("[data-shipping]");
@@ -418,7 +519,7 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
   const shippingCost = parseFloat(shippingCostStr);
   await shippingBtn.click();
 
-  // Step 4: Compute answer
+  // Step 4: Compute answer from summary
   await page.waitForSelector("[data-field='subtotal']");
   const subtotalText = await page.locator("[data-field='subtotal']").textContent();
   if (!subtotalText) throw new Error("Could not read subtotal");
@@ -439,28 +540,85 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
   return finalTotal.toFixed(2);
 }
 
+/**
+ * Linked Data Lookup: Cross-reference tables with disambiguation.
+ * Instructions use first name only with a hint (department or salary).
+ */
 async function solveLinkedDataLookup(page: Page): Promise<string> {
   await page.waitForSelector("[data-table='employees']");
   await page.waitForSelector("[data-table='departments']");
   const instructions = await getInstructions(page);
 
-  // All variants contain the employee name in quotes
+  // Extract first name from instructions (in quotes)
   const empMatch = instructions.match(/"([^"]+)"/);
   if (!empMatch) throw new Error(`Could not parse employee: ${instructions}`);
-  const targetName = empMatch[1];
+  const firstName = empMatch[1];
 
-  // Get employee's department ID
-  const empRow = page.locator(`[data-employee-name="${targetName}"]`);
-  const deptId = (await empRow.locator("[data-dept-id]").textContent())?.trim();
-  if (!deptId) throw new Error(`Could not read dept ID for ${targetName}`);
+  // Find all employees whose name starts with the first name
+  const allEmpRows = page.locator("[data-employee-name]");
+  const empCount = await allEmpRows.count();
 
-  if (instructions.match(/expand|department's/i)) {
-    // Department field task
+  interface EmpCandidate { fullName: string; deptId: string; salary: number }
+  const candidates: EmpCandidate[] = [];
+
+  for (let i = 0; i < empCount; i++) {
+    const row = allEmpRows.nth(i);
+    const fullName = (await row.getAttribute("data-employee-name")) ?? "";
+    if (fullName === firstName || fullName.startsWith(firstName + " ")) {
+      const deptId = (await row.locator("[data-dept-id]").textContent())?.trim() ?? "";
+      const salaryStr = (await row.locator("td").nth(3).textContent())?.trim() ?? "0";
+      const salary = parseInt(salaryStr.replace(/[$,]/g, ""));
+      candidates.push({ fullName, deptId, salary });
+    }
+  }
+
+  if (candidates.length === 0) throw new Error(`No employee found with first name: ${firstName}`);
+
+  // Disambiguate if multiple candidates
+  let targetEmp: EmpCandidate;
+  if (candidates.length === 1) {
+    targetEmp = candidates[0];
+  } else {
+    // Try department hint: "the one in Engineering"
+    const deptHintMatch = instructions.match(/the one in (\w+)/i);
+    if (deptHintMatch) {
+      const deptName = deptHintMatch[1];
+      // Find dept ID by looking up department name in the departments table
+      const deptExpandBtns = page.locator("[data-expand-dept]");
+      const deptBtnCount = await deptExpandBtns.count();
+      let targetDeptId = "";
+      for (let i = 0; i < deptBtnCount; i++) {
+        const btn = deptExpandBtns.nth(i);
+        const btnText = (await btn.textContent())?.trim() ?? "";
+        if (btnText.includes(deptName)) {
+          targetDeptId = (await btn.getAttribute("data-expand-dept")) ?? "";
+          break;
+        }
+      }
+      targetEmp = candidates.find((c) => c.deptId === targetDeptId) ?? candidates[0];
+    } else {
+      // Try salary hint: "with salary above $100K" or "with salary below $100K"
+      const salaryHintMatch = instructions.match(/salary (above|below) \$100K/i);
+      if (salaryHintMatch) {
+        const dir = salaryHintMatch[1].toLowerCase();
+        targetEmp = candidates.find((c) =>
+          dir === "above" ? c.salary >= 100000 : c.salary < 100000
+        ) ?? candidates[0];
+      } else {
+        targetEmp = candidates[0];
+      }
+    }
+  }
+
+  const deptId = targetEmp.deptId;
+
+  if (instructions.match(/expand/i)) {
+    // Department field task — expand the department row
     const expandBtn = page.locator(`[data-expand-dept="${deptId}"]`);
     await expandBtn.click();
     await page.waitForSelector(`[data-dept-details="${deptId}"]`);
 
-    // Extract target field — look for known field names
+    // Determine target field from instructions
     let targetField: string;
     if (instructions.includes("manager")) targetField = "manager";
     else if (instructions.includes("location")) targetField = "location";
@@ -673,18 +831,24 @@ async function solveDataDashboard(page: Page): Promise<string> {
   return (Math.round(totalProfit * 100) / 100).toFixed(2);
 }
 
+/**
+ * Constraint Solver: Horizontally scrollable product cards + popover.
+ * Read constraints from panels, filter items, optimize.
+ */
 async function solveConstraintSolver(page: Page): Promise<string> {
-  await page.waitForSelector("[data-table='inventory']");
+  await page.waitForSelector("[data-inventory-strip]");
   await page.waitForSelector("[data-panel='requirements']");
   await page.waitForSelector("[data-panel='budget']");
   await page.waitForSelector("[data-panel='exclusions']");
 
+  // Open the "Additional Constraints" popover
   const advancedToggle = page.locator("[data-toggle-advanced]");
   if (await advancedToggle.isVisible()) {
     await advancedToggle.click();
     await page.waitForSelector("[data-panel='advanced']");
   }
 
+  // Read constraints from each panel
   const readConstraints = async (panelName: string): Promise<string[]> => {
     const els = page.locator(`[data-panel='${panelName}'] [data-constraint] span:last-child`);
     const count = await els.count();
@@ -700,6 +864,7 @@ async function solveConstraintSolver(page: Page): Promise<string> {
   const exclusions = await readConstraints("exclusions");
   const advancedConstraints = await readConstraints("advanced");
 
+  // Parse constraint values
   const allowedCategories: string[] = [];
   let mustBeInStock = false;
   let maxPrice = Infinity;
@@ -732,24 +897,26 @@ async function solveConstraintSolver(page: Page): Promise<string> {
     if (weightMatch) maxWeight = parseFloat(weightMatch[1]);
   }
 
+  // Read optimization target
   const optimizationText = (await page.locator("[data-optimization]").textContent())?.trim() ?? "";
   const optField = optimizationText.includes("lowest price") ? "price" : "weight";
 
-  const rows = page.locator("[data-table='inventory'] tbody tr");
-  const rowCount = await rows.count();
+  // Read all items from cards in the horizontal scroll strip
+  const itemCards = page.locator("[data-item-card]");
+  const itemCount = await itemCards.count();
 
   interface ItemInfo { name: string; category: string; price: number; rating: number; supplier: string; inStock: boolean; weight: number }
   const qualifying: ItemInfo[] = [];
 
-  for (let i = 0; i < rowCount; i++) {
-    const row = rows.nth(i);
-    const name = (await row.getAttribute("data-item-name")) ?? "";
-    const category = (await row.locator("[data-item-category]").textContent())?.trim() ?? "";
-    const priceStr = (await row.locator("[data-item-price]").textContent())?.trim() ?? "0";
-    const ratingStr = (await row.locator("[data-item-rating]").textContent())?.trim() ?? "0";
-    const supplier = (await row.locator("[data-item-supplier]").textContent())?.trim() ?? "";
-    const stockStr = (await row.locator("[data-item-stock]").textContent())?.trim() ?? "";
-    const weightStr = (await row.locator("[data-item-weight]").textContent())?.trim() ?? "0";
+  for (let i = 0; i < itemCount; i++) {
+    const card = itemCards.nth(i);
+    const name = (await card.getAttribute("data-item-card")) ?? "";
+    const category = (await card.locator("[data-item-category]").textContent())?.trim() ?? "";
+    const priceStr = (await card.locator("[data-item-price]").textContent())?.trim() ?? "0";
+    const ratingStr = (await card.locator("[data-item-rating]").textContent())?.trim() ?? "0";
+    const supplier = (await card.locator("[data-item-supplier]").textContent())?.trim() ?? "";
+    const stockStr = (await card.locator("[data-item-stock]").textContent())?.trim() ?? "";
+    const weightStr = (await card.locator("[data-item-weight]").textContent())?.trim() ?? "0";
 
     const price = parseFloat(priceStr.replace("$", ""));
     const rating = parseFloat(ratingStr);
@@ -774,72 +941,116 @@ async function solveConstraintSolver(page: Page): Promise<string> {
 
 // ─── Tier 4 Solvers ─────────────────────────────────────────────
 
+/**
+ * Calculation Audit: Receipt cards with running totals.
+ * Verify line-item math AND running total correctness. Error propagation
+ * means once a row has wrong math, all subsequent running totals are wrong.
+ */
 async function solveCalculationAudit(page: Page): Promise<string> {
-  await page.waitForSelector("[data-table='expenses']");
+  await page.waitForSelector("[data-expense-card]");
 
-  // Read all line items and verify each row's math
-  const rows = page.locator("[data-table='expenses'] tbody tr");
-  const rowCount = await rows.count();
+  // Read all expense cards in order
+  const cards = page.locator("[data-expense-card]");
+  const cardCount = await cards.count();
+
+  const hasRunningTotals = await page.locator("[data-exp-running-total]").count() > 0;
 
   let correctSum = 0;
+  let runningStillValid = true;
+  let expectedRunning = 0;
 
-  for (let i = 0; i < rowCount; i++) {
-    const row = rows.nth(i);
-    const qtyStr = (await row.locator("[data-quantity]").textContent())?.trim() ?? "0";
-    const unitPriceStr = (await row.locator("[data-unit-price]").textContent())?.trim() ?? "0";
-    const displayedTotalStr = (await row.locator("[data-displayed-total]").textContent())?.trim() ?? "0";
+  for (let i = 0; i < cardCount; i++) {
+    const card = cards.nth(i);
+    const qtyStr = (await card.locator("[data-exp-qty]").textContent())?.trim() ?? "0";
+    const unitPriceStr = (await card.locator("[data-exp-unit-price]").textContent())?.trim() ?? "0";
+    const displayedTotalStr = (await card.locator("[data-exp-total]").textContent())?.trim() ?? "0";
 
     const qty = parseInt(qtyStr);
     const unitPrice = parseFloat(unitPriceStr.replace("$", ""));
     const displayedTotal = parseFloat(displayedTotalStr.replace("$", ""));
     const expectedTotal = Math.round(qty * unitPrice * 100) / 100;
+    const lineCorrect = Math.abs(displayedTotal - expectedTotal) < 0.001;
 
-    // Only include rows where displayed total matches the expected calculation
-    if (Math.abs(displayedTotal - expectedTotal) < 0.001) {
-      correctSum += displayedTotal;
+    if (hasRunningTotals) {
+      const runningTotalStr = (await card.locator("[data-exp-running-total]").textContent())?.trim() ?? "0";
+      const runningTotal = parseFloat(runningTotalStr.replace("$", ""));
+      expectedRunning = Math.round((expectedRunning + displayedTotal) * 100) / 100;
+      const runningCorrect = Math.abs(runningTotal - expectedRunning) < 0.001;
+
+      if (!lineCorrect) runningStillValid = false;
+
+      if (lineCorrect && runningStillValid && runningCorrect) {
+        correctSum += displayedTotal;
+      }
+    } else {
+      // Legacy: only check line math
+      if (lineCorrect) {
+        correctSum += displayedTotal;
+      }
     }
   }
 
   return (Math.round(correctSum * 100) / 100).toFixed(2);
 }
 
+/**
+ * Red Herring: Tab-based UI with Summary Report (wrong) and Raw Data Source (correct).
+ * Must use raw data metric cards, not the summary table.
+ */
 async function solveRedHerring(page: Page): Promise<string> {
-  await page.waitForSelector("[data-table='summary']");
   const instructions = await getInstructions(page);
 
-  // Click the "View Raw Data" toggle
-  const toggleRaw = page.locator("[data-toggle-raw]");
-  await toggleRaw.click();
-  await page.waitForSelector("[data-table='raw']");
+  // Click the "Raw Data Source" tab
+  await page.locator('[data-report-tab="raw"]').click();
+  await page.waitForSelector("[data-raw-data-panel]");
 
-  // All variants contain the metric name in quotes
+  // Extract metric name from instructions (in quotes)
   const metricMatch = instructions.match(/"([^"]+)"/);
   if (!metricMatch) throw new Error(`Could not parse metric: ${instructions}`);
   const targetMetric = metricMatch[1];
 
-  const targetRow = page.locator(`[data-table='raw'] [data-metric="${targetMetric}"]`);
+  // Find the target metric card
+  const metricCard = page.locator(`[data-metric-card="${targetMetric}"]`);
 
-  // Detect sum vs difference from instruction keywords
+  // Detect sum vs difference
   if (instructions.match(/\bsum\b|add|combined/i)) {
+    // Sum operation
     const quarterMatches = [...instructions.matchAll(/Q(\d)/g)].map((m) => `Q${m[1]}`);
     const quarters = [...new Set(quarterMatches)];
 
     let total = 0;
     for (const q of quarters) {
-      const cell = targetRow.locator(`[data-q="${q}"]`);
+      const cell = metricCard.locator(`[data-metric-q="${q}"]`);
       const valStr = (await cell.textContent())?.trim() ?? "0";
       total += parseInt(valStr.replace(/,/g, ""));
     }
     return String(total);
   } else {
-    // Difference
-    const diffMatch = instructions.match(/(Q\d)\s*(?:minus|-|from)\s*(Q\d)/i)
-      || instructions.match(/(Q\d)\s+and\s+(Q\d)/i);
-    if (!diffMatch) throw new Error(`Could not parse difference: ${instructions}`);
-    const [, q1, q2] = diffMatch;
+    // Difference operation
+    let q1: string;
+    let q2: string;
 
-    const v1Str = (await targetRow.locator(`[data-q="${q1}"]`).textContent())?.trim() ?? "0";
-    const v2Str = (await targetRow.locator(`[data-q="${q2}"]`).textContent())?.trim() ?? "0";
+    // Handle "Subtract X from Y" specially (reverses operand order)
+    const subtractFromMatch = instructions.match(/Subtract\s+(Q\d)\s+from\s+(Q\d)/i);
+    if (subtractFromMatch) {
+      q1 = subtractFromMatch[2]; // minuend (subtracted FROM)
+      q2 = subtractFromMatch[1]; // subtrahend
+    } else {
+      const diffMatch = instructions.match(/(Q\d)\s*(?:minus|-)\s*(Q\d)/i)
+        || instructions.match(/(Q\d)\s+and\s+(Q\d)/i);
+      if (diffMatch) {
+        q1 = diffMatch[1];
+        q2 = diffMatch[2];
+      } else {
+        // Fallback: take first two quarters in order
+        const qs = [...instructions.matchAll(/Q(\d)/g)].map((m) => `Q${m[1]}`);
+        q1 = qs[0];
+        q2 = qs[1];
+      }
+    }
+
+    const v1Str = (await metricCard.locator(`[data-metric-q="${q1}"]`).textContent())?.trim() ?? "0";
+    const v2Str = (await metricCard.locator(`[data-metric-q="${q2}"]`).textContent())?.trim() ?? "0";
     return String(parseInt(v1Str.replace(/,/g, "")) - parseInt(v2Str.replace(/,/g, "")));
   }
 }

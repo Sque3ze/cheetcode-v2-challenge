@@ -6,13 +6,14 @@ import { testAttr } from "../../../../lib/test-attrs";
 interface Employee {
   name: string;
   department: string;
-  salary: number;
-  startDate: string;
+  type: "Salary" | "Hourly";
+  salary?: number;
+  hourlyRate?: number;
+  hoursPerWeek?: number;
 }
 
 interface TableSortPageData {
   employees: Employee[];
-  sortColumn: string;
   sortDirection: "highest" | "lowest";
   targetPosition: number;
   targetField: string;
@@ -24,7 +25,14 @@ interface Props {
   answerRef: MutableRefObject<string>;
 }
 
-type SortKey = "name" | "department" | "salary" | "startDate";
+type SortKey = "name" | "department" | "compensation" | "type";
+
+function getAnnualComp(emp: Employee): number {
+  if (emp.type === "Hourly" && emp.hourlyRate && emp.hoursPerWeek) {
+    return emp.hourlyRate * emp.hoursPerWeek * 52;
+  }
+  return emp.salary ?? 0;
+}
 
 export default function TableSortChallenge({ pageData, answerRef }: Props) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -38,10 +46,10 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
   if (sortKey) {
     employees.sort((a, b) => {
       let cmp = 0;
-      if (sortKey === "salary") cmp = a.salary - b.salary;
-      else if (sortKey === "startDate") cmp = a.startDate.localeCompare(b.startDate);
+      if (sortKey === "compensation") cmp = getAnnualComp(a) - getAnnualComp(b);
       else if (sortKey === "name") cmp = a.name.localeCompare(b.name);
       else if (sortKey === "department") cmp = a.department.localeCompare(b.department);
+      else if (sortKey === "type") cmp = a.type.localeCompare(b.type);
       return sortAsc ? cmp : -cmp;
     });
   }
@@ -61,8 +69,7 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
     const globalIndex = currentPage * perPage + pageIndex;
     setSelectedRow(globalIndex);
     const emp = employees[globalIndex];
-    const value = emp[pageData.targetField as keyof Employee];
-    const newAnswer = String(value);
+    const newAnswer = emp.name;
     setAnswer(newAnswer);
     answerRef.current = newAnswer;
   };
@@ -77,8 +84,8 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
   const columns: { key: SortKey; label: string }[] = [
     { key: "name", label: "Name" },
     { key: "department", label: "Department" },
-    { key: "salary", label: "Salary" },
-    { key: "startDate", label: "Start Date" },
+    { key: "type", label: "Type" },
+    { key: "compensation", label: "Annual Compensation" },
   ];
 
   return (
@@ -111,8 +118,12 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
                 >
                   <td className="px-4 py-3">{emp.name}</td>
                   <td className="px-4 py-3 text-gray-400">{emp.department}</td>
-                  <td className="px-4 py-3 font-mono">${emp.salary.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-gray-400">{emp.startDate}</td>
+                  <td className="px-4 py-3 text-gray-400">{emp.type}</td>
+                  <td className="px-4 py-3 font-mono">
+                    {emp.type === "Hourly"
+                      ? `$${emp.hourlyRate?.toFixed(2)}/hr \u00d7 ${emp.hoursPerWeek} hrs/wk`
+                      : `$${(emp.salary ?? 0).toLocaleString()}`}
+                  </td>
                 </tr>
               );
             })}

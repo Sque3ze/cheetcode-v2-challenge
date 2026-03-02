@@ -1,10 +1,11 @@
 /**
- * Tier 1 Challenge: Tab Navigation (Moderate Rework)
+ * Tier 1 Challenge: Tab Navigation (Round 3 — Chained Decision Tree)
  *
- * Changes: Cross-tab computation required.
- * "Find the Growth Rate in Financials. If above 50%, submit the Region
- * from Technical. Otherwise submit the Headquarters from Overview."
- * Forces multi-tab navigation + conditional reasoning.
+ * 2-level decision tree: Check key1 in tab1. If above threshold1,
+ * check key2 in tab2. If above threshold2, submit key3 from tab3.
+ * Otherwise submit key4 from tab4. If key1 was below threshold1,
+ * submit key5 from tab5.
+ * Requires 3-4 tab navigations with branching.
  */
 
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
@@ -20,8 +21,15 @@ interface TabNavigationPageData {
   conditionTab: string;
   conditionKey: string;
   conditionThreshold: number;
-  ifAboveTab: string;
-  ifAboveKey: string;
+  // Second level — only evaluated if first condition is above
+  secondConditionTab: string;
+  secondConditionKey: string;
+  secondConditionThreshold: number;
+  // Leaf nodes
+  ifAboveAboveTab: string;
+  ifAboveAboveKey: string;
+  ifAboveBelowTab: string;
+  ifAboveBelowKey: string;
   ifBelowTab: string;
   ifBelowKey: string;
   variantIndex: number;
@@ -34,12 +42,21 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
   description: "Navigate tabs and use conditional logic to find the right value.",
 
   instructions: (pageData) => {
-    const { conditionKey, conditionTab, conditionThreshold, ifAboveKey, ifAboveTab, ifBelowKey, ifBelowTab } = pageData;
+    const {
+      conditionKey, conditionTab, conditionThreshold,
+      secondConditionKey, secondConditionTab, secondConditionThreshold,
+      ifAboveAboveKey, ifAboveAboveTab,
+      ifAboveBelowKey, ifAboveBelowTab,
+      ifBelowKey, ifBelowTab,
+    } = pageData;
     const variants = [
-      `Find the "${conditionKey}" value in the "${conditionTab}" tab. If the numeric value is above ${conditionThreshold}, submit the "${ifAboveKey}" from the "${ifAboveTab}" tab. Otherwise, submit the "${ifBelowKey}" from the "${ifBelowTab}" tab.`,
-      `Navigate to "${conditionTab}" and check "${conditionKey}". When it exceeds ${conditionThreshold}, your answer is "${ifAboveKey}" from "${ifAboveTab}"; if not, answer with "${ifBelowKey}" from "${ifBelowTab}".`,
-      `In the "${conditionTab}" tab, locate "${conditionKey}". Compare it against ${conditionThreshold}. Above? Submit "${ifAboveKey}" (found in "${ifAboveTab}"). Below or equal? Submit "${ifBelowKey}" (found in "${ifBelowTab}").`,
-      `Check the "${conditionTab}" section for "${conditionKey}". If that number is greater than ${conditionThreshold}, provide the "${ifAboveKey}" value from "${ifAboveTab}". Otherwise provide "${ifBelowKey}" from "${ifBelowTab}".`,
+      `Check "${conditionKey}" in the "${conditionTab}" tab. If above ${conditionThreshold}, then check "${secondConditionKey}" in "${secondConditionTab}". If that is above ${secondConditionThreshold}, submit "${ifAboveAboveKey}" from "${ifAboveAboveTab}". Otherwise submit "${ifAboveBelowKey}" from "${ifAboveBelowTab}". If "${conditionKey}" was not above ${conditionThreshold}, submit "${ifBelowKey}" from "${ifBelowTab}".`,
+
+      `Navigate to "${conditionTab}" and read "${conditionKey}". When it exceeds ${conditionThreshold}, go to "${secondConditionTab}" and check "${secondConditionKey}" against ${secondConditionThreshold}. Above? Answer with "${ifAboveAboveKey}" from "${ifAboveAboveTab}". Below or equal? Answer with "${ifAboveBelowKey}" from "${ifAboveBelowTab}". If the first check ("${conditionKey}") was ${conditionThreshold} or less, your answer is "${ifBelowKey}" from "${ifBelowTab}".`,
+
+      `First, find "${conditionKey}" in "${conditionTab}". Compare it to ${conditionThreshold}. If greater, proceed to "${secondConditionTab}" and evaluate "${secondConditionKey}" against ${secondConditionThreshold}: above means submit "${ifAboveAboveKey}" from "${ifAboveAboveTab}", otherwise "${ifAboveBelowKey}" from "${ifAboveBelowTab}". If the initial "${conditionKey}" was not above ${conditionThreshold}, submit "${ifBelowKey}" from "${ifBelowTab}".`,
+
+      `Look up "${conditionKey}" in the "${conditionTab}" section. If that number is greater than ${conditionThreshold}, check "${secondConditionKey}" in "${secondConditionTab}" next. Above ${secondConditionThreshold}? Provide "${ifAboveAboveKey}" from "${ifAboveAboveTab}". Not above? Provide "${ifAboveBelowKey}" from "${ifAboveBelowTab}". If "${conditionKey}" was ${conditionThreshold} or below from the start, provide "${ifBelowKey}" from "${ifBelowTab}".`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -53,8 +70,8 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
       { label: "Technical", keys: ["Stack", "Uptime", "API Version", "Region"] },
     ];
 
-    const numTabs = data.int(3, 4);
-    const selectedConfigs = data.pickN(tabConfigs, numTabs);
+    // Always use 4 tabs for enough branching targets
+    const selectedConfigs = data.pickN(tabConfigs, 4);
 
     const tabs: TabData[] = selectedConfigs.map((config) => ({
       label: config.label,
@@ -64,7 +81,7 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
       })),
     }));
 
-    // Pick a condition: use a numeric field as the threshold check
+    // Collect all numeric fields for condition checks
     const numericKeys: { tab: TabData; key: string; value: number }[] = [];
     for (const tab of tabs) {
       for (const item of tab.content) {
@@ -75,24 +92,52 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
       }
     }
 
+    // First condition
     const conditionEntry = data.pick(numericKeys);
     const conditionTab = conditionEntry.tab.label;
     const conditionKey = conditionEntry.key;
 
-    const isAbove = data.int(1, 10) <= 6;
-    const conditionThreshold = isAbove
+    // Bias toward first condition being above (so second branch is exercised)
+    const firstIsAbove = data.int(1, 10) <= 6;
+    const conditionThreshold = firstIsAbove
       ? Math.floor(conditionEntry.value - data.int(1, 10))
       : Math.ceil(conditionEntry.value + data.int(1, 10));
 
-    const otherTabs = tabs.filter((t) => t.label !== conditionEntry.tab.label);
-    const ifAboveTab = data.pick(otherTabs);
-    const ifAboveItem = data.pick(ifAboveTab.content);
-    const ifBelowTab = data.pick(otherTabs);
-    const ifBelowItem = data.pick(ifBelowTab.content);
+    // Second condition (from a different tab)
+    const secondCandidates = numericKeys.filter((n) => n.tab.label !== conditionEntry.tab.label);
+    const secondConditionEntry = data.pick(secondCandidates.length > 0 ? secondCandidates : numericKeys);
+    const secondConditionTab = secondConditionEntry.tab.label;
+    const secondConditionKey = secondConditionEntry.key;
 
-    const answer = conditionEntry.value > conditionThreshold
-      ? ifAboveItem.value
-      : ifBelowItem.value;
+    const secondIsAbove = data.int(1, 10) <= 5;
+    const secondConditionThreshold = secondIsAbove
+      ? Math.floor(secondConditionEntry.value - data.int(1, 10))
+      : Math.ceil(secondConditionEntry.value + data.int(1, 10));
+
+    // Leaf targets — each from a different tab if possible
+    const allTabs = tabs;
+    const pickLeaf = (exclude: string[]) => {
+      const candidates = allTabs.filter((t) => !exclude.includes(t.label));
+      const tab = candidates.length > 0 ? data.pick(candidates) : data.pick(allTabs);
+      const item = data.pick(tab.content);
+      return { tab: tab.label, key: item.key, value: item.value };
+    };
+
+    const leafAboveAbove = pickLeaf([conditionTab, secondConditionTab]);
+    const leafAboveBelow = pickLeaf([conditionTab, secondConditionTab, leafAboveAbove.tab]);
+    const leafBelow = pickLeaf([conditionTab]);
+
+    // Compute answer by following the decision tree
+    let answer: string;
+    if (conditionEntry.value > conditionThreshold) {
+      if (secondConditionEntry.value > secondConditionThreshold) {
+        answer = leafAboveAbove.value;
+      } else {
+        answer = leafAboveBelow.value;
+      }
+    } else {
+      answer = leafBelow.value;
+    }
 
     return {
       pageData: {
@@ -100,10 +145,15 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
         conditionTab,
         conditionKey,
         conditionThreshold,
-        ifAboveTab: ifAboveTab.label,
-        ifAboveKey: ifAboveItem.key,
-        ifBelowTab: ifBelowTab.label,
-        ifBelowKey: ifBelowItem.key,
+        secondConditionTab,
+        secondConditionKey,
+        secondConditionThreshold,
+        ifAboveAboveTab: leafAboveAbove.tab,
+        ifAboveAboveKey: leafAboveAbove.key,
+        ifAboveBelowTab: leafAboveBelow.tab,
+        ifAboveBelowKey: leafAboveBelow.key,
+        ifBelowTab: leafBelow.tab,
+        ifBelowKey: leafBelow.key,
         variantIndex,
       },
       answer,

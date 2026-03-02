@@ -22,6 +22,7 @@ interface FilterSearchPageData {
   filterConditions: Array<{ field: string; value: string }>;
   aggregation: "count" | "total salary" | "average salary";
   employeesPerPage: number;
+  initialVisibleCount: number;
   variantIndex: number;
 }
 
@@ -114,6 +115,7 @@ export const filterSearchChallenge: ChallengeDefinition<FilterSearchPageData> = 
         filterConditions,
         aggregation,
         employeesPerPage: 10,
+        initialVisibleCount: 12,
         variantIndex,
       },
       answer,

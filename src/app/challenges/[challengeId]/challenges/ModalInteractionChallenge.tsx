@@ -18,6 +18,7 @@ interface ModalInteractionPageData {
   targetField: string;
   targetCardName: string;
   targetCategory: string;
+  modalLoadDelay?: number;
 }
 
 interface Props {
@@ -27,11 +28,29 @@ interface Props {
 
 export default function ModalInteractionChallenge({ pageData, answerRef }: Props) {
   const [openCard, setOpenCard] = useState<CardData | null>(null);
+  const [modalLoaded, setModalLoaded] = useState(false);
+  const [modalTab, setModalTab] = useState<"overview" | "details">("overview");
   const [answer, setAnswer] = useState("");
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
+
+  // Async loading simulation when modal opens
+  useEffect(() => {
+    if (!openCard) {
+      setModalLoaded(false);
+      setModalTab("overview");
+      return;
+    }
+    const delay = pageData.modalLoadDelay ?? 0;
+    if (delay > 0) {
+      setModalLoaded(false);
+      const timer = setTimeout(() => setModalLoaded(true), delay);
+      return () => clearTimeout(timer);
+    }
+    setModalLoaded(true);
+  }, [openCard, pageData.modalLoadDelay]);
 
   return (
     <div>
@@ -57,7 +76,7 @@ export default function ModalInteractionChallenge({ pageData, answerRef }: Props
         ))}
       </div>
 
-      {/* Modal */}
+      {/* Modal with async loading + tabs */}
       {openCard && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -77,24 +96,73 @@ export default function ModalInteractionChallenge({ pageData, answerRef }: Props
                 &times;
               </button>
             </div>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-sm text-gray-400">Category</dt>
-                <dd>{openCard.category}</dd>
+
+            {/* Loading spinner */}
+            {!modalLoaded && (
+              <div className="flex items-center justify-center py-8" {...testAttr('modal-loading')}>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400" />
+                <span className="ml-3 text-sm text-gray-400">Loading details...</span>
               </div>
+            )}
+
+            {/* Modal content with tabs */}
+            {modalLoaded && (
               <div>
-                <dt className="text-sm text-gray-400">Price</dt>
-                <dd className="font-mono">${openCard.price.toFixed(2)}</dd>
+                {/* Tab bar inside modal */}
+                <div className="flex border-b border-gray-700 mb-4">
+                  <button
+                    onClick={() => setModalTab("overview")}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      modalTab === "overview"
+                        ? "text-white border-b-2 border-blue-500"
+                        : "text-gray-400 hover:text-gray-200"
+                    }`}
+                    {...testAttr('modal-tab', 'overview')}
+                  >
+                    Overview
+                  </button>
+                  <button
+                    onClick={() => setModalTab("details")}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      modalTab === "details"
+                        ? "text-white border-b-2 border-blue-500"
+                        : "text-gray-400 hover:text-gray-200"
+                    }`}
+                    {...testAttr('modal-tab', 'details')}
+                  >
+                    Details
+                  </button>
+                </div>
+
+                {/* Overview tab: category + price */}
+                {modalTab === "overview" && (
+                  <dl className="space-y-3" {...testAttr('modal-panel', 'overview')}>
+                    <div>
+                      <dt className="text-sm text-gray-400">Category</dt>
+                      <dd>{openCard.category}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-gray-400">Price</dt>
+                      <dd className="font-mono">${openCard.price.toFixed(2)}</dd>
+                    </div>
+                  </dl>
+                )}
+
+                {/* Details tab: SKU + supplier */}
+                {modalTab === "details" && (
+                  <dl className="space-y-3" {...testAttr('modal-panel', 'details')}>
+                    <div>
+                      <dt className="text-sm text-gray-400">SKU</dt>
+                      <dd className="font-mono" {...testAttr('field', 'sku')}>{openCard.sku}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-gray-400">Supplier</dt>
+                      <dd {...testAttr('field', 'supplier')}>{openCard.supplier}</dd>
+                    </div>
+                  </dl>
+                )}
               </div>
-              <div>
-                <dt className="text-sm text-gray-400">SKU</dt>
-                <dd className="font-mono" {...testAttr('field', 'sku')}>{openCard.sku}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-400">Supplier</dt>
-                <dd {...testAttr('field', 'supplier')}>{openCard.supplier}</dd>
-              </div>
-            </dl>
+            )}
           </div>
         </div>
       )}

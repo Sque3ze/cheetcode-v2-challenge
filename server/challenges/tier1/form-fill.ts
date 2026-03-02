@@ -1,18 +1,16 @@
 /**
- * Tier 1 Challenge: Form Fill (Minor Tweak)
+ * Tier 1 Challenge: Form Fill (Round 3 — Multiple Disclosure Mechanisms)
  *
- * Changes: Split profile into visible "Basic Info" and collapsed "Details" accordion.
- * At least one fieldsToFill is guaranteed to be in the collapsed section.
- * Forces an expand click.
+ * 3 fields across 3 different disclosure mechanisms:
+ * - Tab: A "Contact" tab alongside "Profile" — one field (e.g. city) is only there
+ * - Inline expand: A "[+] Show full details" link reveals one field (e.g. role)
+ * - Tooltip: Start date shown as "Joined: 2022" — clicking reveals full date "2022-03-15"
  */
 
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
 import type { ChallengeData } from "../../../src/lib/seed";
 
-/** Fields shown in Basic Info (always visible) */
-const BASIC_FIELDS = ["name", "email", "department"] as const;
-/** Fields hidden in Details accordion */
-const DETAIL_FIELDS = ["role", "city", "startDate"] as const;
+type DisclosureType = "tab" | "expand" | "tooltip";
 
 interface FormFillPageData {
   employee: {
@@ -25,24 +23,32 @@ interface FormFillPageData {
     startDate: string;
   };
   fieldsToFill: string[];
-  basicFields: string[];
-  detailFields: string[];
+  fieldDisclosures: Array<{ field: string; type: DisclosureType }>;
   variantIndex: number;
 }
+
+/** Fields always visible in Profile tab */
+const ALWAYS_VISIBLE = ["name", "email", "department", "salary"] as const;
+/** Fields that can be hidden behind disclosure mechanisms */
+const HIDEABLE_FIELDS: Array<{ field: string; disclosureType: DisclosureType }> = [
+  { field: "city", disclosureType: "tab" },        // Hidden in Contact tab
+  { field: "role", disclosureType: "expand" },      // Hidden behind expand
+  { field: "startDate", disclosureType: "tooltip" }, // Abbreviated, click to reveal
+];
 
 export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
   id: "tier1-form-fill",
   title: "Form Fill",
   tier: 1,
-  description: "Read employee details (some hidden) and fill out a form with specific values.",
+  description: "Read employee details (some hidden across tabs, expandable sections, and tooltips) and submit specific values.",
 
   instructions: (pageData) => {
     const fields = pageData.fieldsToFill.join(", ");
     const variants = [
-      `Read the employee profile below and submit the following fields separated by a comma: ${fields}. Note: some fields may be in the collapsed "Details" section.`,
-      `Look at the employee information. What are their ${fields}? Provide them comma-separated. You may need to expand the Details panel.`,
-      `From the profile data, extract and submit (comma-delimited): ${fields}. Some values are hidden under the Details accordion.`,
-      `The employee record shows various attributes. Submit these values joined by commas: ${fields}. Check both Basic Info and Details sections.`,
+      `Read the employee profile below and submit the following fields separated by a comma: ${fields}. Note: some fields are in other tabs, expandable sections, or abbreviated displays. Click to reveal full values.`,
+      `Look at the employee information. What are their ${fields}? Provide them comma-separated. Some data is in the Contact tab, some behind an expand link, and some abbreviated.`,
+      `From the profile data, extract and submit (comma-delimited): ${fields}. Check all tabs, expand any collapsed sections, and click abbreviated values to see full details.`,
+      `The employee record shows various attributes across tabs and expandable areas. Submit these values joined by commas: ${fields}. Explore all disclosure mechanisms.`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -51,10 +57,20 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
     const person = data.person();
     const variantIndex = data.int(0, 3);
 
-    // Guarantee at least one field from details section
-    const detailField = data.pick(DETAIL_FIELDS);
-    const basicField = data.pick(BASIC_FIELDS.filter((f) => f !== "name"));
-    const fieldsToFill = [basicField, detailField] as string[];
+    // Pick 3 fields: 1 visible + all 3 hidden fields
+    const visibleField = data.pick(ALWAYS_VISIBLE.filter((f) => f !== "name"));
+    const fieldsToFill = [
+      visibleField as string,
+      ...HIDEABLE_FIELDS.map((h) => h.field),
+    ];
+
+    // Shuffle to avoid predictable order
+    const shuffled = data.pickN(fieldsToFill, fieldsToFill.length);
+
+    const fieldDisclosures = HIDEABLE_FIELDS.map((h) => ({
+      field: h.field,
+      type: h.disclosureType,
+    }));
 
     const fieldValues: Record<string, string> = {
       name: person.fullName,
@@ -63,9 +79,10 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
       city: person.city,
       email: person.email,
       startDate: person.startDate,
+      salary: `$${person.salary.toLocaleString()}`,
     };
 
-    const answer = fieldsToFill.map((f) => fieldValues[f]).join(", ");
+    const answer = shuffled.map((f) => fieldValues[f]).join(", ");
 
     return {
       pageData: {
@@ -78,9 +95,8 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
           city: person.city,
           startDate: person.startDate,
         },
-        fieldsToFill: [...fieldsToFill],
-        basicFields: [...BASIC_FIELDS],
-        detailFields: [...DETAIL_FIELDS],
+        fieldsToFill: shuffled,
+        fieldDisclosures,
         variantIndex,
       },
       answer,

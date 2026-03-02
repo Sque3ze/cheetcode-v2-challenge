@@ -1,8 +1,10 @@
 /**
- * Tier 2 Challenge: Linked Data Lookup (Moderate Rework)
+ * Tier 2 Challenge: Linked Data Lookup (Round 3 — Disambiguation)
  *
  * Department table shows only ID and Name; full details behind expandable rows.
  * Added projects table linked to departments for 3rd relationship.
+ * Now generates 2 employees with the same first name in different departments.
+ * Instructions reference by first name only with a disambiguation hint.
  */
 
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
@@ -21,6 +23,7 @@ interface LinkedDataLookupPageData {
   targetEmployeeName: string;
   targetField: string;
   taskType: TaskType;
+  disambiguationHint: string;
   variantIndex: number;
 }
 
@@ -34,22 +37,23 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
   description: "Cross-reference tables with expandable rows to find a specific value.",
 
   instructions: (pageData) => {
-    const emp = pageData.targetEmployeeName;
+    const firstName = pageData.targetEmployeeName.split(" ")[0];
+    const hint = pageData.disambiguationHint;
     const field = pageData.targetField;
     if (pageData.taskType === "department-field") {
       const variants = [
-        `Find employee "${emp}" in the Employees table. Note their Department ID, then expand that department's row in the Departments table. Submit the department's ${field}.`,
-        `Locate "${emp}" among employees and note which department they belong to. Expand that department to reveal its details and provide the ${field}.`,
-        `In the Employees table, look up "${emp}" and find their Dept ID. Use that ID to find the matching department, expand it, and submit its ${field}.`,
-        `Which department does "${emp}" work in? Find that department row, expand it, and report the ${field}.`,
+        `Find employee "${firstName}" (${hint}) in the Employees table. Note their Department ID, then expand that department's row in the Departments table. Submit the department's ${field}.`,
+        `Locate "${firstName}" among employees — ${hint}. Note which department they belong to. Expand that department to reveal its details and provide the ${field}.`,
+        `In the Employees table, look up "${firstName}" (${hint}) and find their Dept ID. Use that ID to find the matching department, expand it, and submit its ${field}.`,
+        `Which department does "${firstName}" (${hint}) work in? Find that department row, expand it, and report the ${field}.`,
       ];
       return variants[pageData.variantIndex];
     }
     const variants = [
-      `Find employee "${emp}" in the Employees table. Note their Department ID, then find all projects in that department from the Projects table. Submit the ${field}.`,
-      `Look up "${emp}" in employees to get their department. Then check the Projects table for projects in that department and provide the ${field}.`,
-      `Locate "${emp}", identify their department ID, and cross-reference it with the Projects table. Submit the ${field} for matching projects.`,
-      `Starting from "${emp}" in the employee list, follow their department link to the Projects table. Your answer is the ${field}.`,
+      `Find employee "${firstName}" (${hint}) in the Employees table. Note their Department ID, then find all projects in that department from the Projects table. Submit the ${field}.`,
+      `Look up "${firstName}" (${hint}) in employees to get their department. Then check the Projects table for projects in that department and provide the ${field}.`,
+      `Locate "${firstName}" (${hint}), identify their department ID, and cross-reference it with the Projects table. Submit the ${field} for matching projects.`,
+      `Starting from "${firstName}" (${hint}) in the employee list, follow their department link to the Projects table. Your answer is the ${field}.`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -69,21 +73,56 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
 
     const empCount = data.int(8, 14);
     const employees: EmployeeRow[] = [];
-    const usedNames = new Set<string>();
+    const usedFullNames = new Set<string>();
 
     for (let i = 0; i < empCount; i++) {
       const person = data.person();
       let name = person.fullName;
-      if (usedNames.has(name)) {
+      if (usedFullNames.has(name)) {
         name = `${person.firstName} ${data.pick(["A.", "B.", "C.", "D.", "E."] as const)} ${person.lastName}`;
       }
-      usedNames.add(name);
+      usedFullNames.add(name);
       employees.push({
         name,
         role: person.role,
         departmentId: data.pick(departments).id,
         salary: person.salary,
       });
+    }
+
+    // Disambiguation: create a second employee with the same first name in a different department
+    const targetEmployee = data.pick(employees);
+    const targetFirstName = targetEmployee.name.split(" ")[0];
+    const targetDept = departments.find((d) => d.id === targetEmployee.departmentId)!;
+    const otherDepts = departments.filter((d) => d.id !== targetEmployee.departmentId);
+
+    if (otherDepts.length > 0) {
+      const dupeExists = employees.some(
+        (e) => e.name !== targetEmployee.name && e.name.startsWith(targetFirstName + " ")
+      );
+      if (!dupeExists) {
+        // Add a duplicate first-name employee in a different department
+        const dupePerson = data.person();
+        const dupeDept = data.pick(otherDepts);
+        employees.push({
+          name: `${targetFirstName} ${dupePerson.lastName}`,
+          role: dupePerson.role,
+          departmentId: dupeDept.id,
+          salary: dupePerson.salary,
+        });
+      }
+    }
+
+    // Generate disambiguation hint
+    const targetDeptName = targetDept.name;
+    const hintType = data.pick(["department", "salary"] as const);
+    let disambiguationHint: string;
+    if (hintType === "department") {
+      disambiguationHint = `the one in ${targetDeptName}`;
+    } else {
+      disambiguationHint = targetEmployee.salary >= 100000
+        ? "with salary above $100K"
+        : "with salary below $100K";
     }
 
     const projectCount = data.int(6, 10);
@@ -96,8 +135,6 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
       status: data.pick(["Active", "Planned", "Completed"] as const),
     }));
 
-    const targetEmployee = data.pick(employees);
-    const targetDept = departments.find((d) => d.id === targetEmployee.departmentId)!;
     const taskType = data.pick(["department-field", "project-aggregate"] as const);
 
     let targetField: string;
@@ -138,7 +175,9 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
       pageData: {
         employees, departments, projects,
         targetEmployeeName: targetEmployee.name,
-        targetField, taskType, variantIndex,
+        targetField, taskType,
+        disambiguationHint,
+        variantIndex,
       },
       answer,
     };
