@@ -24,7 +24,7 @@ import { linkedDataLookupChallenge } from "./tier2/linked-data-lookup";
 import { sequentialCalculatorChallenge } from "./tier2/sequential-calculator";
 import { dataDashboardChallenge } from "./tier3/data-dashboard";
 import { constraintSolverChallenge } from "./tier3/constraint-solver";
-import { promptInjectionChallenge } from "./tier4/prompt-injection";
+import { calculationAuditChallenge } from "./tier4/calculation-audit";
 import { redHerringChallenge } from "./tier4/red-herring";
 
 // ─── Registry ──────────────────────────────────────────────────
@@ -49,7 +49,7 @@ const CHALLENGES: ChallengeDefinition<any>[] = [
   constraintSolverChallenge,
 
   // Tier 4 — Adversarial & Judgment
-  promptInjectionChallenge,
+  calculationAuditChallenge,
   redHerringChallenge,
 ];
 

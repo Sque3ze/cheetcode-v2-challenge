@@ -25,9 +25,9 @@ interface FormFillPageData {
     startDate: string;
   };
   fieldsToFill: string[];
-  /** Which section each field belongs to */
   basicFields: string[];
   detailFields: string[];
+  variantIndex: number;
 }
 
 export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
@@ -37,12 +37,19 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
   description: "Read employee details (some hidden) and fill out a form with specific values.",
 
   instructions: (pageData) => {
-    const fieldLabels = pageData.fieldsToFill.join(", ");
-    return `Read the employee profile below and submit the following fields separated by a comma: ${fieldLabels}. Note: some fields may be in the collapsed "Details" section.`;
+    const fields = pageData.fieldsToFill.join(", ");
+    const variants = [
+      `Read the employee profile below and submit the following fields separated by a comma: ${fields}. Note: some fields may be in the collapsed "Details" section.`,
+      `Look at the employee information. What are their ${fields}? Provide them comma-separated. You may need to expand the Details panel.`,
+      `From the profile data, extract and submit (comma-delimited): ${fields}. Some values are hidden under the Details accordion.`,
+      `The employee record shows various attributes. Submit these values joined by commas: ${fields}. Check both Basic Info and Details sections.`,
+    ];
+    return variants[pageData.variantIndex];
   },
 
   generate(data: ChallengeData) {
     const person = data.person();
+    const variantIndex = data.int(0, 3);
 
     // Guarantee at least one field from details section
     const detailField = data.pick(DETAIL_FIELDS);
@@ -74,6 +81,7 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
         fieldsToFill: [...fieldsToFill],
         basicFields: [...BASIC_FIELDS],
         detailFields: [...DETAIL_FIELDS],
+        variantIndex,
       },
       answer,
     };

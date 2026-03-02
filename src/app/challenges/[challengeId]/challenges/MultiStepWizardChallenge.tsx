@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface Order {
   id: string;
@@ -61,7 +62,7 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
                     ? "bg-green-500/20 text-green-400 border border-green-500/50"
                     : "bg-gray-800 text-gray-500 border border-gray-700"
               }`}
-              data-step={s}
+              {...testAttr('step', String(s))}
             >
               {step > s ? "\u2713" : s}
             </div>
@@ -92,13 +93,13 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
               </thead>
               <tbody>
                 {pageData.orders.map((order) => (
-                  <tr key={order.id} className="border-t border-gray-800" data-order-id={order.id}>
+                  <tr key={order.id} className="border-t border-gray-800" {...testAttr('order-id', order.id)}>
                     <td className="px-4 py-3 font-mono">{order.id}</td>
                     <td className="px-4 py-3">{order.customer}</td>
                     <td className="px-4 py-3 text-gray-400">{order.product}</td>
-                    <td className="px-4 py-3 text-right" data-quantity>{order.quantity}</td>
-                    <td className="px-4 py-3 text-right font-mono" data-unit-price>${order.unitPrice.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-gray-400" data-status>{order.status}</td>
+                    <td className="px-4 py-3 text-right" {...testAttr('quantity')}>{order.quantity}</td>
+                    <td className="px-4 py-3 text-right font-mono" {...testAttr('unit-price')}>${order.unitPrice.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-gray-400" {...testAttr('status')}>{order.status}</td>
                     <td className="px-4 py-3 text-center">
                       <button
                         onClick={() => {
@@ -106,7 +107,7 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
                           setStep(2);
                         }}
                         className="text-sm text-blue-400 hover:text-blue-300"
-                        data-select-order={order.id}
+                        {...testAttr('select-order', order.id)}
                       >
                         Select
                       </button>
@@ -127,7 +128,7 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
           </h3>
           <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-4">
             <p className="text-sm text-gray-400 mb-1">Selected Order</p>
-            <p className="font-mono" data-selected-order>{selectedOrder.id}</p>
+            <p className="font-mono" {...testAttr('selected-order')}>{selectedOrder.id}</p>
             <p className="text-sm text-gray-400 mt-2">
               {selectedOrder.quantity} × ${selectedOrder.unitPrice.toFixed(2)} = ${(selectedOrder.quantity * selectedOrder.unitPrice).toFixed(2)}
             </p>
@@ -141,10 +142,10 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
                   setStep(3);
                 }}
                 className="p-4 rounded-lg border bg-gray-900 border-gray-800 hover:border-blue-500 text-left transition-colors"
-                data-discount-code={dc.code}
+                {...testAttr('discount-code', dc.code)}
               >
                 <p className="font-mono font-medium">{dc.code}</p>
-                <p className="text-sm text-gray-400" data-discount-percent={dc.percent}>{dc.percent}% off</p>
+                <p className="text-sm text-gray-400" {...testAttr('discount-percent', String(dc.percent))}>{dc.percent}% off</p>
               </button>
             ))}
           </div>
@@ -173,10 +174,10 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
                   setStep(4);
                 }}
                 className="w-full p-4 rounded-lg border bg-gray-900 border-gray-800 hover:border-blue-500 text-left transition-colors flex justify-between items-center"
-                data-shipping={opt.name}
+                {...testAttr('shipping', opt.name)}
               >
                 <span className="font-medium">{opt.name}</span>
-                <span className="font-mono text-gray-400" data-shipping-cost={opt.cost}>${opt.cost.toFixed(2)}</span>
+                <span className="font-mono text-gray-400" {...testAttr('shipping-cost', String(opt.cost))}>${opt.cost.toFixed(2)}</span>
               </button>
             ))}
           </div>
@@ -196,24 +197,24 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-gray-400">Order</dt>
-                <dd className="font-mono" data-field="order-id">{selectedOrder.id}</dd>
+                <dd className="font-mono" {...testAttr('field', 'order-id')}>{selectedOrder.id}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-400">Subtotal</dt>
-                <dd className="font-mono" data-field="subtotal">
+                <dd className="font-mono" {...testAttr('field', 'subtotal')}>
                   {selectedOrder.quantity} × ${selectedOrder.unitPrice.toFixed(2)} = $
                   {(selectedOrder.quantity * selectedOrder.unitPrice).toFixed(2)}
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-400">Discount</dt>
-                <dd className="font-mono" data-field="discount">
+                <dd className="font-mono" {...testAttr('field', 'discount')}>
                   {selectedDiscount.code} ({selectedDiscount.percent}%)
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-400">Shipping</dt>
-                <dd className="font-mono" data-field="shipping">
+                <dd className="font-mono" {...testAttr('field', 'shipping')}>
                   {selectedShipping.name} (${selectedShipping.cost.toFixed(2)})
                 </dd>
               </div>

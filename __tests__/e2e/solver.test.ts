@@ -2,13 +2,6 @@
  * E2E Challenge Solver — Playwright-based agent that proves each challenge
  * is solvable through browser interaction.
  *
- * For each challenge:
- * 1. Creates a session via API
- * 2. Navigates to the challenge page
- * 3. Runs a solver function that interacts with the page and returns the answer
- * 4. Submits the answer via the UI
- * 5. Verifies the submission is accepted as correct
- *
  * Run: npx playwright test
  */
 
@@ -30,30 +23,38 @@ const SOLVERS: Record<string, SolverFn> = {
   "tier2-sequential-calculator": solveSequentialCalculator,
   "tier3-data-dashboard": solveDataDashboard,
   "tier3-constraint-solver": solveConstraintSolver,
-  "tier4-prompt-injection": solvePromptInjection,
+  "tier4-calculation-audit": solveCalculationAudit,
   "tier4-red-herring": solveRedHerring,
 };
+
+/** Read the instructions text from the challenge page */
+async function getInstructions(page: Page): Promise<string> {
+  await page.waitForSelector("p.text-gray-200");
+  const text = await page.locator("p.text-gray-200").textContent();
+  if (!text) throw new Error("Could not read instructions");
+  return text;
+}
 
 // ─── Tier 1 Solvers ─────────────────────────────────────────────
 
 async function solveTableSort(page: Page): Promise<string> {
   await page.waitForSelector("table tbody tr");
-  await page.waitForSelector("p.text-gray-200");
+  const instructions = await getInstructions(page);
 
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
+  // Broad match across variants — look for column name, position number, and direction
+  const colMatch = instructions.match(/by (Salary|Start Date)/i);
+  const posMatch = instructions.match(/(\d+)\w*\s+(highest|lowest)/i)
+    || instructions.match(/position (\d+)/i);
+  const dirMatch = instructions.match(/(highest|lowest)/i);
 
-  // Parse: "Sort the employee table by Salary and find the 6th highest value..."
-  const match = instructions.match(
-    /Sort the employee table by ([\w\s]+?) and find the (\d+)\w+ (highest|lowest) value\. Submit the (\w+)/
-  );
-  if (!match) throw new Error(`Could not parse instructions: ${instructions}`);
+  if (!colMatch || !posMatch || !dirMatch) throw new Error(`Could not parse instructions: ${instructions}`);
 
-  const [, sortColumn, posStr, direction] = match;
-  const targetPosition = parseInt(posStr);
+  const sortColumn = colMatch[1].trim();
+  const targetPosition = parseInt(posMatch[1]);
+  const direction = dirMatch[1].toLowerCase();
 
   // Click column header to sort
-  const header = page.locator("th", { hasText: sortColumn.trim() });
+  const header = page.locator("th", { hasText: sortColumn });
   await header.click();
   if (direction === "highest") {
     await header.click();
@@ -66,7 +67,6 @@ async function solveTableSort(page: Page): Promise<string> {
     await page.locator("[data-page-next]").click();
   }
 
-  // Read the target row within the current page
   const rowInPage = (targetPosition - 1) % rowsPerPage;
   const targetRow = page.locator("tbody tr").nth(rowInPage);
   const name = await targetRow.locator("td").first().textContent();
@@ -77,17 +77,27 @@ async function solveTableSort(page: Page): Promise<string> {
 
 async function solveFormFill(page: Page): Promise<string> {
   await page.waitForSelector("[data-field]");
-  await page.waitForSelector("p.text-gray-200");
+  const instructions = await getInstructions(page);
 
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
+  // Match field names across instruction variants:
+  // V0: "...separated by a comma: email, city. Note:..."
+  // V1: "...What are their department, startDate? Provide..."
+  // V2: "...submit (comma-delimited): email, city. Some..."
+  // V3: "...joined by commas: email, city. Check..."
+  const match = instructions.match(/:\s*([a-zA-Z ,]+?)\.?\s*(?:Note|You|Some|Check)/i)
+    || instructions.match(/\btheir\s+(.+?)\?/i);
 
-  const match = instructions.match(/separated by a comma:\s*(.+?)\./);
-  if (!match) throw new Error(`Could not parse fields from: ${instructions}`);
+  let fieldNames: string[];
+  if (match) {
+    fieldNames = match[1].split(",").map((f) => f.trim().toLowerCase());
+  } else {
+    // Fallback: look for known field names near commas
+    const allFields = ["name", "email", "department", "role", "salary", "city", "start date", "startdate"];
+    fieldNames = allFields.filter((f) => instructions.toLowerCase().includes(f));
+    // Only keep the ones that are in a comma-separated context
+    if (fieldNames.length === 0) throw new Error(`Could not parse fields from: ${instructions}`);
+  }
 
-  const fieldNames = match[1].split(",").map((f) => f.trim().toLowerCase());
-
-  // Map display names to data-field keys
   const labelToKey: Record<string, string> = {
     name: "name", email: "email", department: "department",
     role: "role", salary: "salary", city: "city", "start date": "startDate",
@@ -114,16 +124,8 @@ async function solveFormFill(page: Page): Promise<string> {
 }
 
 async function solveDropdownSelect(page: Page): Promise<string> {
-  // Cards are in a grid now, read product data from cards
   await page.waitForSelector("[data-product-card]");
-  await page.waitForSelector("p.text-gray-200");
-
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
-
-  const match = instructions.match(/product with the (.+?) from the dropdown/);
-  if (!match) throw new Error(`Could not parse condition from: ${instructions}`);
-  const condition = match[1].trim();
+  const instructions = await getInstructions(page);
 
   // Read all products from cards
   const cards = page.locator("[data-product-card]");
@@ -145,20 +147,20 @@ async function solveDropdownSelect(page: Page): Promise<string> {
     });
   }
 
-  // Evaluate compound condition
+  // Evaluate condition — key phrases are consistent across variants
   let targetName: string;
-  if (condition.includes("price-to-rating ratio")) {
+  if (instructions.includes("price-to-rating ratio")) {
     targetName = products.reduce((a, b) => (a.price / a.rating < b.price / b.rating ? a : b)).name;
-  } else if (condition.includes("most expensive in-stock")) {
+  } else if (instructions.includes("most expensive in-stock")) {
     const inStock = products.filter((p) => p.stock > 0);
     targetName = inStock.reduce((a, b) => (a.price > b.price ? a : b)).name;
-  } else if (condition.includes("highest total value")) {
+  } else if (instructions.includes("highest total value")) {
     targetName = products.reduce((a, b) => (a.price * a.stock > b.price * b.stock ? a : b)).name;
-  } else if (condition.includes("best rated item under")) {
+  } else if (instructions.includes("best rated") && instructions.includes("under $200")) {
     const under200 = products.filter((p) => p.price < 200);
     targetName = under200.reduce((a, b) => (a.rating > b.rating ? a : b)).name;
   } else {
-    throw new Error(`Unknown condition: ${condition}`);
+    throw new Error(`Unknown condition in: ${instructions}`);
   }
 
   await page.selectOption("select", targetName);
@@ -167,25 +169,35 @@ async function solveDropdownSelect(page: Page): Promise<string> {
 
 async function solveTabNavigation(page: Page): Promise<string> {
   await page.waitForSelector("[data-tab]");
-  await page.waitForSelector("p.text-gray-200");
+  const instructions = await getInstructions(page);
 
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
-
-  // Parse: 'Find the "Growth Rate" value in the "Financials" tab. If the numeric value is above 50, submit the "Region" from the "Technical" tab. Otherwise, submit the "Headquarters" from the "Overview" tab.'
-  const condMatch = instructions.match(/Find the "(.+?)" value in the "(.+?)" tab/);
-  const threshMatch = instructions.match(/above (\d+)/);
-  const ifAboveMatch = instructions.match(/submit the "(.+?)" from the "(.+?)" tab\.\s*Otherwise/);
-  const ifBelowMatch = instructions.match(/Otherwise, submit the "(.+?)" from the "(.+?)" tab/);
-
-  if (!condMatch || !threshMatch || !ifAboveMatch || !ifBelowMatch) {
-    throw new Error(`Could not parse instructions: ${instructions}`);
+  // Get actual tab labels from the page to distinguish tabs from keys
+  const tabElements = await page.locator("[data-tab]").all();
+  const tabLabels = new Set<string>();
+  for (const el of tabElements) {
+    const label = await el.getAttribute("data-tab");
+    if (label) tabLabels.add(label);
   }
 
-  const [, condKey, condTab] = condMatch;
+  // Extract all quoted strings and threshold number
+  const quoted = [...instructions.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  const threshMatch = instructions.match(/(?:above|exceeds|greater than|against)\s+(\d+)/i);
+  if (quoted.length < 6 || !threshMatch) throw new Error(`Could not parse instructions: ${instructions}`);
+
   const threshold = parseInt(threshMatch[1]);
-  const [, aboveKey, aboveTab] = ifAboveMatch;
-  const [, belowKey, belowTab] = ifBelowMatch;
+
+  // First two quoted strings are the condition pair (key/tab in either order depending on variant)
+  let condKey: string, condTab: string;
+  if (tabLabels.has(quoted[0])) {
+    condTab = quoted[0];
+    condKey = quoted[1];
+  } else {
+    condKey = quoted[0];
+    condTab = quoted[1];
+  }
+
+  // Remaining pairs are always key, tab
+  const [aboveKey, aboveTab, belowKey, belowTab] = quoted.slice(2);
 
   // Navigate to the condition tab and read the value
   await page.locator(`[data-tab="${condTab}"]`).click();
@@ -194,10 +206,8 @@ async function solveTabNavigation(page: Page): Promise<string> {
   const condValueText = await condValueEl.textContent();
   if (!condValueText) throw new Error(`Could not read value for: ${condKey}`);
 
-  // Parse numeric value (handle "$500M", "85%", "4200", etc.)
   const numericValue = parseNumericFromText(condValueText.trim());
 
-  // Determine which tab/key to read based on condition
   let resultTab: string;
   let resultKey: string;
   if (numericValue > threshold) {
@@ -208,7 +218,6 @@ async function solveTabNavigation(page: Page): Promise<string> {
     resultKey = belowKey;
   }
 
-  // Navigate to result tab and read the value
   await page.locator(`[data-tab="${resultTab}"]`).click();
   const resultEl = page.locator(`[data-value="${resultKey}"]`);
   await resultEl.waitFor({ state: "visible" });
@@ -219,51 +228,44 @@ async function solveTabNavigation(page: Page): Promise<string> {
 }
 
 function parseNumericFromText(text: string): number {
-  // Handle patterns: "85%", "$500M", "$100", "4200", "99.5%"
   const percentMatch = text.match(/^([\d.]+)%$/);
   if (percentMatch) return parseFloat(percentMatch[1]);
-
   const dollarMatch = text.match(/^\$([\d.]+)M?$/);
   if (dollarMatch) return parseFloat(dollarMatch[1]);
-
   const numMatch = text.match(/^([\d.]+)$/);
   if (numMatch) return parseFloat(numMatch[1]);
-
   return 0;
 }
 
 async function solveFilterSearch(page: Page): Promise<string> {
   await page.waitForSelector("table tbody tr");
-  await page.waitForSelector("p.text-gray-200");
+  const instructions = await getInstructions(page);
 
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
-
-  // Parse: 'Filter employees where department = "Engineering" AND city = "Denver" and submit the count/total salary/average salary'
-  const condMatch = instructions.match(
-    /where (.+?) and submit the (count|total salary|average salary)/
-  );
-  if (!condMatch) throw new Error(`Could not parse instructions: ${instructions}`);
-
-  const [, conditionsStr, aggregation] = condMatch;
-
-  // Parse individual conditions: 'department = "Engineering" AND city = "Denver"'
+  // Parse conditions: all variants contain field = "value" patterns
   const conditions: Array<{ field: string; value: string }> = [];
-  const condParts = conditionsStr.split(/\s+AND\s+/);
-  for (const part of condParts) {
-    const m = part.match(/(\w+)\s*=\s*"(.+?)"/);
-    if (m) conditions.push({ field: m[1], value: m[2] });
+  const condMatches = [...instructions.matchAll(/(\w+)\s*=\s*"(.+?)"/g)];
+  for (const m of condMatches) {
+    conditions.push({ field: m[1], value: m[2] });
+  }
+
+  // Determine aggregation from instruction keywords
+  let aggregation: "count" | "total salary" | "average salary";
+  if (instructions.match(/\b(?:count|how many|total count)\b/i)) {
+    aggregation = "count";
+  } else if (instructions.match(/\b(?:average|mean)\b/i)) {
+    aggregation = "average salary";
+  } else {
+    aggregation = "total salary";
   }
 
   // Read ALL employees from ALL pages
   interface EmployeeRow { name: string; department: string; salary: number; city: string }
   const employees: EmployeeRow[] = [];
 
-  // Read current page
   const readCurrentPage = async () => {
     const rows = page.locator("tbody tr");
-    const count = await rows.count();
-    for (let i = 0; i < count; i++) {
+    const rowCount = await rows.count();
+    for (let i = 0; i < rowCount; i++) {
       const cells = rows.nth(i).locator("td");
       employees.push({
         name: (await cells.nth(0).textContent())?.trim() ?? "",
@@ -276,7 +278,6 @@ async function solveFilterSearch(page: Page): Promise<string> {
 
   await readCurrentPage();
 
-  // Paginate through all pages
   while (true) {
     const nextBtn = page.locator("[data-page-next]");
     if (await nextBtn.isDisabled()) break;
@@ -285,7 +286,6 @@ async function solveFilterSearch(page: Page): Promise<string> {
     await readCurrentPage();
   }
 
-  // Filter by all conditions
   const matching = employees.filter((e) => {
     return conditions.every((c) => {
       if (c.field === "department") return e.department === c.value;
@@ -305,22 +305,19 @@ async function solveFilterSearch(page: Page): Promise<string> {
 
 async function solveModalInteraction(page: Page): Promise<string> {
   await page.waitForSelector("[data-card-name]");
-  await page.waitForSelector("p.text-gray-200");
+  const instructions = await getInstructions(page);
 
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
-
-  // Parse: 'Find the product in the "Security" category with the lowest price. Click "View Details" to open its modal and submit the sku.'
-  const catMatch = instructions.match(/in the "(.+?)" category/);
-  const condMatch = instructions.match(/with the (lowest price|highest price)/);
-  const fieldMatch = instructions.match(/submit the (\w+)/);
+  // All variants contain quoted category name and "lowest/highest price"
+  const catMatch = instructions.match(/"([^"]+)"\s*(?:category|products|section)/i)
+    || instructions.match(/(?:category|categorized as)\s*"([^"]+)"/i);
+  const condMatch = instructions.match(/(lowest price|highest price)/i);
+  const fieldMatch = instructions.match(/(?:submit|provide|report)\s+(?:the\s+)?(\w+)/i);
   if (!catMatch || !condMatch || !fieldMatch) throw new Error(`Could not parse instructions: ${instructions}`);
 
   const targetCategory = catMatch[1];
-  const condition = condMatch[1];
+  const condition = condMatch[1].toLowerCase();
   const targetField = fieldMatch[1];
 
-  // Read all cards to find the ones in the target category
   const allCards = page.locator("[data-card-category]");
   const cardCount = await allCards.count();
 
@@ -331,27 +328,18 @@ async function solveModalInteraction(page: Page): Promise<string> {
     const card = allCards.nth(i);
     const category = (await card.getAttribute("data-card-category")) ?? "";
     if (category === targetCategory) {
-      // Find the card-name button within this card
       const nameBtn = card.locator("[data-card-name]");
       const name = (await nameBtn.getAttribute("data-card-name")) ?? "";
       const priceStr = (await card.locator("[data-card-price]").textContent())?.trim() ?? "0";
-      categoryCards.push({
-        name,
-        price: parseFloat(priceStr.replace("$", "")),
-      });
+      categoryCards.push({ name, price: parseFloat(priceStr.replace("$", "")) });
     }
   }
 
-  // Find the target card by condition
   const target = condition === "lowest price"
     ? categoryCards.reduce((min, c) => (c.price < min.price ? c : min), categoryCards[0])
     : categoryCards.reduce((max, c) => (c.price > max.price ? c : max), categoryCards[0]);
 
-  // Click "View Details" on target card
-  const viewButton = page.locator(`[data-card-name="${target.name}"]`).first();
-  await viewButton.click();
-
-  // Wait for modal and read value
+  await page.locator(`[data-card-name="${target.name}"]`).first().click();
   await page.waitForSelector("[data-modal]");
   const fieldEl = page.locator(`[data-field="${targetField}"]`);
   const value = await fieldEl.textContent();
@@ -364,22 +352,20 @@ async function solveModalInteraction(page: Page): Promise<string> {
 
 async function solveMultiStepWizard(page: Page): Promise<string> {
   await page.waitForSelector("[data-order-id]");
-  await page.waitForSelector("p.text-gray-200");
+  const instructions = await getInstructions(page);
 
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
-
-  // Parse: 'Step 1: Find the order with the highest subtotal among orders with status "Pending".'
-  const orderCondMatch = instructions.match(/with the (highest subtotal|lowest subtotal) among orders with status "(.+?)"/);
-  const discountCondMatch = instructions.match(/Apply the (highest discount percentage|lowest discount percentage)/);
-  const shippingMatch = instructions.match(/Select "(.+?)" shipping/);
-  if (!orderCondMatch || !discountCondMatch || !shippingMatch) {
+  // All variants contain "highest/lowest subtotal", status in quotes, discount condition, shipping in quotes
+  const orderCondMatch = instructions.match(/(highest subtotal|lowest subtotal)/i);
+  const statusMatch = instructions.match(/"(Pending|Processing)"/);
+  const discountCondMatch = instructions.match(/(highest discount percentage|lowest discount percentage)/i);
+  const shippingMatch = instructions.match(/"(Standard|Express|Overnight)"\s*(?:shipping|for shipping)/i);
+  if (!orderCondMatch || !statusMatch || !discountCondMatch || !shippingMatch) {
     throw new Error(`Could not parse instructions: ${instructions}`);
   }
 
-  const orderCondition = orderCondMatch[1];
-  const targetStatus = orderCondMatch[2];
-  const discountCondition = discountCondMatch[1];
+  const orderCondition = orderCondMatch[1].toLowerCase();
+  const targetStatus = statusMatch[1];
+  const discountCondition = discountCondMatch[1].toLowerCase();
   const targetShipping = shippingMatch[1];
 
   // Step 1: Read all orders, find matching by status and condition
@@ -394,23 +380,19 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
     const id = (await row.getAttribute("data-order-id")) ?? "";
     const status = (await row.locator("[data-status]").textContent())?.trim() ?? "";
     if (status !== targetStatus) continue;
-
     const qty = parseInt((await row.locator("[data-quantity]").textContent())?.trim() ?? "0");
     const unitPriceStr = (await row.locator("[data-unit-price]").textContent())?.trim() ?? "0";
     const unitPrice = parseFloat(unitPriceStr.replace("$", ""));
     statusOrders.push({ id, qty, unitPrice, status, subtotal: qty * unitPrice });
   }
 
-  // Sort and pick the target order
   statusOrders.sort((a, b) =>
     orderCondition === "highest subtotal" ? b.subtotal - a.subtotal : a.subtotal - b.subtotal
   );
   const targetOrder = statusOrders[0];
-
-  // Click "Select" on that order
   await page.locator(`[data-select-order="${targetOrder.id}"]`).click();
 
-  // Step 2: Read discount codes and find the one matching condition
+  // Step 2: Read discount codes
   await page.waitForSelector("[data-discount-code]");
   const discountButtons = page.locator("[data-discount-code]");
   const discountCount = await discountButtons.count();
@@ -420,24 +402,19 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
   for (let i = 0; i < discountCount; i++) {
     const btn = discountButtons.nth(i);
     const code = (await btn.getAttribute("data-discount-code")) ?? "";
-    const percentStr = (await btn.locator("[data-discount-percent]").textContent())?.trim() ?? "0";
-    const percentMatch = percentStr.match(/(\d+)%/);
-    const percent = percentMatch ? parseInt(percentMatch[1]) : parseInt((await btn.getAttribute("data-discount-percent")) ?? "0");
-    discounts.push({ code, percent });
+    const percentStr = (await btn.locator("[data-discount-percent]").getAttribute("data-discount-percent")) ?? "0";
+    discounts.push({ code, percent: parseInt(percentStr) });
   }
 
   discounts.sort((a, b) =>
     discountCondition === "highest discount percentage" ? b.percent - a.percent : a.percent - b.percent
   );
-  const targetDiscount = discounts[0];
-
-  // Click the target discount
-  await page.locator(`[data-discount-code="${targetDiscount.code}"]`).click();
+  await page.locator(`[data-discount-code="${discounts[0].code}"]`).click();
 
   // Step 3: Select shipping
   await page.waitForSelector("[data-shipping]");
   const shippingBtn = page.locator(`[data-shipping="${targetShipping}"]`);
-  const shippingCostStr = (await shippingBtn.locator(`[data-shipping-cost]`).getAttribute("data-shipping-cost")) ?? "0";
+  const shippingCostStr = (await shippingBtn.locator("[data-shipping-cost]").getAttribute("data-shipping-cost")) ?? "0";
   const shippingCost = parseFloat(shippingCostStr);
   await shippingBtn.click();
 
@@ -465,13 +442,10 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
 async function solveLinkedDataLookup(page: Page): Promise<string> {
   await page.waitForSelector("[data-table='employees']");
   await page.waitForSelector("[data-table='departments']");
-  await page.waitForSelector("p.text-gray-200");
+  const instructions = await getInstructions(page);
 
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
-
-  // Parse employee name
-  const empMatch = instructions.match(/Find employee "(.+?)"/);
+  // All variants contain the employee name in quotes
+  const empMatch = instructions.match(/"([^"]+)"/);
   if (!empMatch) throw new Error(`Could not parse employee: ${instructions}`);
   const targetName = empMatch[1];
 
@@ -480,18 +454,19 @@ async function solveLinkedDataLookup(page: Page): Promise<string> {
   const deptId = (await empRow.locator("[data-dept-id]").textContent())?.trim();
   if (!deptId) throw new Error(`Could not read dept ID for ${targetName}`);
 
-  if (instructions.includes("expand that department")) {
-    // Department field task — click to expand department row
+  if (instructions.match(/expand|department's/i)) {
+    // Department field task
     const expandBtn = page.locator(`[data-expand-dept="${deptId}"]`);
     await expandBtn.click();
-
-    // Wait for details to appear
     await page.waitForSelector(`[data-dept-details="${deptId}"]`);
 
-    // Parse target field — match "Submit the department's <field>."
-    const fieldMatch = instructions.match(/Submit the department's (.+?)\.$/);
-    if (!fieldMatch) throw new Error(`Could not parse field: ${instructions}`);
-    const targetField = fieldMatch[1].trim();
+    // Extract target field — look for known field names
+    let targetField: string;
+    if (instructions.includes("manager")) targetField = "manager";
+    else if (instructions.includes("location")) targetField = "location";
+    else if (instructions.includes("budget")) targetField = "budget";
+    else if (instructions.includes("headcount")) targetField = "headcount";
+    else throw new Error(`Could not determine target field: ${instructions}`);
 
     const fieldCell = page.locator(`[data-dept-details="${deptId}"] [data-field="${targetField}"]`);
     const value = await fieldCell.textContent();
@@ -504,7 +479,6 @@ async function solveLinkedDataLookup(page: Page): Promise<string> {
     // Project aggregate task
     await page.waitForSelector("[data-table='projects']");
 
-    // Find all projects for this department
     const projectRows = page.locator("[data-table='projects'] tbody tr");
     const projectCount = await projectRows.count();
 
@@ -516,14 +490,11 @@ async function solveLinkedDataLookup(page: Page): Promise<string> {
       const projDeptId = (await row.locator("[data-project-dept-id]").textContent())?.trim();
       if (projDeptId === deptId) {
         const budgetStr = (await row.locator("[data-project-budget]").textContent())?.trim() ?? "0";
-        deptProjects.push({
-          deptId: projDeptId,
-          budget: parseInt(budgetStr.replace(/[$,]/g, "")),
-        });
+        deptProjects.push({ deptId: projDeptId, budget: parseInt(budgetStr.replace(/[$,]/g, "")) });
       }
     }
 
-    if (instructions.includes("total project budget")) {
+    if (instructions.match(/total project budget|budget/i)) {
       return String(deptProjects.reduce((s, p) => s + p.budget, 0));
     } else {
       return String(deptProjects.length);
@@ -546,7 +517,6 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
     const stepType = await step.getAttribute("data-step-type");
 
     if (stepType === "conditional") {
-      // Handle conditional operation
       const revealBtn = step.locator(`[data-reveal="${i}"]`);
       if (await revealBtn.isVisible()) {
         await revealBtn.click();
@@ -560,8 +530,6 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
         const operandAboveText = await step.locator(`[data-operand-above="${i}"]`).textContent();
         if (!operandAboveText) throw new Error(`Could not read above operand for step ${i}`);
         const operand = parseFloat(operandAboveText.trim());
-
-        // Find which operator (+ or -)
         const opLines = step.locator("p.text-gray-400");
         const firstOpLine = await opLines.first().textContent();
         if (firstOpLine?.includes("+")) current += operand;
@@ -570,14 +538,12 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
         const operandBelowText = await step.locator(`[data-operand-below="${i}"]`).textContent();
         if (!operandBelowText) throw new Error(`Could not read below operand for step ${i}`);
         const operand = parseFloat(operandBelowText.trim());
-
         const opLines = step.locator("p.text-gray-400");
         const lastOpLine = await opLines.last().textContent();
         if (lastOpLine?.includes("+")) current += operand;
         else current -= operand;
       }
     } else if (stepType === "lookup") {
-      // Handle lookup operation
       const lookupKeyEl = step.locator(`[data-lookup-key="${i}"]`);
       const lookupText = await lookupKeyEl.textContent();
       if (!lookupText) throw new Error(`Could not read lookup key for step ${i}`);
@@ -586,13 +552,11 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
       if (!keyMatch) throw new Error(`Could not parse lookup key: ${lookupText}`);
       const lookupKey = keyMatch[1];
 
-      // Look up value in reference table
       const refRow = page.locator(`[data-ref-key="${lookupKey}"]`);
       const refValueText = await refRow.locator("[data-ref-value]").textContent();
       if (!refValueText) throw new Error(`Could not read ref value for ${lookupKey}`);
       const refValue = parseFloat(refValueText.trim());
 
-      // Get operator
       const opSymbol = await step.locator(".text-blue-400").textContent();
       if (!opSymbol) throw new Error(`Could not read operator for step ${i}`);
       switch (opSymbol.trim()) {
@@ -601,7 +565,6 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
         case "\u00d7": current *= refValue; break;
       }
     } else {
-      // Normal operation
       const revealBtn = step.locator(`[data-reveal="${i}"]`);
       if (await revealBtn.isVisible()) {
         await revealBtn.click();
@@ -632,22 +595,22 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
 
 async function solveDataDashboard(page: Page): Promise<string> {
   await page.waitForSelector("[data-dashboard-tab]");
-  await page.waitForSelector("p.text-gray-200");
+  const instructions = await getInstructions(page);
 
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
+  // All variants contain quoted product and region, and Q-patterns
+  const productMatch = instructions.match(/"([A-Z]\w+)"/);
+  const regionMatch = instructions.match(/"(North|South|East|West|Central)"/);
+  const quarterMatches = [...instructions.matchAll(/Q(\d)/g)].map((m) => `Q${m[1]}`);
+  const targetQuarters = [...new Set(quarterMatches)];
 
-  // Parse target product, region, and quarters
-  const productMatch = instructions.match(/sales of "(.+?)"/);
-  const regionMatch = instructions.match(/in the "(.+?)" region/);
-  const quarterMatch = instructions.match(/for (Q\d(?:\s+and\s+Q\d)+) only/);
-  if (!productMatch || !regionMatch || !quarterMatch) throw new Error(`Could not parse instructions: ${instructions}`);
+  if (!productMatch || !regionMatch || targetQuarters.length === 0) {
+    throw new Error(`Could not parse instructions: ${instructions}`);
+  }
 
   const targetProduct = productMatch[1];
   const targetRegion = regionMatch[1];
-  const targetQuarters = quarterMatch[1].split(/\s+and\s+/).map((q) => q.trim());
 
-  // Click Sales tab and read all sales (paginate through)
+  // Click Sales tab and read all sales (paginate)
   await page.locator('[data-dashboard-tab="sales"]').click();
   await page.waitForSelector("[data-table='sales']");
 
@@ -675,7 +638,6 @@ async function solveDataDashboard(page: Page): Promise<string> {
   };
 
   await readSalesPage();
-  // Paginate
   while (true) {
     const nextBtn = page.locator("[data-page-next]");
     if (await nextBtn.isDisabled()) break;
@@ -684,7 +646,7 @@ async function solveDataDashboard(page: Page): Promise<string> {
     await readSalesPage();
   }
 
-  // Click Costs tab
+  // Costs tab
   await page.locator('[data-dashboard-tab="costs"]').click();
   await page.waitForSelector("[data-table='costs']");
 
@@ -694,7 +656,7 @@ async function solveDataDashboard(page: Page): Promise<string> {
   const costPerUnit = parseFloat(costPerUnitStr.replace("$", ""));
   const shipping = parseFloat(shippingStr.replace("$", ""));
 
-  // Click Taxes tab
+  // Taxes tab
   await page.locator('[data-dashboard-tab="taxes"]').click();
   await page.waitForSelector("[data-table='taxes']");
 
@@ -702,12 +664,10 @@ async function solveDataDashboard(page: Page): Promise<string> {
   const taxRateStr = (await taxRow.locator("[data-tax-rate]").textContent())?.trim() ?? "0";
   const taxRate = parseFloat(taxRateStr.replace("%", ""));
 
-  // Compute profit
   let totalProfit = 0;
   for (const sale of matchingSales) {
     const grossProfit = sale.revenue - sale.units * costPerUnit - shipping;
-    const netProfit = grossProfit * (1 - taxRate / 100);
-    totalProfit += netProfit;
+    totalProfit += grossProfit * (1 - taxRate / 100);
   }
 
   return (Math.round(totalProfit * 100) / 100).toFixed(2);
@@ -719,14 +679,12 @@ async function solveConstraintSolver(page: Page): Promise<string> {
   await page.waitForSelector("[data-panel='budget']");
   await page.waitForSelector("[data-panel='exclusions']");
 
-  // Expand advanced filters
   const advancedToggle = page.locator("[data-toggle-advanced]");
   if (await advancedToggle.isVisible()) {
     await advancedToggle.click();
     await page.waitForSelector("[data-panel='advanced']");
   }
 
-  // Read all constraint labels
   const readConstraints = async (panelName: string): Promise<string[]> => {
     const els = page.locator(`[data-panel='${panelName}'] [data-constraint] span:last-child`);
     const count = await els.count();
@@ -742,7 +700,6 @@ async function solveConstraintSolver(page: Page): Promise<string> {
   const exclusions = await readConstraints("exclusions");
   const advancedConstraints = await readConstraints("advanced");
 
-  // Parse constraints
   const allowedCategories: string[] = [];
   let mustBeInStock = false;
   let maxPrice = Infinity;
@@ -751,11 +708,8 @@ async function solveConstraintSolver(page: Page): Promise<string> {
   let maxWeight = Infinity;
 
   for (const r of requirements) {
-    // Handle OR categories: 'Category must be "Electronics" OR "Medical"'
     const catOrMatch = r.match(/Category must be "(.+?)" OR "(.+?)"/);
-    if (catOrMatch) {
-      allowedCategories.push(catOrMatch[1], catOrMatch[2]);
-    }
+    if (catOrMatch) { allowedCategories.push(catOrMatch[1], catOrMatch[2]); }
     const catMatch = r.match(/^Category must be "(.+?)"$/);
     if (catMatch) allowedCategories.push(catMatch[1]);
     if (r.includes("Must be in stock")) mustBeInStock = true;
@@ -778,11 +732,9 @@ async function solveConstraintSolver(page: Page): Promise<string> {
     if (weightMatch) maxWeight = parseFloat(weightMatch[1]);
   }
 
-  // Read optimization criterion
   const optimizationText = (await page.locator("[data-optimization]").textContent())?.trim() ?? "";
   const optField = optimizationText.includes("lowest price") ? "price" : "weight";
 
-  // Read all items
   const rows = page.locator("[data-table='inventory'] tbody tr");
   const rowCount = await rows.count();
 
@@ -804,7 +756,6 @@ async function solveConstraintSolver(page: Page): Promise<string> {
     const inStock = stockStr === "Yes";
     const weight = parseFloat(weightStr);
 
-    // Check all constraints
     if (allowedCategories.length > 0 && !allowedCategories.includes(category)) continue;
     if (mustBeInStock && !inStock) continue;
     if (price > maxPrice) continue;
@@ -817,78 +768,61 @@ async function solveConstraintSolver(page: Page): Promise<string> {
 
   if (qualifying.length === 0) throw new Error("No item satisfies all constraints");
 
-  // Apply optimization
   qualifying.sort((a, b) => a[optField] - b[optField]);
   return qualifying[0].name;
 }
 
 // ─── Tier 4 Solvers ─────────────────────────────────────────────
 
-async function solvePromptInjection(page: Page): Promise<string> {
-  // Key: filter by status "Actual" AND target category, ignore Quick Stats
-  await page.waitForSelector("[data-table='data']");
-  await page.waitForSelector("p.text-gray-200");
+async function solveCalculationAudit(page: Page): Promise<string> {
+  await page.waitForSelector("[data-table='expenses']");
 
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
-
-  const catMatch = instructions.match(/category "(.+?)"/);
-  const aggMatch = instructions.match(/compute the (sum of values|average value)/);
-  if (!catMatch || !aggMatch) throw new Error(`Could not parse instructions: ${instructions}`);
-
-  const targetCategory = catMatch[1];
-  const aggregation = aggMatch[1];
-
-  // Read all rows, only include status = "Actual"
-  const rows = page.locator("[data-table='data'] tbody tr");
+  // Read all line items and verify each row's math
+  const rows = page.locator("[data-table='expenses'] tbody tr");
   const rowCount = await rows.count();
 
-  const matchingValues: number[] = [];
+  let correctSum = 0;
+
   for (let i = 0; i < rowCount; i++) {
     const row = rows.nth(i);
-    const category = (await row.locator("[data-category]").textContent())?.trim();
-    const status = (await row.locator("[data-status]").textContent())?.trim();
-    if (category === targetCategory && status === "Actual") {
-      const valueStr = (await row.locator("[data-value]").textContent())?.trim() ?? "0";
-      matchingValues.push(parseFloat(valueStr));
+    const qtyStr = (await row.locator("[data-quantity]").textContent())?.trim() ?? "0";
+    const unitPriceStr = (await row.locator("[data-unit-price]").textContent())?.trim() ?? "0";
+    const displayedTotalStr = (await row.locator("[data-displayed-total]").textContent())?.trim() ?? "0";
+
+    const qty = parseInt(qtyStr);
+    const unitPrice = parseFloat(unitPriceStr.replace("$", ""));
+    const displayedTotal = parseFloat(displayedTotalStr.replace("$", ""));
+    const expectedTotal = Math.round(qty * unitPrice * 100) / 100;
+
+    // Only include rows where displayed total matches the expected calculation
+    if (Math.abs(displayedTotal - expectedTotal) < 0.001) {
+      correctSum += displayedTotal;
     }
   }
 
-  let result: number;
-  if (aggregation === "sum of values") {
-    result = matchingValues.reduce((s, v) => s + v, 0);
-  } else {
-    result = matchingValues.reduce((s, v) => s + v, 0) / matchingValues.length;
-  }
-
-  return (Math.round(result * 100) / 100).toFixed(2);
+  return (Math.round(correctSum * 100) / 100).toFixed(2);
 }
 
 async function solveRedHerring(page: Page): Promise<string> {
-  // Key: click "View Raw Data" toggle, then read from raw table, NOT summary
   await page.waitForSelector("[data-table='summary']");
-  await page.waitForSelector("p.text-gray-200");
-
-  const instructions = await page.locator("p.text-gray-200").textContent();
-  if (!instructions) throw new Error("Could not read instructions");
+  const instructions = await getInstructions(page);
 
   // Click the "View Raw Data" toggle
   const toggleRaw = page.locator("[data-toggle-raw]");
   await toggleRaw.click();
   await page.waitForSelector("[data-table='raw']");
 
-  // Parse target metric
-  const metricMatch = instructions.match(/Find "(.+?)"/);
+  // All variants contain the metric name in quotes
+  const metricMatch = instructions.match(/"([^"]+)"/);
   if (!metricMatch) throw new Error(`Could not parse metric: ${instructions}`);
   const targetMetric = metricMatch[1];
 
-  // Find the target row in the RAW table
   const targetRow = page.locator(`[data-table='raw'] [data-metric="${targetMetric}"]`);
 
-  if (instructions.includes("compute the sum of")) {
-    const qMatch = instructions.match(/sum of (Q\d(?:\s+and\s+Q\d)+)/);
-    if (!qMatch) throw new Error(`Could not parse quarters: ${instructions}`);
-    const quarters = qMatch[1].split(/\s+and\s+/).map((q) => q.trim());
+  // Detect sum vs difference from instruction keywords
+  if (instructions.match(/\bsum\b|add|combined/i)) {
+    const quarterMatches = [...instructions.matchAll(/Q(\d)/g)].map((m) => `Q${m[1]}`);
+    const quarters = [...new Set(quarterMatches)];
 
     let total = 0;
     for (const q of quarters) {
@@ -898,16 +832,15 @@ async function solveRedHerring(page: Page): Promise<string> {
     }
     return String(total);
   } else {
-    // Difference: "Q2 minus Q1"
-    const diffMatch = instructions.match(/(Q\d) minus (Q\d)/);
+    // Difference
+    const diffMatch = instructions.match(/(Q\d)\s*(?:minus|-|from)\s*(Q\d)/i)
+      || instructions.match(/(Q\d)\s+and\s+(Q\d)/i);
     if (!diffMatch) throw new Error(`Could not parse difference: ${instructions}`);
     const [, q1, q2] = diffMatch;
 
     const v1Str = (await targetRow.locator(`[data-q="${q1}"]`).textContent())?.trim() ?? "0";
     const v2Str = (await targetRow.locator(`[data-q="${q2}"]`).textContent())?.trim() ?? "0";
-    const v1 = parseInt(v1Str.replace(/,/g, ""));
-    const v2 = parseInt(v2Str.replace(/,/g, ""));
-    return String(v1 - v2);
+    return String(parseInt(v1Str.replace(/,/g, "")) - parseInt(v2Str.replace(/,/g, "")));
   }
 }
 

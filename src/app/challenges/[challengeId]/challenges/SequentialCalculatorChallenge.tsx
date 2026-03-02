@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 type BaseOperation = {
   operator: "add" | "subtract" | "multiply" | "divide";
@@ -70,7 +71,7 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
       {/* Starting value */}
       <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-6">
         <p className="text-sm text-gray-400">Starting Value</p>
-        <p className="text-2xl font-mono font-bold" data-start-value>{pageData.startValue}</p>
+        <p className="text-2xl font-mono font-bold" {...testAttr('start-value')}>{pageData.startValue}</p>
       </div>
 
       {/* Operations */}
@@ -79,8 +80,8 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
           <div
             key={i}
             className="bg-gray-900 rounded-lg border border-gray-800 p-4"
-            data-step={i}
-            data-step-type={op.type}
+            {...testAttr('step', String(i))}
+            {...testAttr('step-type', op.type)}
           >
             {op.type === "normal" && (
               <div className="flex items-center gap-3">
@@ -90,12 +91,12 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
                   <button
                     onClick={() => revealStep(i)}
                     className="px-3 py-1 text-sm bg-gray-800 rounded border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
-                    data-reveal={i}
+                    {...testAttr('reveal', String(i))}
                   >
                     Reveal
                   </button>
                 ) : (
-                  <span className="text-lg font-mono" data-operand={i}>
+                  <span className="text-lg font-mono" {...testAttr('operand', String(i))}>
                     {op.operand}
                   </span>
                 )}
@@ -108,9 +109,9 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
                   <span className="text-sm text-gray-500 w-14">{op.label}</span>
                   <span className="text-sm text-amber-400 font-medium">CONDITIONAL</span>
                 </div>
-                <div className="ml-14 text-sm space-y-1" data-conditional={i}>
+                <div className="ml-14 text-sm space-y-1" {...testAttr('conditional', String(i))}>
                   <p className="text-gray-300">
-                    IF current &gt; <span className="font-mono text-white" data-threshold={i}>{op.threshold}</span>:
+                    IF current &gt; <span className="font-mono text-white" {...testAttr('threshold', String(i))}>{op.threshold}</span>:
                   </p>
                   <p className="text-gray-400 ml-4">
                     {OP_SYMBOLS[op.ifAbove.operator]}{" "}
@@ -118,12 +119,12 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
                       <button
                         onClick={() => revealStep(i)}
                         className="px-2 py-0.5 text-xs bg-gray-800 rounded border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
-                        data-reveal={i}
+                        {...testAttr('reveal', String(i))}
                       >
                         Reveal
                       </button>
                     ) : (
-                      <span className="font-mono" data-operand-above={i}>{op.ifAbove.operand}</span>
+                      <span className="font-mono" {...testAttr('operand-above', String(i))}>{op.ifAbove.operand}</span>
                     )}
                   </p>
                   <p className="text-gray-300">OTHERWISE:</p>
@@ -132,7 +133,7 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
                     {op.hidden && !revealedSteps.has(i) ? (
                       <span className="text-xs text-gray-600">[Reveal above]</span>
                     ) : (
-                      <span className="font-mono" data-operand-below={i}>{op.ifBelow.operand}</span>
+                      <span className="font-mono" {...testAttr('operand-below', String(i))}>{op.ifBelow.operand}</span>
                     )}
                   </p>
                 </div>
@@ -143,7 +144,7 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-500 w-14">{op.label}</span>
                 <span className="text-lg font-mono text-blue-400">{OP_SYMBOLS[op.operator]}</span>
-                <span className="text-sm text-purple-400" data-lookup-key={i}>
+                <span className="text-sm text-purple-400" {...testAttr('lookup-key', String(i))}>
                   value of &quot;{op.lookupKey}&quot; from reference table
                 </span>
               </div>
@@ -156,7 +157,7 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-400 mb-2">Reference Table</h3>
         <div className="overflow-x-auto rounded-lg border border-gray-800">
-          <table className="w-full text-sm" data-table="reference">
+          <table className="w-full text-sm" {...testAttr('table', 'reference')}>
             <thead>
               <tr className="bg-gray-900">
                 <th className="px-4 py-2 text-left text-gray-400 font-medium">Key</th>
@@ -165,9 +166,9 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
             </thead>
             <tbody>
               {pageData.referenceTable.map((entry) => (
-                <tr key={entry.key} className="border-t border-gray-800" data-ref-key={entry.key}>
+                <tr key={entry.key} className="border-t border-gray-800" {...testAttr('ref-key', entry.key)}>
                   <td className="px-4 py-2">{entry.key}</td>
-                  <td className="px-4 py-2 text-right font-mono" data-ref-value>{entry.value}</td>
+                  <td className="px-4 py-2 text-right font-mono" {...testAttr('ref-value')}>{entry.value}</td>
                 </tr>
               ))}
             </tbody>

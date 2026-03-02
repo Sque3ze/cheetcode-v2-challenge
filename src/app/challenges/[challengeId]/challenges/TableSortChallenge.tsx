@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface Employee {
   name: string;
@@ -129,7 +130,7 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
             onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
             disabled={currentPage === 0}
             className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
-            data-page-prev
+            {...testAttr('page-prev')}
           >
             Previous
           </button>
@@ -137,7 +138,7 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
             onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={currentPage === totalPages - 1}
             className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
-            data-page-next
+            {...testAttr('page-next')}
           >
             Next
           </button>

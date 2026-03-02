@@ -19,6 +19,7 @@ interface DropdownSelectPageData {
   }>;
   condition: string;
   conditionType: string;
+  variantIndex: number;
 }
 
 type ConditionDef = {
@@ -68,11 +69,20 @@ export const dropdownSelectChallenge: ChallengeDefinition<DropdownSelectPageData
   tier: 1,
   description: "Find the product matching a compound condition and select it.",
 
-  instructions: (pageData) =>
-    `Review the products below. Select the product with the ${pageData.condition} from the dropdown and submit its name.`,
+  instructions: (pageData) => {
+    const cond = pageData.condition;
+    const variants = [
+      `Review the products below. Select the product with the ${cond} from the dropdown and submit its name.`,
+      `Examine each product card. Identify the one with the ${cond}, choose it in the dropdown, and submit.`,
+      `The product cards display various attributes. Determine which has the ${cond} and select it from the dropdown.`,
+      `Among the listed products, find the one satisfying: ${cond}. Use the dropdown to select it and submit the name.`,
+    ];
+    return variants[pageData.variantIndex];
+  },
 
   generate(data: ChallengeData) {
     const count = data.int(6, 10);
+    const variantIndex = data.int(0, 3);
     const products = data.products(count).map((p) => ({
       name: p.name,
       price: Math.round(p.price * 100) / 100,
@@ -106,6 +116,7 @@ export const dropdownSelectChallenge: ChallengeDefinition<DropdownSelectPageData
         products,
         condition: condition.label,
         conditionType: condition.type,
+        variantIndex,
       },
       answer,
     };

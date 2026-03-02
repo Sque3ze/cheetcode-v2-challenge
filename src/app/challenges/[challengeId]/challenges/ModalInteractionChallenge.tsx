@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface CardData {
   id: number;
@@ -40,15 +41,15 @@ export default function ModalInteractionChallenge({ pageData, answerRef }: Props
           <div
             key={card.id}
             className="bg-gray-900 rounded-lg border border-gray-800 p-4"
-            data-card-category={card.category}
+            {...testAttr('card-category', card.category)}
           >
             <h3 className="font-medium mb-1">{card.name}</h3>
-            <p className="text-sm text-gray-400 mb-1" data-category-label>{card.category}</p>
-            <p className="text-sm font-mono mb-3" data-card-price>${card.price.toFixed(2)}</p>
+            <p className="text-sm text-gray-400 mb-1" {...testAttr('category-label')}>{card.category}</p>
+            <p className="text-sm font-mono mb-3" {...testAttr('card-price')}>${card.price.toFixed(2)}</p>
             <button
               onClick={() => setOpenCard(card)}
               className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-              data-card-name={card.name}
+              {...testAttr('card-name', card.name)}
             >
               View Details
             </button>
@@ -65,7 +66,7 @@ export default function ModalInteractionChallenge({ pageData, answerRef }: Props
           <div
             className="bg-gray-900 rounded-lg border border-gray-700 p-6 max-w-md w-full mx-4"
             onClick={(e) => e.stopPropagation()}
-            data-modal="true"
+            {...testAttr('modal', 'true')}
           >
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-lg font-semibold">{openCard.name}</h3>
@@ -87,11 +88,11 @@ export default function ModalInteractionChallenge({ pageData, answerRef }: Props
               </div>
               <div>
                 <dt className="text-sm text-gray-400">SKU</dt>
-                <dd className="font-mono" data-field="sku">{openCard.sku}</dd>
+                <dd className="font-mono" {...testAttr('field', 'sku')}>{openCard.sku}</dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-400">Supplier</dt>
-                <dd data-field="supplier">{openCard.supplier}</dd>
+                <dd {...testAttr('field', 'supplier')}>{openCard.supplier}</dd>
               </div>
             </dl>
           </div>

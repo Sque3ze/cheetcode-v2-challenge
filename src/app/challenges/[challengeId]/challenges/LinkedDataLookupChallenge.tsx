@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface EmployeeRow {
   name: string;
@@ -63,7 +64,7 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef }: Props
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-400 mb-2">Employees</h3>
         <div className="overflow-x-auto rounded-lg border border-gray-800">
-          <table className="w-full text-sm" data-table="employees">
+          <table className="w-full text-sm" {...testAttr('table', 'employees')}>
             <thead>
               <tr className="bg-gray-900">
                 <th className="px-4 py-3 text-left text-gray-400 font-medium">Name</th>
@@ -74,10 +75,10 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef }: Props
             </thead>
             <tbody>
               {pageData.employees.map((emp, i) => (
-                <tr key={i} className="border-t border-gray-800" data-employee-name={emp.name}>
+                <tr key={i} className="border-t border-gray-800" {...testAttr('employee-name', emp.name)}>
                   <td className="px-4 py-3">{emp.name}</td>
                   <td className="px-4 py-3 text-gray-400">{emp.role}</td>
-                  <td className="px-4 py-3 font-mono" data-dept-id>{emp.departmentId}</td>
+                  <td className="px-4 py-3 font-mono" {...testAttr('dept-id')}>{emp.departmentId}</td>
                   <td className="px-4 py-3 text-right font-mono">${emp.salary.toLocaleString()}</td>
                 </tr>
               ))}
@@ -90,7 +91,7 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef }: Props
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-400 mb-2">Departments</h3>
         <div className="overflow-x-auto rounded-lg border border-gray-800">
-          <table className="w-full text-sm" data-table="departments">
+          <table className="w-full text-sm" {...testAttr('table', 'departments')}>
             <thead>
               <tr className="bg-gray-900">
                 <th className="px-4 py-3 text-left text-gray-400 font-medium w-8"></th>
@@ -100,12 +101,12 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef }: Props
             </thead>
             <tbody>
               {pageData.departments.map((dept) => (
-                <tr key={dept.id} className="border-t border-gray-800" data-dept-row={dept.id}>
+                <tr key={dept.id} className="border-t border-gray-800" {...testAttr('dept-row', dept.id)}>
                   <td className="px-4 py-3" colSpan={3}>
                     <button
                       onClick={() => toggleDept(dept.id)}
                       className="w-full text-left flex items-center gap-3"
-                      data-expand-dept={dept.id}
+                      {...testAttr('expand-dept', dept.id)}
                     >
                       <span className="text-xs text-gray-500">
                         {expandedDepts.has(dept.id) ? "▼" : "▶"}
@@ -114,16 +115,16 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef }: Props
                       <span className="text-sm">{dept.name}</span>
                     </button>
                     {expandedDepts.has(dept.id) && (
-                      <div className="mt-2 ml-6 bg-gray-900/50 rounded-lg p-3 text-sm" data-dept-details={dept.id}>
+                      <div className="mt-2 ml-6 bg-gray-900/50 rounded-lg p-3 text-sm" {...testAttr('dept-details', dept.id)}>
                         <dl className="grid grid-cols-2 gap-x-6 gap-y-1">
                           <dt className="text-gray-500">Budget</dt>
-                          <dd className="font-mono" data-field="budget">${dept.budget.toLocaleString()}</dd>
+                          <dd className="font-mono" {...testAttr('field', 'budget')}>${dept.budget.toLocaleString()}</dd>
                           <dt className="text-gray-500">Manager</dt>
-                          <dd data-field="manager">{dept.manager}</dd>
+                          <dd {...testAttr('field', 'manager')}>{dept.manager}</dd>
                           <dt className="text-gray-500">Location</dt>
-                          <dd data-field="location">{dept.location}</dd>
+                          <dd {...testAttr('field', 'location')}>{dept.location}</dd>
                           <dt className="text-gray-500">Headcount</dt>
-                          <dd data-field="headcount">{dept.headcount}</dd>
+                          <dd {...testAttr('field', 'headcount')}>{dept.headcount}</dd>
                         </dl>
                       </div>
                     )}
@@ -139,7 +140,7 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef }: Props
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-400 mb-2">Projects</h3>
         <div className="overflow-x-auto rounded-lg border border-gray-800">
-          <table className="w-full text-sm" data-table="projects">
+          <table className="w-full text-sm" {...testAttr('table', 'projects')}>
             <thead>
               <tr className="bg-gray-900">
                 <th className="px-4 py-3 text-left text-gray-400 font-medium">Project ID</th>
@@ -151,11 +152,11 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef }: Props
             </thead>
             <tbody>
               {pageData.projects.map((proj) => (
-                <tr key={proj.id} className="border-t border-gray-800" data-project-id={proj.id}>
+                <tr key={proj.id} className="border-t border-gray-800" {...testAttr('project-id', proj.id)}>
                   <td className="px-4 py-3 font-mono text-xs">{proj.id}</td>
                   <td className="px-4 py-3">{proj.name}</td>
-                  <td className="px-4 py-3 font-mono" data-project-dept-id>{proj.departmentId}</td>
-                  <td className="px-4 py-3 text-right font-mono" data-project-budget>${proj.budget.toLocaleString()}</td>
+                  <td className="px-4 py-3 font-mono" {...testAttr('project-dept-id')}>{proj.departmentId}</td>
+                  <td className="px-4 py-3 text-right font-mono" {...testAttr('project-budget')}>${proj.budget.toLocaleString()}</td>
                   <td className="px-4 py-3 text-gray-400">{proj.status}</td>
                 </tr>
               ))}

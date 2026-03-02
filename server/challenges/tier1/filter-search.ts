@@ -22,6 +22,7 @@ interface FilterSearchPageData {
   filterConditions: Array<{ field: string; value: string }>;
   aggregation: "count" | "total salary" | "average salary";
   employeesPerPage: number;
+  variantIndex: number;
 }
 
 export const filterSearchChallenge: ChallengeDefinition<FilterSearchPageData> = {
@@ -32,19 +33,36 @@ export const filterSearchChallenge: ChallengeDefinition<FilterSearchPageData> = 
 
   instructions: (pageData) => {
     const conditions = pageData.filterConditions.map((c) => `${c.field} = "${c.value}"`).join(" AND ");
-    if (pageData.aggregation === "count") {
-      return `Filter employees where ${conditions} and submit the count of matching employees.`;
-    }
-    if (pageData.aggregation === "average salary") {
-      return `Filter employees where ${conditions} and submit the average salary of matching employees, rounded to the nearest whole number.`;
-    }
-    return `Filter employees where ${conditions} and submit the total salary of matching employees.`;
+    const agg = pageData.aggregation;
+    const variants = [
+      agg === "count"
+        ? `Filter employees where ${conditions} and submit the count of matching employees.`
+        : agg === "average salary"
+          ? `Filter employees where ${conditions} and submit the average salary of matching employees, rounded to the nearest whole number.`
+          : `Filter employees where ${conditions} and submit the total salary of matching employees.`,
+      agg === "count"
+        ? `From the employee list, find all records matching ${conditions}. How many are there? Submit that number.`
+        : agg === "average salary"
+          ? `Find employees matching ${conditions}. Compute their mean salary (round to whole number) and submit it.`
+          : `Find employees matching ${conditions}. Add up all their salaries and submit the total.`,
+      agg === "count"
+        ? `The table contains employee records. Apply these filters: ${conditions}. Submit how many employees match.`
+        : agg === "average salary"
+          ? `Apply filters ${conditions} to the employee data. Calculate the average salary of results, rounded to the nearest integer.`
+          : `Apply filters ${conditions} to the employee data. What is the combined salary of all matching employees?`,
+      agg === "count"
+        ? `Look through the employee list for entries where ${conditions}. Report the total count of matches.`
+        : agg === "average salary"
+          ? `Search for employees with ${conditions}. Compute the average of their salaries, rounded to a whole number.`
+          : `Search for employees with ${conditions}. Sum their salaries and submit the result.`,
+    ];
+    return variants[pageData.variantIndex];
   },
 
   generate(data: ChallengeData) {
-    // Generate 30-40 employees (needs pagination)
     const count = data.int(30, 40);
     const people = data.people(count);
+    const variantIndex = data.int(0, 3);
 
     const employees = people.map((p) => ({
       name: p.fullName,
@@ -54,7 +72,6 @@ export const filterSearchChallenge: ChallengeDefinition<FilterSearchPageData> = 
       age: p.age,
     }));
 
-    // Build filter conditions — always 2 AND conditions
     const deptValues = [...new Set(employees.map((e) => e.department))];
     const cityValues = [...new Set(employees.map((e) => e.city))];
 
@@ -66,12 +83,10 @@ export const filterSearchChallenge: ChallengeDefinition<FilterSearchPageData> = 
       { field: "city", value: filterCity },
     ];
 
-    // Find matching employees
     let matching = employees.filter(
       (e) => e.department === filterDept && e.city === filterCity
     );
 
-    // Ensure at least 2 matches
     while (matching.length < 2) {
       const idx = data.int(0, employees.length - 1);
       employees[idx].department = filterDept;
@@ -99,6 +114,7 @@ export const filterSearchChallenge: ChallengeDefinition<FilterSearchPageData> = 
         filterConditions,
         aggregation,
         employeesPerPage: 10,
+        variantIndex,
       },
       answer,
     };

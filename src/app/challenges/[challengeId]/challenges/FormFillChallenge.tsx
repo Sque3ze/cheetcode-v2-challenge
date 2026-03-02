@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface FormFillPageData {
   employee: {
@@ -62,19 +63,19 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
         <dl className="grid grid-cols-2 gap-4">
           <div>
             <dt className="text-sm text-gray-400">Name</dt>
-            <dd className="text-gray-100" data-field="name">{employee.name}</dd>
+            <dd className="text-gray-100" {...testAttr('field', 'name')}>{employee.name}</dd>
           </div>
           <div>
             <dt className="text-sm text-gray-400">Email</dt>
-            <dd className="text-gray-100" data-field="email">{employee.email}</dd>
+            <dd className="text-gray-100" {...testAttr('field', 'email')}>{employee.email}</dd>
           </div>
           <div>
             <dt className="text-sm text-gray-400">Department</dt>
-            <dd className="text-gray-100" data-field="department">{employee.department}</dd>
+            <dd className="text-gray-100" {...testAttr('field', 'department')}>{employee.department}</dd>
           </div>
           <div>
             <dt className="text-sm text-gray-400">Salary</dt>
-            <dd className="text-gray-100" data-field="salary">${employee.salary.toLocaleString()}</dd>
+            <dd className="text-gray-100" {...testAttr('field', 'salary')}>${employee.salary.toLocaleString()}</dd>
           </div>
         </dl>
       </div>
@@ -84,25 +85,25 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
         <button
           onClick={() => setShowDetails(!showDetails)}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors mb-2"
-          data-toggle-details
+          {...testAttr('toggle-details')}
         >
           <span className="text-xs">{showDetails ? "▼" : "▶"}</span>
           Details
         </button>
         {showDetails && (
-          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6" data-details-panel>
+          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6" {...testAttr('details-panel')}>
             <dl className="grid grid-cols-2 gap-4">
               <div>
                 <dt className="text-sm text-gray-400">Role</dt>
-                <dd className="text-gray-100" data-field="role">{employee.role}</dd>
+                <dd className="text-gray-100" {...testAttr('field', 'role')}>{employee.role}</dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-400">City</dt>
-                <dd className="text-gray-100" data-field="city">{employee.city}</dd>
+                <dd className="text-gray-100" {...testAttr('field', 'city')}>{employee.city}</dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-400">Start Date</dt>
-                <dd className="text-gray-100" data-field="startDate">{employee.startDate}</dd>
+                <dd className="text-gray-100" {...testAttr('field', 'startDate')}>{employee.startDate}</dd>
               </div>
             </dl>
           </div>

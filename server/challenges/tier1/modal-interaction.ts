@@ -24,6 +24,7 @@ interface ModalInteractionPageData {
   targetField: string;
   targetCardName: string;
   targetCategory: string;
+  variantIndex: number;
 }
 
 const SUPPLIERS = [
@@ -37,13 +38,21 @@ export const modalInteractionChallenge: ChallengeDefinition<ModalInteractionPage
   tier: 1,
   description: "Find a product by condition, open its modal, and extract hidden info.",
 
-  instructions: (pageData) =>
-    `Find the product in the "${pageData.targetCategory}" category with the ${pageData.targetCondition}. ` +
-    `Click "View Details" to open its modal and submit the ${pageData.targetField}.`,
+  instructions: (pageData) => {
+    const { targetCategory, targetCondition, targetField } = pageData;
+    const variants = [
+      `Find the product in the "${targetCategory}" category with the ${targetCondition}. Click "View Details" to open its modal and submit the ${targetField}.`,
+      `Among "${targetCategory}" products, identify the one with the ${targetCondition}. Open its detail modal and provide the ${targetField}.`,
+      `Look at products categorized as "${targetCategory}". Which one has the ${targetCondition}? Click its details button and submit the ${targetField} shown in the modal.`,
+      `In the "${targetCategory}" section, locate the product with the ${targetCondition}. View its details and report the ${targetField}.`,
+    ];
+    return variants[pageData.variantIndex];
+  },
 
   generate(data: ChallengeData) {
     const count = data.int(6, 9);
     const products = data.products(count);
+    const variantIndex = data.int(0, 3);
 
     const usedNames = new Set<string>();
     const cards: CardData[] = products.map((p, i) => {
@@ -64,14 +73,12 @@ export const modalInteractionChallenge: ChallengeDefinition<ModalInteractionPage
       };
     });
 
-    // Ensure unique prices
     const usedPrices = new Set<number>();
     for (const c of cards) {
       while (usedPrices.has(c.price)) c.price += 0.01;
       usedPrices.add(c.price);
     }
 
-    // Pick a target category that has at least 2 items
     const categoryCounts = new Map<string, number>();
     for (const c of cards) {
       categoryCounts.set(c.category, (categoryCounts.get(c.category) || 0) + 1);
@@ -80,7 +87,6 @@ export const modalInteractionChallenge: ChallengeDefinition<ModalInteractionPage
       .filter(([, count]) => count >= 2)
       .map(([cat]) => cat);
 
-    // If no category has 2+ items, force it
     if (validCategories.length === 0) {
       cards[0].category = cards[1].category;
       validCategories.push(cards[0].category);
@@ -89,7 +95,6 @@ export const modalInteractionChallenge: ChallengeDefinition<ModalInteractionPage
     const targetCategory = data.pick(validCategories);
     const categoryCards = cards.filter((c) => c.category === targetCategory);
 
-    // Pick condition: lowest or highest price in category
     const conditionType = data.pick(["lowest price", "highest price"] as const);
     const targetCard = conditionType === "lowest price"
       ? categoryCards.reduce((min, c) => (c.price < min.price ? c : min), categoryCards[0])
@@ -105,6 +110,7 @@ export const modalInteractionChallenge: ChallengeDefinition<ModalInteractionPage
         targetField,
         targetCardName: targetCard.name,
         targetCategory,
+        variantIndex,
       },
       answer,
     };

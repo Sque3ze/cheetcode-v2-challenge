@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface Employee {
   name: string;
@@ -61,7 +62,7 @@ export default function FilterSearchChallenge({ pageData, answerRef }: Props) {
           onChange={(e) => setFilterText(e.target.value)}
           placeholder="Type to filter employees..."
           className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          data-testid="filter-input"
+          {...testAttr('testid', 'filter-input')}
         />
         <p className="mt-1 text-xs text-gray-500">
           Showing {filtered.length} of {pageData.employees.length} employees
@@ -104,7 +105,7 @@ export default function FilterSearchChallenge({ pageData, answerRef }: Props) {
             onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
             disabled={currentPage === 0}
             className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
-            data-page-prev
+            {...testAttr('page-prev')}
           >
             Previous
           </button>
@@ -112,7 +113,7 @@ export default function FilterSearchChallenge({ pageData, answerRef }: Props) {
             onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={currentPage === totalPages - 1}
             className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
-            data-page-next
+            {...testAttr('page-next')}
           >
             Next
           </button>

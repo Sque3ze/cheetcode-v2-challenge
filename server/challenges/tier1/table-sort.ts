@@ -20,6 +20,7 @@ interface TableSortPageData {
   targetPosition: number;
   targetField: string;
   rowsPerPage: number;
+  variantIndex: number;
 }
 
 export const tableSortChallenge: ChallengeDefinition<TableSortPageData> = {
@@ -29,14 +30,23 @@ export const tableSortChallenge: ChallengeDefinition<TableSortPageData> = {
   description: "Sort a paginated table and find a specific value.",
 
   instructions: (pageData) => {
-    const directionWord = pageData.sortDirection === "highest" ? "highest" : "lowest";
-    const ordinal = getOrdinal(pageData.targetPosition);
-    return `Sort the employee table by ${pageData.sortColumn} and find the ${ordinal} ${directionWord} value. Submit the ${pageData.targetField} of that employee. Note: the table is paginated — you may need to navigate pages.`;
+    const dir = pageData.sortDirection === "highest" ? "highest" : "lowest";
+    const ord = getOrdinal(pageData.targetPosition);
+    const col = pageData.sortColumn;
+    const field = pageData.targetField;
+    const variants = [
+      `Sort the employee table by ${col} and find the ${ord} ${dir} value. Submit the ${field} of that employee. Note: the table is paginated — you may need to navigate pages.`,
+      `Order employees by ${col} (${dir} first). Which employee is at position ${pageData.targetPosition}? Provide their ${field}. The table has multiple pages.`,
+      `The table below lists employees. Sort it by ${col} to identify the ${ord} ${dir} entry and submit that employee's ${field}. Pagination is required.`,
+      `Look at the employee data. Arrange rows by ${col} from ${dir} to ${dir === "highest" ? "lowest" : "highest"}. The ${ord} row's ${field} is your answer. Check all pages.`,
+    ];
+    return variants[pageData.variantIndex];
   },
 
   generate(data: ChallengeData) {
     const count = data.int(10, 12);
     const people = data.people(count);
+    const variantIndex = data.int(0, 3);
 
     const sortableColumns = ["salary", "startDate"] as const;
     const sortColumn = data.pick(sortableColumns);
@@ -71,6 +81,7 @@ export const tableSortChallenge: ChallengeDefinition<TableSortPageData> = {
         targetPosition,
         targetField,
         rowsPerPage: 5,
+        variantIndex,
       },
       answer,
     };

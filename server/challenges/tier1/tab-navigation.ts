@@ -24,6 +24,7 @@ interface TabNavigationPageData {
   ifAboveKey: string;
   ifBelowTab: string;
   ifBelowKey: string;
+  variantIndex: number;
 }
 
 export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> = {
@@ -32,12 +33,19 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
   tier: 1,
   description: "Navigate tabs and use conditional logic to find the right value.",
 
-  instructions: (pageData) =>
-    `Find the "${pageData.conditionKey}" value in the "${pageData.conditionTab}" tab. ` +
-    `If the numeric value is above ${pageData.conditionThreshold}, submit the "${pageData.ifAboveKey}" from the "${pageData.ifAboveTab}" tab. ` +
-    `Otherwise, submit the "${pageData.ifBelowKey}" from the "${pageData.ifBelowTab}" tab.`,
+  instructions: (pageData) => {
+    const { conditionKey, conditionTab, conditionThreshold, ifAboveKey, ifAboveTab, ifBelowKey, ifBelowTab } = pageData;
+    const variants = [
+      `Find the "${conditionKey}" value in the "${conditionTab}" tab. If the numeric value is above ${conditionThreshold}, submit the "${ifAboveKey}" from the "${ifAboveTab}" tab. Otherwise, submit the "${ifBelowKey}" from the "${ifBelowTab}" tab.`,
+      `Navigate to "${conditionTab}" and check "${conditionKey}". When it exceeds ${conditionThreshold}, your answer is "${ifAboveKey}" from "${ifAboveTab}"; if not, answer with "${ifBelowKey}" from "${ifBelowTab}".`,
+      `In the "${conditionTab}" tab, locate "${conditionKey}". Compare it against ${conditionThreshold}. Above? Submit "${ifAboveKey}" (found in "${ifAboveTab}"). Below or equal? Submit "${ifBelowKey}" (found in "${ifBelowTab}").`,
+      `Check the "${conditionTab}" section for "${conditionKey}". If that number is greater than ${conditionThreshold}, provide the "${ifAboveKey}" value from "${ifAboveTab}". Otherwise provide "${ifBelowKey}" from "${ifBelowTab}".`,
+    ];
+    return variants[pageData.variantIndex];
+  },
 
   generate(data: ChallengeData) {
+    const variantIndex = data.int(0, 3);
     const tabConfigs = [
       { label: "Overview", keys: ["Company", "Founded", "Headquarters", "Industry"] },
       { label: "Financials", keys: ["Revenue", "Profit", "Employees", "Growth Rate"] },
@@ -57,7 +65,6 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
     }));
 
     // Pick a condition: use a numeric field as the threshold check
-    // Find tabs with numeric values
     const numericKeys: { tab: TabData; key: string; value: number }[] = [];
     for (const tab of tabs) {
       for (const item of tab.content) {
@@ -68,26 +75,21 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
       }
     }
 
-    // Pick the condition from a numeric field
     const conditionEntry = data.pick(numericKeys);
     const conditionTab = conditionEntry.tab.label;
     const conditionKey = conditionEntry.key;
 
-    // Set threshold close to the actual value so the condition is meaningful
-    // but deterministic — use a threshold below actual value 60% of time
     const isAbove = data.int(1, 10) <= 6;
     const conditionThreshold = isAbove
       ? Math.floor(conditionEntry.value - data.int(1, 10))
       : Math.ceil(conditionEntry.value + data.int(1, 10));
 
-    // Pick the two result targets from different tabs
     const otherTabs = tabs.filter((t) => t.label !== conditionEntry.tab.label);
     const ifAboveTab = data.pick(otherTabs);
     const ifAboveItem = data.pick(ifAboveTab.content);
     const ifBelowTab = data.pick(otherTabs);
     const ifBelowItem = data.pick(ifBelowTab.content);
 
-    // Determine the answer based on the condition
     const answer = conditionEntry.value > conditionThreshold
       ? ifAboveItem.value
       : ifBelowItem.value;
@@ -102,6 +104,7 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
         ifAboveKey: ifAboveItem.key,
         ifBelowTab: ifBelowTab.label,
         ifBelowKey: ifBelowItem.key,
+        variantIndex,
       },
       answer,
     };
@@ -109,19 +112,14 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
 };
 
 function parseNumericValue(value: string): number | null {
-  // Handle "$500M", "85%", "4200", etc.
   const cleanedPercent = value.match(/^(\d+)%$/);
   if (cleanedPercent) return parseInt(cleanedPercent[1]);
-
   const cleanedDollar = value.match(/^\$(\d+)M?$/);
   if (cleanedDollar) return parseInt(cleanedDollar[1]);
-
   const cleanedNumber = value.match(/^(\d+)$/);
   if (cleanedNumber) return parseInt(cleanedNumber[1]);
-
   const cleanedDecimal = value.match(/^([\d.]+)%$/);
   if (cleanedDecimal) return parseFloat(cleanedDecimal[1]);
-
   return null;
 }
 

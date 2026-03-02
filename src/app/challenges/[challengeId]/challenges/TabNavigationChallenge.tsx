@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface TabData {
   label: string;
@@ -44,7 +45,7 @@ export default function TabNavigationChallenge({ pageData, answerRef }: Props) {
                 ? "text-white border-b-2 border-blue-500 bg-gray-900"
                 : "text-gray-400 hover:text-gray-200"
             }`}
-            data-tab={tab.label}
+            {...testAttr('tab', tab.label)}
           >
             {tab.label}
           </button>
@@ -56,8 +57,8 @@ export default function TabNavigationChallenge({ pageData, answerRef }: Props) {
         <dl className="space-y-4">
           {pageData.tabs[activeTab].content.map((item, i) => (
             <div key={i} className="flex justify-between items-center py-2 border-b border-gray-800 last:border-0">
-              <dt className="text-gray-400" data-key={item.key}>{item.key}</dt>
-              <dd className="text-gray-100 font-mono" data-value={item.key}>{item.value}</dd>
+              <dt className="text-gray-400" {...testAttr('key', item.key)}>{item.key}</dt>
+              <dd className="text-gray-100 font-mono" {...testAttr('value', item.key)}>{item.value}</dd>
             </div>
           ))}
         </dl>

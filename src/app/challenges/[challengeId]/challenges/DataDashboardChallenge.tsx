@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface SalesRow {
   id: string;
@@ -70,7 +71,7 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
               Total Profit: {pageData.targetProduct} / {pageData.targetRegion}
             </p>
           </div>
-          <p className="text-2xl font-bold font-mono text-emerald-300" data-quick-stats>
+          <p className="text-2xl font-bold font-mono text-emerald-300" {...testAttr('quick-stats')}>
             ${pageData.quickStatsTotal.toFixed(2)}
           </p>
         </div>
@@ -87,7 +88,7 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
                 ? "text-blue-400 border-b-2 border-blue-400"
                 : "text-gray-500 hover:text-gray-300"
             }`}
-            data-dashboard-tab={key}
+            {...testAttr('dashboard-tab', key)}
           >
             {label}
           </button>
@@ -98,7 +99,7 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
       {activeTab === "sales" && (
         <div className="mb-6">
           <div className="overflow-x-auto rounded-lg border border-gray-800">
-            <table className="w-full text-sm" data-table="sales">
+            <table className="w-full text-sm" {...testAttr('table', 'sales')}>
               <thead>
                 <tr className="bg-gray-900">
                   <th className="px-3 py-2 text-left text-gray-400 font-medium">ID</th>
@@ -111,13 +112,13 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
               </thead>
               <tbody>
                 {salesSlice.map((row) => (
-                  <tr key={row.id} className="border-t border-gray-800" data-sale-id={row.id}>
+                  <tr key={row.id} className="border-t border-gray-800" {...testAttr('sale-id', row.id)}>
                     <td className="px-3 py-2 font-mono text-xs">{row.id}</td>
-                    <td className="px-3 py-2" data-region>{row.region}</td>
-                    <td className="px-3 py-2" data-product>{row.product}</td>
-                    <td className="px-3 py-2 text-right font-mono" data-revenue>${row.revenue.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right" data-units>{row.units}</td>
-                    <td className="px-3 py-2 text-gray-400" data-quarter>{row.quarter}</td>
+                    <td className="px-3 py-2" {...testAttr('region')}>{row.region}</td>
+                    <td className="px-3 py-2" {...testAttr('product')}>{row.product}</td>
+                    <td className="px-3 py-2 text-right font-mono" {...testAttr('revenue')}>${row.revenue.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right" {...testAttr('units')}>{row.units}</td>
+                    <td className="px-3 py-2 text-gray-400" {...testAttr('quarter')}>{row.quarter}</td>
                   </tr>
                 ))}
               </tbody>
@@ -134,7 +135,7 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
                 onClick={() => setSalesPage((p) => Math.max(0, p - 1))}
                 disabled={salesPage === 0}
                 className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
-                data-page-prev
+                {...testAttr('page-prev')}
               >
                 Previous
               </button>
@@ -142,7 +143,7 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
                 onClick={() => setSalesPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={salesPage === totalPages - 1}
                 className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
-                data-page-next
+                {...testAttr('page-next')}
               >
                 Next
               </button>
@@ -155,7 +156,7 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
       {activeTab === "costs" && (
         <div className="mb-6">
           <div className="overflow-x-auto rounded-lg border border-gray-800">
-            <table className="w-full text-sm" data-table="costs">
+            <table className="w-full text-sm" {...testAttr('table', 'costs')}>
               <thead>
                 <tr className="bg-gray-900">
                   <th className="px-3 py-2 text-left text-gray-400 font-medium">Product</th>
@@ -165,10 +166,10 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
               </thead>
               <tbody>
                 {pageData.costs.map((row) => (
-                  <tr key={row.product} className="border-t border-gray-800" data-cost-product={row.product}>
+                  <tr key={row.product} className="border-t border-gray-800" {...testAttr('cost-product', row.product)}>
                     <td className="px-3 py-2">{row.product}</td>
-                    <td className="px-3 py-2 text-right font-mono" data-cost-per-unit>${row.costPerUnit.toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right font-mono" data-shipping>${row.shipping.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right font-mono" {...testAttr('cost-per-unit')}>${row.costPerUnit.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right font-mono" {...testAttr('shipping')}>${row.shipping.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -181,7 +182,7 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
       {activeTab === "taxes" && (
         <div className="mb-6">
           <div className="overflow-x-auto rounded-lg border border-gray-800">
-            <table className="w-full text-sm" data-table="taxes">
+            <table className="w-full text-sm" {...testAttr('table', 'taxes')}>
               <thead>
                 <tr className="bg-gray-900">
                   <th className="px-3 py-2 text-left text-gray-400 font-medium">Region</th>
@@ -190,9 +191,9 @@ export default function DataDashboardChallenge({ pageData, answerRef }: Props) {
               </thead>
               <tbody>
                 {pageData.taxes.map((row) => (
-                  <tr key={row.region} className="border-t border-gray-800" data-tax-region={row.region}>
+                  <tr key={row.region} className="border-t border-gray-800" {...testAttr('tax-region', row.region)}>
                     <td className="px-3 py-2">{row.region}</td>
-                    <td className="px-3 py-2 text-right font-mono" data-tax-rate>{row.taxRate}%</td>
+                    <td className="px-3 py-2 text-right font-mono" {...testAttr('tax-rate')}>{row.taxRate}%</td>
                   </tr>
                 ))}
               </tbody>

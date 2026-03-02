@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface Product {
   name: string;
@@ -36,25 +37,25 @@ export default function DropdownSelectChallenge({ pageData, answerRef }: Props) 
           <div
             key={i}
             className="bg-gray-900 rounded-lg border border-gray-800 p-4"
-            data-product-card={product.name}
+            {...testAttr('product-card', product.name)}
           >
             <h3 className="font-medium mb-2">{product.name}</h3>
             <dl className="text-sm space-y-1">
               <div className="flex justify-between">
                 <dt className="text-gray-500">Category</dt>
-                <dd className="text-gray-300" data-card-category>{product.category}</dd>
+                <dd className="text-gray-300" {...testAttr('card-category')}>{product.category}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Price</dt>
-                <dd className="font-mono text-gray-300" data-card-price>${product.price.toFixed(2)}</dd>
+                <dd className="font-mono text-gray-300" {...testAttr('card-price')}>${product.price.toFixed(2)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Rating</dt>
-                <dd className="text-gray-300" data-card-rating>{product.rating}</dd>
+                <dd className="text-gray-300" {...testAttr('card-rating')}>{product.rating}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500">Stock</dt>
-                <dd className="text-gray-300" data-card-stock>{product.stock}</dd>
+                <dd className="text-gray-300" {...testAttr('card-stock')}>{product.stock}</dd>
               </div>
             </dl>
           </div>

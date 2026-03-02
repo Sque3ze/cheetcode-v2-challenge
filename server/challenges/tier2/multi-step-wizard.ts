@@ -6,9 +6,6 @@
  *   "Find the order with highest subtotal that has status 'Pending'"
  * - Add shipping option selection as a 4th step (radio buttons)
  * - Final answer = discounted subtotal + shipping cost
- *
- * Tests: condition-based lookups, multi-step sequential reasoning,
- * carrying context between steps, computation with multiple variables.
  */
 
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
@@ -41,6 +38,7 @@ interface MultiStepWizardPageData {
   targetStatus: string;
   discountCondition: string;
   targetShipping: string;
+  variantIndex: number;
 }
 
 export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageData> = {
@@ -49,14 +47,32 @@ export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageDa
   tier: 2,
   description: "Complete a 4-step order processing wizard with conditional lookups.",
 
-  instructions: (pageData) =>
-    `Step 1: Find the order with the ${pageData.orderCondition} among orders with status "${pageData.targetStatus}". ` +
-    `Step 2: Apply the ${pageData.discountCondition}. ` +
-    `Step 3: Select "${pageData.targetShipping}" shipping. ` +
-    `Step 4: Calculate the final total: (quantity × unit price) × (1 - discount/100) + shipping cost. ` +
-    `Submit the result rounded to 2 decimal places.`,
+  instructions: (pageData) => {
+    const { orderCondition, targetStatus, discountCondition, targetShipping } = pageData;
+    const variants = [
+      `Step 1: Find the order with the ${orderCondition} among orders with status "${targetStatus}". ` +
+      `Step 2: Apply the ${discountCondition}. ` +
+      `Step 3: Select "${targetShipping}" shipping. ` +
+      `Step 4: Calculate the final total: (quantity × unit price) × (1 - discount/100) + shipping cost. ` +
+      `Submit the result rounded to 2 decimal places.`,
+
+      `Process an order through the wizard: (1) Among "${targetStatus}" orders, pick the one with the ${orderCondition}. ` +
+      `(2) Use the ${discountCondition}. (3) Choose "${targetShipping}" shipping. ` +
+      `(4) Compute: (qty × unitPrice) × (1 - discount%) + shippingCost. Round to 2 decimals.`,
+
+      `Navigate the 4-step form. First, select the "${targetStatus}" order with the ${orderCondition}. ` +
+      `Then apply the ${discountCondition} and select "${targetShipping}" for shipping. ` +
+      `Finally, calculate (quantity × unit price) × (1 - discount/100) + shipping. Submit to 2 decimal places.`,
+
+      `Complete these steps: Pick the ${orderCondition} from "${targetStatus}" orders. ` +
+      `Apply ${discountCondition} as your discount. Ship via "${targetShipping}". ` +
+      `Your answer is (qty × unit price) × (1 - discount/100) + shipping cost, rounded to 2 decimals.`,
+    ];
+    return variants[pageData.variantIndex];
+  },
 
   generate(data: ChallengeData) {
+    const variantIndex = data.int(0, 3);
     const orderCount = data.int(8, 12);
     const orders: Order[] = [];
     const usedIds = new Set<string>();
@@ -81,24 +97,20 @@ export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageDa
       });
     }
 
-    // Generate discount codes
     const discountCodes: DiscountCode[] = [
       { code: `SAVE${data.int(10, 30)}`, percent: data.int(5, 15) },
       { code: `DEAL${data.int(40, 60)}`, percent: data.int(10, 25) },
       { code: `VIP${data.int(70, 99)}`, percent: data.int(15, 35) },
     ];
 
-    // Shipping options
     const shippingOptions: ShippingOption[] = [
       { name: "Standard", cost: data.int(5, 15) + data.int(0, 99) / 100 },
       { name: "Express", cost: data.int(20, 40) + data.int(0, 99) / 100 },
       { name: "Overnight", cost: data.int(45, 80) + data.int(0, 99) / 100 },
     ];
 
-    // Pick a target status
     const targetStatus = data.pick(["Pending", "Processing"] as const);
 
-    // Ensure at least 2 orders with this status
     let statusOrders = orders.filter((o) => o.status === targetStatus);
     while (statusOrders.length < 2) {
       const randomOrder = data.pick(orders);
@@ -108,10 +120,8 @@ export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageDa
       }
     }
 
-    // Order condition: highest or lowest subtotal
     const orderCondition = data.pick(["highest subtotal", "lowest subtotal"] as const);
 
-    // Find the target order
     const sortedOrders = [...statusOrders].sort((a, b) => {
       const subA = a.quantity * a.unitPrice;
       const subB = b.quantity * b.unitPrice;
@@ -119,17 +129,14 @@ export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageDa
     });
     const targetOrder = sortedOrders[0];
 
-    // Pick discount condition
     const discountCondition = data.pick(["highest discount percentage", "lowest discount percentage"] as const);
     const sortedDiscounts = [...discountCodes].sort((a, b) =>
       discountCondition === "highest discount percentage" ? b.percent - a.percent : a.percent - b.percent
     );
     const targetDiscount = sortedDiscounts[0];
 
-    // Pick shipping
     const targetShipping = data.pick(shippingOptions);
 
-    // Compute: (qty * unitPrice) * (1 - discount/100) + shipping
     const subtotal = targetOrder.quantity * targetOrder.unitPrice;
     const discountedTotal = subtotal * (1 - targetDiscount.percent / 100);
     const finalTotal = discountedTotal + targetShipping.cost;
@@ -144,6 +151,7 @@ export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageDa
         targetStatus,
         discountCondition,
         targetShipping: targetShipping.name,
+        variantIndex,
       },
       answer,
     };

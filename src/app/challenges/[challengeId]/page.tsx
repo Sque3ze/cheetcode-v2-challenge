@@ -17,7 +17,7 @@ import LinkedDataLookupChallenge from "./challenges/LinkedDataLookupChallenge";
 import SequentialCalculatorChallenge from "./challenges/SequentialCalculatorChallenge";
 import DataDashboardChallenge from "./challenges/DataDashboardChallenge";
 import ConstraintSolverChallenge from "./challenges/ConstraintSolverChallenge";
-import PromptInjectionChallenge from "./challenges/PromptInjectionChallenge";
+import CalculationAuditChallenge from "./challenges/CalculationAuditChallenge";
 import RedHerringChallenge from "./challenges/RedHerringChallenge";
 
 interface ChallengePageData {
@@ -49,7 +49,7 @@ const CHALLENGE_RENDERERS: Record<string, React.ComponentType<{ pageData: any; a
   "tier2-sequential-calculator": SequentialCalculatorChallenge,
   "tier3-data-dashboard": DataDashboardChallenge,
   "tier3-constraint-solver": ConstraintSolverChallenge,
-  "tier4-prompt-injection": PromptInjectionChallenge,
+  "tier4-calculation-audit": CalculationAuditChallenge,
   "tier4-red-herring": RedHerringChallenge,
 };
 

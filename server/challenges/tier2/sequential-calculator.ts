@@ -1,62 +1,28 @@
 /**
  * Tier 2 Challenge: Sequential Calculator (Moderate Rework)
  *
- * Changes:
- * - Add conditional operations: "If current > 50, add 12; otherwise subtract 8"
- * - Add lookup operations: one operand references a value in a separate reference table
- * - Increase hidden percentage (60-70% behind Reveal buttons)
- *
- * Tests: sequential multi-step computation, conditional reasoning,
- * cross-referencing a lookup table, interacting with UI to reveal data.
+ * Conditional operations, lookup operations, and hidden values behind Reveal buttons.
  */
 
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
 import type { ChallengeData } from "../../../src/lib/seed";
 
-type BaseOperation = {
-  operator: "add" | "subtract" | "multiply" | "divide";
-  operand: number;
-  hidden: boolean;
-  label: string;
-  type: "normal";
-};
-
-type ConditionalOperation = {
-  threshold: number;
-  ifAbove: { operator: "add" | "subtract"; operand: number };
-  ifBelow: { operator: "add" | "subtract"; operand: number };
-  hidden: boolean;
-  label: string;
-  type: "conditional";
-};
-
-type LookupOperation = {
-  operator: "add" | "subtract" | "multiply";
-  lookupKey: string;
-  lookupValue: number;
-  hidden: boolean;
-  label: string;
-  type: "lookup";
-};
-
+type BaseOperation = { operator: "add" | "subtract" | "multiply" | "divide"; operand: number; hidden: boolean; label: string; type: "normal"; };
+type ConditionalOperation = { threshold: number; ifAbove: { operator: "add" | "subtract"; operand: number }; ifBelow: { operator: "add" | "subtract"; operand: number }; hidden: boolean; label: string; type: "conditional"; };
+type LookupOperation = { operator: "add" | "subtract" | "multiply"; lookupKey: string; lookupValue: number; hidden: boolean; label: string; type: "lookup"; };
 type Operation = BaseOperation | ConditionalOperation | LookupOperation;
 
-interface ReferenceEntry {
-  key: string;
-  value: number;
-}
+interface ReferenceEntry { key: string; value: number; }
 
 interface SequentialCalculatorPageData {
   startValue: number;
   operations: Operation[];
   referenceTable: ReferenceEntry[];
+  variantIndex: number;
 }
 
 const OP_SYMBOLS: Record<string, string> = {
-  add: "+",
-  subtract: "\u2212",
-  multiply: "\u00d7",
-  divide: "\u00f7",
+  add: "+", subtract: "\u2212", multiply: "\u00d7", divide: "\u00f7",
 };
 
 export const sequentialCalculatorChallenge: ChallengeDefinition<SequentialCalculatorPageData> = {
@@ -85,67 +51,45 @@ export const sequentialCalculatorChallenge: ChallengeDefinition<SequentialCalcul
       }
       return `Step ${i + 1}: ${sym} ${op.operand}`;
     });
-    return (
-      `Start with ${pageData.startValue}. Apply each operation in order:\n` +
-      steps.join("\n") +
-      `\nSubmit the final result rounded to 2 decimal places.`
-    );
+    const stepList = steps.join("\n");
+    const sv = pageData.startValue;
+    const variants = [
+      `Start with ${sv}. Apply each operation in order:\n${stepList}\nSubmit the final result rounded to 2 decimal places.`,
+      `Beginning from ${sv}, perform the following operations sequentially:\n${stepList}\nRound your final answer to 2 decimals.`,
+      `Your initial value is ${sv}. Execute these steps one by one:\n${stepList}\nProvide the result to 2 decimal places.`,
+      `Take ${sv} as the starting number and apply each operation below in sequence:\n${stepList}\nSubmit the outcome rounded to two decimal places.`,
+    ];
+    return variants[pageData.variantIndex];
   },
 
   generate(data: ChallengeData) {
     const startValue = data.int(10, 100);
     const stepCount = data.int(4, 6);
+    const variantIndex = data.int(0, 3);
 
-    // Generate reference table for lookup operations
     const refKeys = ["Alpha", "Beta", "Gamma", "Delta", "Epsilon"] as const;
     const referenceTable: ReferenceEntry[] = refKeys.map((key) => ({
-      key,
-      value: data.int(2, 30),
+      key, value: data.int(2, 30),
     }));
 
     const operations: Operation[] = [];
     let currentValue = startValue;
 
     for (let i = 0; i < stepCount; i++) {
-      // 60-70% chance of being hidden
       const hidden = data.int(1, 10) <= 6;
-
-      // Decide operation type: 60% normal, 20% conditional, 20% lookup
       const typeRoll = data.int(1, 10);
 
       if (typeRoll <= 6) {
-        // Normal operation
         const operator = data.pick(["add", "subtract", "multiply", "divide"] as const);
         let operand: number;
-
         switch (operator) {
-          case "add":
-            operand = data.int(5, 50);
-            currentValue += operand;
-            break;
-          case "subtract":
-            operand = data.int(5, 30);
-            currentValue -= operand;
-            break;
-          case "multiply":
-            operand = data.int(2, 5);
-            currentValue *= operand;
-            break;
-          case "divide":
-            operand = data.pick([2, 3, 4, 5] as const);
-            currentValue /= operand;
-            break;
+          case "add": operand = data.int(5, 50); currentValue += operand; break;
+          case "subtract": operand = data.int(5, 30); currentValue -= operand; break;
+          case "multiply": operand = data.int(2, 5); currentValue *= operand; break;
+          case "divide": operand = data.pick([2, 3, 4, 5] as const); currentValue /= operand; break;
         }
-
-        operations.push({
-          type: "normal",
-          operator,
-          operand,
-          hidden,
-          label: `Step ${i + 1}`,
-        });
+        operations.push({ type: "normal", operator, operand, hidden, label: `Step ${i + 1}` });
       } else if (typeRoll <= 8) {
-        // Conditional operation
         const threshold = Math.round(currentValue);
         const ifAboveOp = data.pick(["add", "subtract"] as const);
         const ifBelowOp = data.pick(["add", "subtract"] as const);
@@ -159,37 +103,22 @@ export const sequentialCalculatorChallenge: ChallengeDefinition<SequentialCalcul
         }
 
         operations.push({
-          type: "conditional",
-          threshold,
+          type: "conditional", threshold,
           ifAbove: { operator: ifAboveOp, operand: ifAboveVal },
           ifBelow: { operator: ifBelowOp, operand: ifBelowVal },
-          hidden,
-          label: `Step ${i + 1}`,
+          hidden, label: `Step ${i + 1}`,
         });
       } else {
-        // Lookup operation
         const ref = data.pick(referenceTable);
         const operator = data.pick(["add", "subtract", "multiply"] as const);
-
         switch (operator) {
-          case "add":
-            currentValue += ref.value;
-            break;
-          case "subtract":
-            currentValue -= ref.value;
-            break;
-          case "multiply":
-            currentValue *= ref.value;
-            break;
+          case "add": currentValue += ref.value; break;
+          case "subtract": currentValue -= ref.value; break;
+          case "multiply": currentValue *= ref.value; break;
         }
-
         operations.push({
-          type: "lookup",
-          operator,
-          lookupKey: ref.key,
-          lookupValue: ref.value,
-          hidden: false, // Lookup ops are visible (you still need to find the value)
-          label: `Step ${i + 1}`,
+          type: "lookup", operator, lookupKey: ref.key, lookupValue: ref.value,
+          hidden: false, label: `Step ${i + 1}`,
         });
       }
     }
@@ -197,11 +126,7 @@ export const sequentialCalculatorChallenge: ChallengeDefinition<SequentialCalcul
     const answer = (Math.round(currentValue * 100) / 100).toFixed(2);
 
     return {
-      pageData: {
-        startValue,
-        operations,
-        referenceTable,
-      },
+      pageData: { startValue, operations, referenceTable, variantIndex },
       answer,
     };
   },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface Item {
   name: string;
@@ -48,7 +49,7 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-400 mb-2">Inventory</h3>
         <div className="overflow-x-auto rounded-lg border border-gray-800">
-          <table className="w-full text-sm" data-table="inventory">
+          <table className="w-full text-sm" {...testAttr('table', 'inventory')}>
             <thead>
               <tr className="bg-gray-900">
                 <th className="px-3 py-2 text-left text-gray-400 font-medium">Name</th>
@@ -62,20 +63,20 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
             </thead>
             <tbody>
               {pageData.items.map((item) => (
-                <tr key={item.name} className="border-t border-gray-800" data-item-name={item.name}>
+                <tr key={item.name} className="border-t border-gray-800" {...testAttr('item-name', item.name)}>
                   <td className="px-3 py-2 font-medium">{item.name}</td>
-                  <td className="px-3 py-2 text-gray-400" data-item-category>{item.category}</td>
-                  <td className="px-3 py-2 text-right font-mono" data-item-price>${item.price.toFixed(2)}</td>
-                  <td className="px-3 py-2 text-right" data-item-rating>{item.rating}</td>
-                  <td className="px-3 py-2 text-gray-400" data-item-supplier>{item.supplier}</td>
-                  <td className="px-3 py-2 text-center" data-item-stock>
+                  <td className="px-3 py-2 text-gray-400" {...testAttr('item-category')}>{item.category}</td>
+                  <td className="px-3 py-2 text-right font-mono" {...testAttr('item-price')}>${item.price.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-right" {...testAttr('item-rating')}>{item.rating}</td>
+                  <td className="px-3 py-2 text-gray-400" {...testAttr('item-supplier')}>{item.supplier}</td>
+                  <td className="px-3 py-2 text-center" {...testAttr('item-stock')}>
                     {item.inStock ? (
                       <span className="text-green-400">Yes</span>
                     ) : (
                       <span className="text-red-400">No</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-right" data-item-weight>{item.weight}</td>
+                  <td className="px-3 py-2 text-right" {...testAttr('item-weight')}>{item.weight}</td>
                 </tr>
               ))}
             </tbody>
@@ -88,9 +89,9 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
         {/* Requirements */}
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
           <h3 className="text-sm font-medium text-blue-400 mb-3">Requirements</h3>
-          <ul className="space-y-2" data-panel="requirements">
+          <ul className="space-y-2" {...testAttr('panel', 'requirements')}>
             {pageData.requirements.map((c, i) => (
-              <li key={i} className="text-sm text-gray-300 flex items-start gap-2" data-constraint={i}>
+              <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
                 <span className="text-blue-400 mt-0.5">&#x2022;</span>
                 <span>{c.label}</span>
               </li>
@@ -101,9 +102,9 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
         {/* Budget Constraints */}
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
           <h3 className="text-sm font-medium text-yellow-400 mb-3">Budget &amp; Quality</h3>
-          <ul className="space-y-2" data-panel="budget">
+          <ul className="space-y-2" {...testAttr('panel', 'budget')}>
             {pageData.budgetConstraints.map((c, i) => (
-              <li key={i} className="text-sm text-gray-300 flex items-start gap-2" data-constraint={i}>
+              <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
                 <span className="text-yellow-400 mt-0.5">&#x2022;</span>
                 <span>{c.label}</span>
               </li>
@@ -114,9 +115,9 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
         {/* Exclusions */}
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
           <h3 className="text-sm font-medium text-red-400 mb-3">Exclusions</h3>
-          <ul className="space-y-2" data-panel="exclusions">
+          <ul className="space-y-2" {...testAttr('panel', 'exclusions')}>
             {pageData.exclusions.map((c, i) => (
-              <li key={i} className="text-sm text-gray-300 flex items-start gap-2" data-constraint={i}>
+              <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
                 <span className="text-red-400 mt-0.5">&#x2022;</span>
                 <span>{c.label}</span>
               </li>
@@ -130,17 +131,17 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
-          data-toggle-advanced
+          {...testAttr('toggle-advanced')}
         >
           <span className="text-xs">{showAdvanced ? "▼" : "▶"}</span>
           Advanced Filters
         </button>
 
         {showAdvanced && (
-          <div className="mt-2 bg-gray-900 rounded-lg border border-gray-800 p-4" data-panel="advanced">
+          <div className="mt-2 bg-gray-900 rounded-lg border border-gray-800 p-4" {...testAttr('panel', 'advanced')}>
             <ul className="space-y-2">
               {pageData.advancedConstraints.map((c, i) => (
-                <li key={i} className="text-sm text-gray-300 flex items-start gap-2" data-constraint={i}>
+                <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
                   <span className="text-purple-400 mt-0.5">&#x2022;</span>
                   <span>{c.label}</span>
                 </li>
@@ -152,7 +153,7 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
 
       {/* Optimization note */}
       <div className="bg-gray-900/50 rounded-lg border border-gray-800 p-3 mb-6">
-        <p className="text-sm text-gray-400" data-optimization>
+        <p className="text-sm text-gray-400" {...testAttr('optimization')}>
           <span className="text-amber-400 font-medium">Optimization:</span> {pageData.optimization}
         </p>
       </div>

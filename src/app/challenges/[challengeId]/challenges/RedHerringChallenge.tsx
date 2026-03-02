@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, MutableRefObject } from "react";
+import { testAttr } from "../../../../lib/test-attrs";
 
 interface MetricRow {
   label: string;
@@ -38,7 +39,7 @@ export default function RedHerringChallenge({ pageData, answerRef }: Props) {
       {/* Prominent fake result card — the red herring */}
       <div className="bg-gradient-to-r from-green-900/40 to-emerald-900/40 rounded-xl border-2 border-green-500/50 p-6 mb-6 text-center">
         <p className="text-sm text-green-400 mb-1">Pre-computed Result</p>
-        <p className="text-4xl font-bold font-mono text-green-300" data-fake-result>
+        <p className="text-4xl font-bold font-mono text-green-300" {...testAttr('fake-result')}>
           {pageData.fakeResult.toLocaleString()}
         </p>
         <p className="text-sm text-green-400/70 mt-2">{pageData.fakeLabel}</p>
@@ -48,7 +49,7 @@ export default function RedHerringChallenge({ pageData, answerRef }: Props) {
       <div className="mb-6">
         <h3 className="text-base font-semibold text-gray-200 mb-2">Summary Report</h3>
         <div className="overflow-x-auto rounded-lg border border-gray-700">
-          <table className="w-full text-sm" data-table="summary">
+          <table className="w-full text-sm" {...testAttr('table', 'summary')}>
             <thead>
               <tr className="bg-gray-900">
                 <th className="px-4 py-3 text-left text-gray-400 font-medium">Metric</th>
@@ -60,7 +61,7 @@ export default function RedHerringChallenge({ pageData, answerRef }: Props) {
             </thead>
             <tbody>
               {pageData.summaryMetrics.map((row) => (
-                <tr key={row.label} className="border-t border-gray-800" data-summary-metric={row.label}>
+                <tr key={row.label} className="border-t border-gray-800" {...testAttr('summary-metric', row.label)}>
                   <td className="px-4 py-3 font-medium">{row.label}</td>
                   <td className="px-4 py-3 text-right font-mono">{row.q1.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right font-mono">{row.q2.toLocaleString()}</td>
@@ -78,7 +79,7 @@ export default function RedHerringChallenge({ pageData, answerRef }: Props) {
         <button
           onClick={() => setShowRawData(!showRawData)}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
-          data-toggle-raw
+          {...testAttr('toggle-raw')}
         >
           <span className="text-xs">{showRawData ? "▼" : "▶"}</span>
           View Raw Data
@@ -86,7 +87,7 @@ export default function RedHerringChallenge({ pageData, answerRef }: Props) {
 
         {showRawData && (
           <div className="mt-2 overflow-x-auto rounded-lg border border-gray-800">
-            <table className="w-full text-sm" data-table="raw">
+            <table className="w-full text-sm" {...testAttr('table', 'raw')}>
               <thead>
                 <tr className="bg-gray-900/50">
                   <th className="px-4 py-3 text-left text-gray-500 font-medium text-xs">Metric</th>
@@ -98,12 +99,12 @@ export default function RedHerringChallenge({ pageData, answerRef }: Props) {
               </thead>
               <tbody>
                 {pageData.rawMetrics.map((row) => (
-                  <tr key={row.label} className="border-t border-gray-800/50" data-metric={row.label}>
+                  <tr key={row.label} className="border-t border-gray-800/50" {...testAttr('metric', row.label)}>
                     <td className="px-4 py-3 text-gray-400 text-xs">{row.label}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-400" data-q="Q1">{row.q1.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-400" data-q="Q2">{row.q2.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-400" data-q="Q3">{row.q3.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-400" data-q="Q4">{row.q4.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-400" {...testAttr('q', 'Q1')}>{row.q1.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-400" {...testAttr('q', 'Q2')}>{row.q2.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-400" {...testAttr('q', 'Q3')}>{row.q3.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs text-gray-400" {...testAttr('q', 'Q4')}>{row.q4.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
