@@ -10,7 +10,8 @@ import {
   serverError,
   sessionExpired,
 } from "../../../../lib/api-helpers";
-import { MAX_ATTEMPTS_PER_CHALLENGE, TIER_POINTS } from "../../../../lib/config";
+import { MAX_ATTEMPTS_PER_CHALLENGE, TIER_POINTS, MIN_SOLVE_TIME_MS } from "../../../../lib/config";
+import type { Tier } from "../../../../lib/config";
 import {
   getChallenge,
   validateAnswer,
@@ -119,6 +120,27 @@ export async function POST(
           message: "Challenge locked. No attempts remaining.",
         },
         { status: 200 }
+      );
+    }
+
+    // 6.5. Timing constraint — must have viewed the challenge and spent minimum time
+    const view = await convex.query(api.challengeViews.get, {
+      sessionId: session._id,
+      challengeId,
+    });
+    if (!view) {
+      return badRequest("Challenge must be loaded before submitting an answer");
+    }
+    const elapsed = Date.now() - view.viewedAt;
+    const minTime = MIN_SOLVE_TIME_MS[challenge.tier as Tier];
+    if (elapsed < minTime) {
+      return NextResponse.json(
+        {
+          error: "too_fast",
+          message: `Submission too fast. Please spend more time on the challenge.`,
+          retryAfterMs: minTime - elapsed,
+        },
+        { status: 429 }
       );
     }
 

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
+import { useInteract } from "../../../../lib/use-interact";
 
 type BaseOperation = {
   operator: "add" | "subtract" | "multiply" | "divide";
-  operand: number;
+  operand: number | null;
   hidden: boolean;
   label: string;
   type: "normal";
@@ -13,8 +14,8 @@ type BaseOperation = {
 
 type ConditionalOperation = {
   threshold: number;
-  ifAbove: { operator: "add" | "subtract"; operand: number };
-  ifBelow: { operator: "add" | "subtract"; operand: number };
+  ifAbove: { operator: "add" | "subtract"; operand: number | null };
+  ifBelow: { operator: "add" | "subtract"; operand: number | null };
   hidden: boolean;
   label: string;
   type: "conditional";
@@ -45,6 +46,9 @@ interface SequentialCalculatorPageData {
 interface Props {
   pageData: SequentialCalculatorPageData;
   answerRef: MutableRefObject<string>;
+  sessionId: string;
+  challengeId: string;
+  renderToken: string;
 }
 
 const OP_SYMBOLS: Record<string, string> = {
@@ -54,16 +58,44 @@ const OP_SYMBOLS: Record<string, string> = {
   divide: "\u00f7",
 };
 
-export default function SequentialCalculatorChallenge({ pageData, answerRef }: Props) {
+export default function SequentialCalculatorChallenge({ pageData, answerRef, sessionId, challengeId, renderToken }: Props) {
   const [answer, setAnswer] = useState("");
   const [revealedSteps, setRevealedSteps] = useState<Set<number>>(new Set());
+  const [revealedValues, setRevealedValues] = useState<Record<number, unknown>>({});
+  const [loadingReveal, setLoadingReveal] = useState<number | null>(null);
+  const interact = useInteract(challengeId, sessionId, renderToken);
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
 
-  const revealStep = (index: number) => {
-    setRevealedSteps((prev) => new Set([...prev, index]));
+  const revealStep = async (index: number) => {
+    if (revealedSteps.has(index)) return;
+    setLoadingReveal(index);
+    try {
+      const result = await interact("reveal", { stepIndex: index }) as { operand: unknown };
+      if (result?.operand !== undefined) {
+        setRevealedValues(prev => ({ ...prev, [index]: result.operand }));
+      }
+      setRevealedSteps(prev => new Set([...prev, index]));
+    } catch (err) {
+      console.error("Failed to reveal step:", err);
+    } finally {
+      setLoadingReveal(null);
+    }
+  };
+
+  const getRevealedOperand = (index: number): number | null => {
+    const val = revealedValues[index];
+    return typeof val === "number" ? val : null;
+  };
+
+  const getRevealedConditional = (index: number): { ifAbove: number; ifBelow: number } | null => {
+    const val = revealedValues[index];
+    if (val && typeof val === "object" && "ifAbove" in (val as object)) {
+      return val as { ifAbove: number; ifBelow: number };
+    }
+    return null;
   };
 
   return (
@@ -88,57 +120,72 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef }: P
                 <span className="text-sm text-gray-500 w-14">{op.label}</span>
                 <span className="text-lg font-mono text-blue-400">{OP_SYMBOLS[op.operator]}</span>
                 {op.hidden && !revealedSteps.has(i) ? (
-                  <button
-                    onClick={() => revealStep(i)}
-                    className="px-3 py-1 text-sm bg-gray-800 rounded border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
-                    {...testAttr('reveal', String(i))}
-                  >
-                    Reveal
-                  </button>
+                  loadingReveal === i ? (
+                    <span className="text-sm text-gray-400">Loading...</span>
+                  ) : (
+                    <button
+                      onClick={() => revealStep(i)}
+                      className="px-3 py-1 text-sm bg-gray-800 rounded border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
+                      {...testAttr('reveal', String(i))}
+                    >
+                      Reveal
+                    </button>
+                  )
                 ) : (
                   <span className="text-lg font-mono" {...testAttr('operand', String(i))}>
-                    {op.operand}
+                    {op.operand !== null ? op.operand : getRevealedOperand(i) ?? "?"}
                   </span>
                 )}
               </div>
             )}
 
-            {op.type === "conditional" && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-gray-500 w-14">{op.label}</span>
-                  <span className="text-sm text-amber-400 font-medium">CONDITIONAL</span>
+            {op.type === "conditional" && (() => {
+              const revealed = getRevealedConditional(i);
+              return (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-gray-500 w-14">{op.label}</span>
+                    <span className="text-sm text-amber-400 font-medium">CONDITIONAL</span>
+                  </div>
+                  <div className="ml-14 text-sm space-y-1" {...testAttr('conditional', String(i))}>
+                    <p className="text-gray-300">
+                      IF current &gt; <span className="font-mono text-white" {...testAttr('threshold', String(i))}>{op.threshold}</span>:
+                    </p>
+                    <p className="text-gray-400 ml-4">
+                      {OP_SYMBOLS[op.ifAbove.operator]}{" "}
+                      {op.hidden && !revealedSteps.has(i) ? (
+                        loadingReveal === i ? (
+                          <span className="text-xs text-gray-400">Loading...</span>
+                        ) : (
+                          <button
+                            onClick={() => revealStep(i)}
+                            className="px-2 py-0.5 text-xs bg-gray-800 rounded border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
+                            {...testAttr('reveal', String(i))}
+                          >
+                            Reveal
+                          </button>
+                        )
+                      ) : (
+                        <span className="font-mono" {...testAttr('operand-above', String(i))}>
+                          {op.ifAbove.operand !== null ? op.ifAbove.operand : revealed?.ifAbove ?? "?"}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-gray-300">OTHERWISE:</p>
+                    <p className="text-gray-400 ml-4">
+                      {OP_SYMBOLS[op.ifBelow.operator]}{" "}
+                      {op.hidden && !revealedSteps.has(i) ? (
+                        <span className="text-xs text-gray-600">[Reveal above]</span>
+                      ) : (
+                        <span className="font-mono" {...testAttr('operand-below', String(i))}>
+                          {op.ifBelow.operand !== null ? op.ifBelow.operand : revealed?.ifBelow ?? "?"}
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div className="ml-14 text-sm space-y-1" {...testAttr('conditional', String(i))}>
-                  <p className="text-gray-300">
-                    IF current &gt; <span className="font-mono text-white" {...testAttr('threshold', String(i))}>{op.threshold}</span>:
-                  </p>
-                  <p className="text-gray-400 ml-4">
-                    {OP_SYMBOLS[op.ifAbove.operator]}{" "}
-                    {op.hidden && !revealedSteps.has(i) ? (
-                      <button
-                        onClick={() => revealStep(i)}
-                        className="px-2 py-0.5 text-xs bg-gray-800 rounded border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
-                        {...testAttr('reveal', String(i))}
-                      >
-                        Reveal
-                      </button>
-                    ) : (
-                      <span className="font-mono" {...testAttr('operand-above', String(i))}>{op.ifAbove.operand}</span>
-                    )}
-                  </p>
-                  <p className="text-gray-300">OTHERWISE:</p>
-                  <p className="text-gray-400 ml-4">
-                    {OP_SYMBOLS[op.ifBelow.operator]}{" "}
-                    {op.hidden && !revealedSteps.has(i) ? (
-                      <span className="text-xs text-gray-600">[Reveal above]</span>
-                    ) : (
-                      <span className="font-mono" {...testAttr('operand-below', String(i))}>{op.ifBelow.operand}</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {op.type === "lookup" && (
               <div className="flex items-center gap-3">

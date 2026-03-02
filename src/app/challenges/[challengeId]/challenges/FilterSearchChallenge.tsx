@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
+import { useInteract } from "../../../../lib/use-interact";
 
 interface Employee {
   name: string;
@@ -17,41 +18,61 @@ interface FilterSearchPageData {
   aggregation: "count" | "total salary" | "average salary";
   employeesPerPage: number;
   initialVisibleCount?: number;
+  totalEmployees?: number;
 }
 
 interface Props {
   pageData: FilterSearchPageData;
   answerRef: MutableRefObject<string>;
+  sessionId: string;
+  challengeId: string;
+  renderToken: string;
 }
 
-export default function FilterSearchChallenge({ pageData, answerRef }: Props) {
+export default function FilterSearchChallenge({ pageData, answerRef, sessionId, challengeId, renderToken }: Props) {
   const [filterText, setFilterText] = useState("");
   const [answer, setAnswer] = useState("");
-  const initialVisible = pageData.initialVisibleCount ?? 12;
-  const [visibleCount, setVisibleCount] = useState(initialVisible);
+  const [allEmployees, setAllEmployees] = useState<Employee[]>(pageData.employees);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [allLoaded, setAllLoaded] = useState(
+    !pageData.totalEmployees || pageData.employees.length >= pageData.totalEmployees
+  );
+  const interact = useInteract(challengeId, sessionId, renderToken);
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
 
   const filtered = useMemo(() => {
-    if (!filterText.trim()) return pageData.employees;
+    if (!filterText.trim()) return allEmployees;
     const query = filterText.toLowerCase();
-    return pageData.employees.filter(
+    return allEmployees.filter(
       (e) =>
         e.name.toLowerCase().includes(query) ||
         e.department.toLowerCase().includes(query) ||
         e.city.toLowerCase().includes(query)
     );
-  }, [pageData.employees, filterText]);
+  }, [allEmployees, filterText]);
 
-  // Reset visible count when filter changes
-  useEffect(() => {
-    setVisibleCount(initialVisible);
-  }, [filterText, initialVisible]);
-
-  const visibleEmployees = filtered.slice(0, visibleCount);
-  const remaining = filtered.length - visibleCount;
+  const handleLoadMore = async () => {
+    if (allLoaded || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = Math.ceil(allEmployees.length / pageData.employeesPerPage);
+      const result = await interact("page", { page }) as { employees: Employee[] };
+      if (result?.employees?.length) {
+        setAllEmployees(prev => [...prev, ...result.employees]);
+      }
+      if (!result?.employees?.length ||
+          allEmployees.length + (result?.employees?.length ?? 0) >= (pageData.totalEmployees ?? Infinity)) {
+        setAllLoaded(true);
+      }
+    } catch (err) {
+      console.error("Failed to load more employees:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <div>
@@ -66,13 +87,13 @@ export default function FilterSearchChallenge({ pageData, answerRef }: Props) {
           {...testAttr('testid', 'filter-input')}
         />
         <p className="mt-1 text-xs text-gray-500">
-          Showing {Math.min(visibleCount, filtered.length)} of {filtered.length} matching ({pageData.employees.length} total)
+          Showing {filtered.length} matching ({allEmployees.length} loaded{pageData.totalEmployees ? `, ${pageData.totalEmployees} total` : ""})
         </p>
       </div>
 
       {/* Employee cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4" {...testAttr('employee-grid')}>
-        {visibleEmployees.map((emp, i) => (
+        {filtered.map((emp, i) => (
           <div
             key={i}
             className="bg-gray-900 rounded-lg border border-gray-800 p-4"
@@ -101,15 +122,16 @@ export default function FilterSearchChallenge({ pageData, answerRef }: Props) {
         ))}
       </div>
 
-      {/* Load More button — disappears when all loaded */}
-      {remaining > 0 && (
+      {/* Load More button */}
+      {!allLoaded && (
         <div className="mb-6 text-center">
           <button
-            onClick={() => setVisibleCount((v) => v + initialVisible)}
-            className="px-6 py-2 text-sm bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors text-gray-300"
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="px-6 py-2 text-sm bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors text-gray-300 disabled:opacity-50"
             {...testAttr('load-more')}
           >
-            Load More ({remaining} remaining)
+            {loadingMore ? "Loading..." : `Load More (${(pageData.totalEmployees ?? 0) - allEmployees.length} remaining)`}
           </button>
         </div>
       )}

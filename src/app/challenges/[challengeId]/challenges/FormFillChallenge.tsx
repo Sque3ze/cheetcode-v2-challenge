@@ -2,6 +2,7 @@
 
 import { useState, useEffect, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
+import { useInteract } from "../../../../lib/use-interact";
 
 interface SalaryBand { min: number; max: number; label: string; }
 
@@ -10,10 +11,10 @@ interface FormFillPageData {
     name: string;
     email: string;
     department: string;
-    role: string;
     salary: number;
-    city: string;
-    startDate: string;
+    role?: string;
+    city?: string;
+    startDate?: string;
   };
   fieldsToFill: string[];
   fieldDisclosures?: Array<{ field: string; type: "tab" | "expand" | "tooltip" }>;
@@ -24,6 +25,9 @@ interface FormFillPageData {
 interface Props {
   pageData: FormFillPageData;
   answerRef: MutableRefObject<string>;
+  sessionId: string;
+  challengeId: string;
+  renderToken: string;
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -39,31 +43,80 @@ const FIELD_LABELS: Record<string, string> = {
   "dept code": "Dept Code",
 };
 
-export default function FormFillChallenge({ pageData, answerRef }: Props) {
+export default function FormFillChallenge({ pageData, answerRef, sessionId, challengeId, renderToken }: Props) {
   const [answer, setAnswer] = useState("");
   const [activeTab, setActiveTab] = useState<"profile" | "contact">("profile");
   const [showExpand, setShowExpand] = useState(false);
   const [tooltipRevealed, setTooltipRevealed] = useState(false);
+  const [role, setRole] = useState<string | null>(pageData.employee.role ?? null);
+  const [city, setCity] = useState<string | null>(pageData.employee.city ?? null);
+  const [startDate, setStartDate] = useState<string | null>(pageData.employee.startDate ?? null);
+  const [loadingExpand, setLoadingExpand] = useState(false);
+  const [loadingTab, setLoadingTab] = useState(false);
+  const [loadingTooltip, setLoadingTooltip] = useState(false);
   const { employee, fieldsToFill, fieldDisclosures, salaryBands } = pageData;
+  const interact = useInteract(challengeId, sessionId, renderToken);
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
 
-  // Check if we have multi-disclosure mode (Round 3+)
   const hasDisclosures = fieldDisclosures && fieldDisclosures.length > 0;
 
   if (!hasDisclosures) {
-    // Legacy mode: Basic Info + Details accordion (for backward compatibility)
     return <LegacyFormFill pageData={pageData} answerRef={answerRef} />;
   }
 
-  // Abbreviated start date (just year) for tooltip display
-  const startYear = employee.startDate.split("-")[0];
+  const startYear = startDate ? startDate.split("-")[0] : "—";
+
+  const handleExpand = async () => {
+    if (!showExpand && role === null) {
+      setLoadingExpand(true);
+      try {
+        const result = await interact("expand") as { role: string };
+        if (result?.role) setRole(result.role);
+      } catch (err) {
+        console.error("Failed to load expand content:", err);
+      } finally {
+        setLoadingExpand(false);
+      }
+    }
+    setShowExpand(!showExpand);
+  };
+
+  const handleContactTab = async () => {
+    setActiveTab("contact");
+    if (city === null) {
+      setLoadingTab(true);
+      try {
+        const result = await interact("tab") as { city: string };
+        if (result?.city) setCity(result.city);
+      } catch (err) {
+        console.error("Failed to load contact tab:", err);
+      } finally {
+        setLoadingTab(false);
+      }
+    }
+  };
+
+  const handleTooltip = async () => {
+    if (!tooltipRevealed && startDate === null) {
+      setLoadingTooltip(true);
+      try {
+        const result = await interact("tooltip") as { startDate: string };
+        if (result?.startDate) setStartDate(result.startDate);
+      } catch (err) {
+        console.error("Failed to load tooltip:", err);
+      } finally {
+        setLoadingTooltip(false);
+      }
+    }
+    setTooltipRevealed(!tooltipRevealed);
+  };
 
   return (
     <div>
-      {/* Salary Band Reference Table — always shown (potential distraction if not needed) */}
+      {/* Salary Band Reference Table */}
       {salaryBands && salaryBands.length > 0 && (
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-4" {...testAttr('salary-band-table')}>
           <h4 className="text-xs font-medium text-amber-400 mb-2">Salary Band Reference</h4>
@@ -82,12 +135,11 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
         </div>
       )}
 
-      {/* Dept code note */}
       <p className="text-xs text-gray-500 mb-4" {...testAttr('dept-code-note')}>
         Dept codes: first 3 letters, uppercased (e.g., Engineering → ENG)
       </p>
 
-      {/* Tab bar: Profile | Contact */}
+      {/* Tab bar */}
       <div className="flex border-b border-gray-800 mb-0">
         <button
           onClick={() => setActiveTab("profile")}
@@ -101,7 +153,7 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
           Profile
         </button>
         <button
-          onClick={() => setActiveTab("contact")}
+          onClick={handleContactTab}
           className={`px-6 py-3 text-sm font-medium transition-colors ${
             activeTab === "contact"
               ? "text-white border-b-2 border-blue-500 bg-gray-900"
@@ -113,7 +165,7 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
         </button>
       </div>
 
-      {/* Profile tab — basic visible fields + expand + tooltip */}
+      {/* Profile tab */}
       {activeTab === "profile" && (
         <div className="bg-gray-900 rounded-b-lg border border-t-0 border-gray-800 p-6 mb-4">
           <dl className="grid grid-cols-2 gap-4">
@@ -135,19 +187,22 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
             </div>
           </dl>
 
-          {/* Tooltip: Start date abbreviated */}
+          {/* Tooltip: Start date */}
           <div className="mt-4">
             <button
-              onClick={() => setTooltipRevealed(!tooltipRevealed)}
+              onClick={handleTooltip}
               className="text-sm text-gray-400 hover:text-gray-200 cursor-pointer transition-colors"
               {...testAttr('tooltip-trigger')}
             >
               Joined: {startYear}
               {!tooltipRevealed && <span className="text-gray-600 ml-1">(click for details)</span>}
             </button>
-            {tooltipRevealed && (
+            {loadingTooltip && (
+              <span className="text-xs text-gray-500 ml-2">Loading...</span>
+            )}
+            {tooltipRevealed && startDate && (
               <p className="text-sm text-gray-100 mt-1" {...testAttr('field', 'startDate')}>
-                {employee.startDate}
+                {startDate}
               </p>
             )}
           </div>
@@ -155,17 +210,20 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
           {/* Inline expand for role */}
           <div className="mt-4">
             <button
-              onClick={() => setShowExpand(!showExpand)}
+              onClick={handleExpand}
               className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
               {...testAttr('expand-details')}
             >
               {showExpand ? "[-] Hide full details" : "[+] Show full details"}
             </button>
-            {showExpand && (
+            {loadingExpand && (
+              <span className="text-xs text-gray-500 ml-2">Loading...</span>
+            )}
+            {showExpand && role && (
               <div className="mt-2 bg-gray-800/50 rounded p-3" {...testAttr('expand-panel')}>
                 <dl>
                   <dt className="text-sm text-gray-400">Role</dt>
-                  <dd className="text-gray-100" {...testAttr('field', 'role')}>{employee.role}</dd>
+                  <dd className="text-gray-100" {...testAttr('field', 'role')}>{role}</dd>
                 </dl>
               </div>
             )}
@@ -173,19 +231,26 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
         </div>
       )}
 
-      {/* Contact tab — city field */}
+      {/* Contact tab */}
       {activeTab === "contact" && (
         <div className="bg-gray-900 rounded-b-lg border border-t-0 border-gray-800 p-6 mb-4" {...testAttr('contact-panel')}>
-          <dl className="grid grid-cols-2 gap-4">
-            <div>
-              <dt className="text-sm text-gray-400">City</dt>
-              <dd className="text-gray-100" {...testAttr('field', 'city')}>{employee.city}</dd>
+          {loadingTab ? (
+            <div className="flex items-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400" />
+              <span className="ml-3 text-sm text-gray-400">Loading...</span>
             </div>
-            <div>
-              <dt className="text-sm text-gray-400">Email</dt>
-              <dd className="text-gray-100">{employee.email}</dd>
-            </div>
-          </dl>
+          ) : (
+            <dl className="grid grid-cols-2 gap-4">
+              <div>
+                <dt className="text-sm text-gray-400">City</dt>
+                <dd className="text-gray-100" {...testAttr('field', 'city')}>{city ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-gray-400">Email</dt>
+                <dd className="text-gray-100">{employee.email}</dd>
+              </div>
+            </dl>
+          )}
         </div>
       )}
 
@@ -206,8 +271,8 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
   );
 }
 
-/** Legacy form fill for backward compatibility (Basic Info + Details accordion) */
-function LegacyFormFill({ pageData, answerRef }: Props) {
+/** Legacy form fill for backward compatibility */
+function LegacyFormFill({ pageData, answerRef }: { pageData: FormFillPageData; answerRef: MutableRefObject<string> }) {
   const [answer, setAnswer] = useState("");
   const [showDetails, setShowDetails] = useState(false);
   const { employee, fieldsToFill } = pageData;

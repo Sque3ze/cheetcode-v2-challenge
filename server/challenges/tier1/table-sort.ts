@@ -25,6 +25,7 @@ interface TableSortPageData {
   targetPosition: number;
   targetField: string;
   rowsPerPage: number;
+  totalEmployees?: number;
   variantIndex: number;
 }
 
@@ -97,17 +98,34 @@ export const tableSortChallenge: ChallengeDefinition<TableSortPageData> = {
     const targetEmployee = sorted[targetPosition - 1];
     const answer = targetEmployee.name;
 
+    const allEmployees = employees.map(({ annualComp, ...emp }) => emp);
+
     return {
       pageData: {
-        employees: employees.map(({ annualComp, ...emp }) => emp),
+        employees: allEmployees.slice(0, 5),
+        totalEmployees: allEmployees.length,
         sortDirection,
         targetPosition,
         targetField,
         rowsPerPage: 5,
         variantIndex,
       },
+      hiddenData: { allEmployees },
       answer,
     };
+  },
+
+  interactActions: ["page"],
+
+  handleInteract(hiddenData, action, params) {
+    if (action === "page") {
+      const page = (params.page as number) ?? 1;
+      const perPage = 5;
+      const allEmployees = hiddenData.allEmployees as Array<Record<string, unknown>>;
+      const start = page * perPage;
+      return { employees: allEmployees.slice(start, start + perPage), page };
+    }
+    return null;
   },
 
   validateAnswer(submitted: string, correct: string): boolean {

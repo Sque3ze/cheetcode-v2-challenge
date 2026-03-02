@@ -19,3 +19,12 @@ export const TIER_POINTS = {
 } as const;
 
 export type Tier = keyof typeof TIER_POINTS;
+
+/** Minimum time (ms) between loading a challenge and submitting a valid answer, per tier. */
+export const MIN_SOLVE_TIME_MS: Record<Tier, number> = { 1: 3_000, 2: 5_000, 3: 8_000, 4: 10_000 };
+
+/** Minimum interval (ms) between consecutive /interact calls. */
+export const MIN_INTERACT_INTERVAL_MS = 500;
+
+/** How long a render token remains valid (ms). */
+export const RENDER_TOKEN_TTL_MS = 60_000;

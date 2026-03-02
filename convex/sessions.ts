@@ -147,7 +147,7 @@ export const complete = internalMutation({
 /**
  * Expire a session (called when time runs out).
  */
-export const expire = mutation({
+export const expire = internalMutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
+import { useInteract } from "../../../../lib/use-interact";
 
 interface EmployeeRow {
   name: string;
@@ -13,6 +14,13 @@ interface EmployeeRow {
 interface DepartmentRow {
   id: string;
   name: string;
+  budget?: number;
+  manager?: string;
+  location?: string;
+  headcount?: number;
+}
+
+interface DeptDetails {
   budget: number;
   manager: string;
   location: string;
@@ -39,23 +47,47 @@ interface LinkedDataLookupPageData {
 interface Props {
   pageData: LinkedDataLookupPageData;
   answerRef: MutableRefObject<string>;
+  sessionId: string;
+  challengeId: string;
+  renderToken: string;
 }
 
-export default function LinkedDataLookupChallenge({ pageData, answerRef }: Props) {
+export default function LinkedDataLookupChallenge({ pageData, answerRef, sessionId, challengeId, renderToken }: Props) {
   const [answer, setAnswer] = useState("");
   const [expandedDepts, setExpandedDepts] = useState<Set<string>>(new Set());
+  const [deptDetails, setDeptDetails] = useState<Record<string, DeptDetails>>({});
+  const [loadingDept, setLoadingDept] = useState<string | null>(null);
+  const interact = useInteract(challengeId, sessionId, renderToken);
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
 
-  const toggleDept = (id: string) => {
-    setExpandedDepts((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggleDept = async (id: string) => {
+    const next = new Set(expandedDepts);
+    if (next.has(id)) {
+      next.delete(id);
+      setExpandedDepts(next);
+      return;
+    }
+
+    next.add(id);
+    setExpandedDepts(next);
+
+    // Fetch details if not cached
+    if (!deptDetails[id]) {
+      setLoadingDept(id);
+      try {
+        const result = await interact("expand", { deptId: id }) as DeptDetails;
+        if (result) {
+          setDeptDetails(prev => ({ ...prev, [id]: result }));
+        }
+      } catch (err) {
+        console.error("Failed to load department details:", err);
+      } finally {
+        setLoadingDept(null);
+      }
+    }
   };
 
   return (
@@ -109,23 +141,32 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef }: Props
                       {...testAttr('expand-dept', dept.id)}
                     >
                       <span className="text-xs text-gray-500">
-                        {expandedDepts.has(dept.id) ? "▼" : "▶"}
+                        {expandedDepts.has(dept.id) ? "\u25BC" : "\u25B6"}
                       </span>
                       <span className="font-mono text-sm">{dept.id}</span>
                       <span className="text-sm">{dept.name}</span>
                     </button>
                     {expandedDepts.has(dept.id) && (
                       <div className="mt-2 ml-6 bg-gray-900/50 rounded-lg p-3 text-sm" {...testAttr('dept-details', dept.id)}>
-                        <dl className="grid grid-cols-2 gap-x-6 gap-y-1">
-                          <dt className="text-gray-500">Budget</dt>
-                          <dd className="font-mono" {...testAttr('field', 'budget')}>${dept.budget.toLocaleString()}</dd>
-                          <dt className="text-gray-500">Manager</dt>
-                          <dd {...testAttr('field', 'manager')}>{dept.manager}</dd>
-                          <dt className="text-gray-500">Location</dt>
-                          <dd {...testAttr('field', 'location')}>{dept.location}</dd>
-                          <dt className="text-gray-500">Headcount</dt>
-                          <dd {...testAttr('field', 'headcount')}>{dept.headcount}</dd>
-                        </dl>
+                        {loadingDept === dept.id ? (
+                          <div className="flex items-center py-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400" />
+                            <span className="ml-2 text-xs text-gray-400">Loading...</span>
+                          </div>
+                        ) : deptDetails[dept.id] ? (
+                          <dl className="grid grid-cols-2 gap-x-6 gap-y-1">
+                            <dt className="text-gray-500">Budget</dt>
+                            <dd className="font-mono" {...testAttr('field', 'budget')}>${deptDetails[dept.id].budget.toLocaleString()}</dd>
+                            <dt className="text-gray-500">Manager</dt>
+                            <dd {...testAttr('field', 'manager')}>{deptDetails[dept.id].manager}</dd>
+                            <dt className="text-gray-500">Location</dt>
+                            <dd {...testAttr('field', 'location')}>{deptDetails[dept.id].location}</dd>
+                            <dt className="text-gray-500">Headcount</dt>
+                            <dd {...testAttr('field', 'headcount')}>{deptDetails[dept.id].headcount}</dd>
+                          </dl>
+                        ) : (
+                          <p className="text-xs text-gray-500">No details available</p>
+                        )}
                       </div>
                     )}
                   </td>

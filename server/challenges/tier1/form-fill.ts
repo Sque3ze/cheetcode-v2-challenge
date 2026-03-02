@@ -22,10 +22,10 @@ interface FormFillPageData {
     name: string;
     email: string;
     department: string;
-    role: string;
     salary: number;
-    city: string;
-    startDate: string;
+    role?: string;
+    city?: string;
+    startDate?: string;
   };
   fieldsToFill: string[];
   fieldDisclosures: Array<{ field: string; type: DisclosureType }>;
@@ -154,16 +154,15 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
 
     const answer = shuffled.map((f) => fieldValues[f]).join(", ");
 
+    // Only visible on initial load: name, email, department, salary
+    // Hidden behind interactions: city (tab), role (expand), startDate full (tooltip)
     return {
       pageData: {
         employee: {
           name: person.fullName,
           email: person.email,
           department: person.department,
-          role: person.role,
           salary: person.salary,
-          city: person.city,
-          startDate: person.startDate,
         },
         fieldsToFill: shuffled,
         fieldDisclosures,
@@ -175,8 +174,28 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
         })),
         variantIndex,
       },
+      hiddenData: {
+        expandContent: { role: person.role },
+        contactTab: { city: person.city },
+        tooltipContent: { startDate: person.startDate },
+      },
       answer,
     };
+  },
+
+  interactActions: ["expand", "tab", "tooltip"],
+
+  handleInteract(hiddenData, action) {
+    if (action === "expand") {
+      return hiddenData.expandContent;
+    }
+    if (action === "tab") {
+      return hiddenData.contactTab;
+    }
+    if (action === "tooltip") {
+      return hiddenData.tooltipContent;
+    }
+    return null;
   },
 
   validateAnswer(submitted: string, correct: string): boolean {

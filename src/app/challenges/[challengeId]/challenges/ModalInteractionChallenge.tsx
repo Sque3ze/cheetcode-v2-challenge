@@ -2,12 +2,16 @@
 
 import { useState, useEffect, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
+import { useInteract } from "../../../../lib/use-interact";
 
 interface CardData {
   id: number;
   name: string;
   category: string;
   price: number;
+}
+
+interface CardDetails {
   sku: string;
   supplier: string;
 }
@@ -16,7 +20,6 @@ interface ModalInteractionPageData {
   cards: CardData[];
   targetCondition: string;
   targetField: string;
-  targetCardName: string;
   targetCategory: string;
   modalLoadDelay?: number;
 }
@@ -24,33 +27,56 @@ interface ModalInteractionPageData {
 interface Props {
   pageData: ModalInteractionPageData;
   answerRef: MutableRefObject<string>;
+  sessionId: string;
+  challengeId: string;
+  renderToken: string;
 }
 
-export default function ModalInteractionChallenge({ pageData, answerRef }: Props) {
+export default function ModalInteractionChallenge({ pageData, answerRef, sessionId, challengeId, renderToken }: Props) {
   const [openCard, setOpenCard] = useState<CardData | null>(null);
+  const [cardDetails, setCardDetails] = useState<CardDetails | null>(null);
   const [modalLoaded, setModalLoaded] = useState(false);
   const [modalTab, setModalTab] = useState<"overview" | "details">("overview");
   const [answer, setAnswer] = useState("");
+  const [detailsCache, setDetailsCache] = useState<Record<number, CardDetails>>({});
+  const interact = useInteract(challengeId, sessionId, renderToken);
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
 
-  // Async loading simulation when modal opens
+  // Fetch card details when modal opens
   useEffect(() => {
     if (!openCard) {
       setModalLoaded(false);
       setModalTab("overview");
+      setCardDetails(null);
       return;
     }
-    const delay = pageData.modalLoadDelay ?? 0;
-    if (delay > 0) {
-      setModalLoaded(false);
-      const timer = setTimeout(() => setModalLoaded(true), delay);
-      return () => clearTimeout(timer);
+
+    // Check cache first
+    if (detailsCache[openCard.id]) {
+      setCardDetails(detailsCache[openCard.id]);
+      setModalLoaded(true);
+      return;
     }
-    setModalLoaded(true);
-  }, [openCard, pageData.modalLoadDelay]);
+
+    // Fetch via interact
+    setModalLoaded(false);
+    interact("modal", { cardId: openCard.id })
+      .then((result) => {
+        const details = result as CardDetails;
+        if (details) {
+          setCardDetails(details);
+          setDetailsCache(prev => ({ ...prev, [openCard.id]: details }));
+        }
+        setModalLoaded(true);
+      })
+      .catch((err) => {
+        console.error("Failed to load card details:", err);
+        setModalLoaded(true);
+      });
+  }, [openCard, interact, detailsCache]);
 
   return (
     <div>
@@ -148,16 +174,16 @@ export default function ModalInteractionChallenge({ pageData, answerRef }: Props
                   </dl>
                 )}
 
-                {/* Details tab: SKU + supplier */}
+                {/* Details tab: SKU + supplier (fetched via interact) */}
                 {modalTab === "details" && (
                   <dl className="space-y-3" {...testAttr('modal-panel', 'details')}>
                     <div>
                       <dt className="text-sm text-gray-400">SKU</dt>
-                      <dd className="font-mono" {...testAttr('field', 'sku')}>{openCard.sku}</dd>
+                      <dd className="font-mono" {...testAttr('field', 'sku')}>{cardDetails?.sku ?? "—"}</dd>
                     </div>
                     <div>
                       <dt className="text-sm text-gray-400">Supplier</dt>
-                      <dd {...testAttr('field', 'supplier')}>{openCard.supplier}</dd>
+                      <dd {...testAttr('field', 'supplier')}>{cardDetails?.supplier ?? "—"}</dd>
                     </div>
                   </dl>
                 )}

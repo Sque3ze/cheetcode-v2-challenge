@@ -2,6 +2,7 @@
 
 import { useState, useEffect, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
+import { useInteract } from "../../../../lib/use-interact";
 
 interface Employee {
   name: string;
@@ -14,6 +15,7 @@ interface Employee {
 
 interface TableSortPageData {
   employees: Employee[];
+  totalEmployees?: number;
   sortDirection: "highest" | "lowest";
   targetPosition: number;
   targetField: string;
@@ -23,6 +25,9 @@ interface TableSortPageData {
 interface Props {
   pageData: TableSortPageData;
   answerRef: MutableRefObject<string>;
+  sessionId: string;
+  challengeId: string;
+  renderToken: string;
 }
 
 type SortKey = "name" | "department" | "compensation" | "type";
@@ -34,14 +39,39 @@ function getAnnualComp(emp: Employee): number {
   return emp.salary ?? 0;
 }
 
-export default function TableSortChallenge({ pageData, answerRef }: Props) {
+export default function TableSortChallenge({ pageData, answerRef, sessionId, challengeId, renderToken }: Props) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortAsc, setSortAsc] = useState(true);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [answer, setAnswer] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+  const [allEmployees, setAllEmployees] = useState<Employee[]>(pageData.employees);
+  const [loadingPage, setLoadingPage] = useState(false);
+  const interact = useInteract(challengeId, sessionId, renderToken);
 
-  const employees = [...pageData.employees];
+  const totalEmployees = pageData.totalEmployees ?? allEmployees.length;
+  const perPage = pageData.rowsPerPage;
+  const totalPages = Math.ceil(totalEmployees / perPage);
+
+  // Fetch additional pages as needed
+  const ensurePage = async (page: number) => {
+    const neededUpTo = (page + 1) * perPage;
+    if (allEmployees.length >= neededUpTo || allEmployees.length >= totalEmployees) return;
+    setLoadingPage(true);
+    try {
+      const fetchPage = Math.ceil(allEmployees.length / perPage);
+      const result = await interact("page", { page: fetchPage }) as { employees: Employee[] };
+      if (result?.employees?.length) {
+        setAllEmployees(prev => [...prev, ...result.employees]);
+      }
+    } catch (err) {
+      console.error("Failed to load page:", err);
+    } finally {
+      setLoadingPage(false);
+    }
+  };
+
+  const employees = [...allEmployees];
 
   if (sortKey) {
     employees.sort((a, b) => {
@@ -54,8 +84,6 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
     });
   }
 
-  const perPage = pageData.rowsPerPage;
-  const totalPages = Math.ceil(employees.length / perPage);
   const pageSlice = employees.slice(currentPage * perPage, (currentPage + 1) * perPage);
 
   const handleSort = (key: SortKey) => {
@@ -63,6 +91,11 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
     else { setSortKey(key); setSortAsc(true); }
     setSelectedRow(null);
     setCurrentPage(0);
+  };
+
+  const handlePageChange = async (newPage: number) => {
+    await ensurePage(newPage);
+    setCurrentPage(newPage);
   };
 
   const handleRowClick = (pageIndex: number) => {
@@ -106,27 +139,36 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
             </tr>
           </thead>
           <tbody>
-            {pageSlice.map((emp, i) => {
-              const globalIndex = currentPage * perPage + i;
-              return (
-                <tr
-                  key={`${emp.name}-${globalIndex}`}
-                  onClick={() => handleRowClick(i)}
-                  className={`border-t border-gray-800 cursor-pointer transition-colors ${
-                    selectedRow === globalIndex ? "bg-blue-500/10" : "hover:bg-gray-900/50"
-                  }`}
-                >
-                  <td className="px-4 py-3">{emp.name}</td>
-                  <td className="px-4 py-3 text-gray-400">{emp.department}</td>
-                  <td className="px-4 py-3 text-gray-400">{emp.type}</td>
-                  <td className="px-4 py-3 font-mono">
-                    {emp.type === "Hourly"
-                      ? `$${emp.hourlyRate?.toFixed(2)}/hr \u00d7 ${emp.hoursPerWeek} hrs/wk`
-                      : `$${(emp.salary ?? 0).toLocaleString()}`}
-                  </td>
-                </tr>
-              );
-            })}
+            {loadingPage ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                  <div className="animate-spin inline-block rounded-full h-6 w-6 border-b-2 border-blue-400 mr-2" />
+                  Loading...
+                </td>
+              </tr>
+            ) : (
+              pageSlice.map((emp, i) => {
+                const globalIndex = currentPage * perPage + i;
+                return (
+                  <tr
+                    key={`${emp.name}-${globalIndex}`}
+                    onClick={() => handleRowClick(i)}
+                    className={`border-t border-gray-800 cursor-pointer transition-colors ${
+                      selectedRow === globalIndex ? "bg-blue-500/10" : "hover:bg-gray-900/50"
+                    }`}
+                  >
+                    <td className="px-4 py-3">{emp.name}</td>
+                    <td className="px-4 py-3 text-gray-400">{emp.department}</td>
+                    <td className="px-4 py-3 text-gray-400">{emp.type}</td>
+                    <td className="px-4 py-3 font-mono">
+                      {emp.type === "Hourly"
+                        ? `$${emp.hourlyRate?.toFixed(2)}/hr \u00d7 ${emp.hoursPerWeek} hrs/wk`
+                        : `$${(emp.salary ?? 0).toLocaleString()}`}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -134,11 +176,11 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
       {/* Pagination controls */}
       <div className="flex items-center justify-between mt-3">
         <p className="text-xs text-gray-500">
-          Page {currentPage + 1} of {totalPages} ({employees.length} total)
+          Page {currentPage + 1} of {totalPages} ({totalEmployees} total)
         </p>
         <div className="flex gap-2">
           <button
-            onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+            onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
             disabled={currentPage === 0}
             className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
             {...testAttr('page-prev')}
@@ -146,7 +188,7 @@ export default function TableSortChallenge({ pageData, answerRef }: Props) {
             Previous
           </button>
           <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+            onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))}
             disabled={currentPage === totalPages - 1}
             className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
             {...testAttr('page-next')}

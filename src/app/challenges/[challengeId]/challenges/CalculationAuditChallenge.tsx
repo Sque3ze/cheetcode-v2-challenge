@@ -29,6 +29,9 @@ interface CalculationAuditPageData {
 interface Props {
   pageData: CalculationAuditPageData;
   answerRef: MutableRefObject<string>;
+  sessionId?: string;
+  challengeId?: string;
+  renderToken?: string;
 }
 
 export default function CalculationAuditChallenge({ pageData, answerRef }: Props) {

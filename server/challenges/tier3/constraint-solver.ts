@@ -16,7 +16,7 @@ interface ConstraintSolverPageData {
   requirements: Constraint[];
   budgetConstraints: Constraint[];
   exclusions: Constraint[];
-  advancedConstraints: Constraint[];
+  advancedConstraints?: Constraint[];
   optimization: string;
   optimizationField: "price" | "weight";
   variantIndex: number;
@@ -195,10 +195,20 @@ export const constraintSolverChallenge: ChallengeDefinition<ConstraintSolverPage
 
     return {
       pageData: {
-        items, requirements, budgetConstraints, exclusions, advancedConstraints,
+        items, requirements, budgetConstraints, exclusions,
         optimization, optimizationField, variantIndex,
       },
+      hiddenData: { advancedConstraints },
       answer: winner.name,
     };
+  },
+
+  interactActions: ["accordion"],
+
+  handleInteract(hiddenData, action) {
+    if (action === "accordion") {
+      return { advancedConstraints: hiddenData.advancedConstraints };
+    }
+    return null;
   },
 };

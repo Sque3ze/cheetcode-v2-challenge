@@ -7,8 +7,8 @@
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
 import type { ChallengeData } from "../../../src/lib/seed";
 
-type BaseOperation = { operator: "add" | "subtract" | "multiply" | "divide"; operand: number; hidden: boolean; label: string; type: "normal"; };
-type ConditionalOperation = { threshold: number; ifAbove: { operator: "add" | "subtract"; operand: number }; ifBelow: { operator: "add" | "subtract"; operand: number }; hidden: boolean; label: string; type: "conditional"; };
+type BaseOperation = { operator: "add" | "subtract" | "multiply" | "divide"; operand: number | null; hidden: boolean; label: string; type: "normal"; };
+type ConditionalOperation = { threshold: number; ifAbove: { operator: "add" | "subtract"; operand: number | null }; ifBelow: { operator: "add" | "subtract"; operand: number | null }; hidden: boolean; label: string; type: "conditional"; };
 type LookupOperation = { operator: "add" | "subtract" | "multiply"; lookupKey: string; lookupValue: number; hidden: boolean; label: string; type: "lookup"; };
 type Operation = BaseOperation | ConditionalOperation | LookupOperation;
 
@@ -125,10 +125,41 @@ export const sequentialCalculatorChallenge: ChallengeDefinition<SequentialCalcul
 
     const answer = (Math.round(currentValue * 100) / 100).toFixed(2);
 
+    // Build revealed operands map for hidden steps
+    const revealedOperands: Record<number, unknown> = {};
+    const gatedOperations = operations.map((op, i) => {
+      if (!op.hidden) return op;
+      if (op.type === "normal") {
+        revealedOperands[i] = op.operand;
+        return { ...op, operand: null };
+      }
+      if (op.type === "conditional") {
+        revealedOperands[i] = { ifAbove: op.ifAbove.operand, ifBelow: op.ifBelow.operand };
+        return {
+          ...op,
+          ifAbove: { ...op.ifAbove, operand: null },
+          ifBelow: { ...op.ifBelow, operand: null },
+        };
+      }
+      return op;
+    });
+
     return {
-      pageData: { startValue, operations, referenceTable, variantIndex },
+      pageData: { startValue, operations: gatedOperations, referenceTable, variantIndex },
+      hiddenData: { revealedOperands },
       answer,
     };
+  },
+
+  interactActions: ["reveal"],
+
+  handleInteract(hiddenData, action, params) {
+    if (action === "reveal") {
+      const stepIndex = params.stepIndex as number;
+      const revealedOperands = hiddenData.revealedOperands as Record<number, unknown>;
+      return { operand: revealedOperands[stepIndex] ?? null };
+    }
+    return null;
   },
 
   validateAnswer(submitted: string, correct: string): boolean {

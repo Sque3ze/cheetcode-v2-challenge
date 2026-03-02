@@ -11,7 +11,7 @@ import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
 import type { ChallengeData } from "../../../src/lib/seed";
 
 interface EmployeeRow { name: string; role: string; departmentId: string; salary: number; }
-interface DepartmentRow { id: string; name: string; budget: number; manager: string; location: string; headcount: number; }
+interface DepartmentRow { id: string; name: string; budget?: number; manager?: string; location?: string; headcount?: number; }
 interface ProjectRow { id: string; name: string; departmentId: string; budget: number; status: string; }
 
 type TaskType = "department-field" | "project-aggregate";
@@ -171,15 +171,35 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
       }
     }
 
+    // Gate department details behind expand interaction
+    const deptDetails: Record<string, { budget: number; manager: string; location: string; headcount: number }> = {};
+    for (const dept of departments) {
+      deptDetails[dept.id] = { budget: dept.budget, manager: dept.manager, location: dept.location, headcount: dept.headcount };
+    }
+
     return {
       pageData: {
-        employees, departments, projects,
+        employees,
+        departments: departments.map(({ budget, manager, location, headcount, ...rest }) => rest),
+        projects,
         targetEmployeeName: targetEmployee.name,
         targetField, taskType,
         disambiguationHint,
         variantIndex,
       },
+      hiddenData: { deptDetails },
       answer,
     };
+  },
+
+  interactActions: ["expand"],
+
+  handleInteract(hiddenData, action, params) {
+    if (action === "expand") {
+      const deptId = params.deptId as string;
+      const deptDetails = hiddenData.deptDetails as Record<string, unknown>;
+      return deptDetails[deptId] ?? null;
+    }
+    return null;
   },
 };

@@ -139,9 +139,17 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
       answer = leafBelow.value;
     }
 
+    // Build gated tab contents: only first tab visible initially
+    const tabContents: Record<number, Array<{ key: string; value: string }>> = {};
+    const gatedTabs = tabs.map((tab, i) => {
+      if (i === 0) return tab;
+      tabContents[i] = tab.content;
+      return { ...tab, content: [] as Array<{ key: string; value: string }> };
+    });
+
     return {
       pageData: {
-        tabs,
+        tabs: gatedTabs,
         conditionTab,
         conditionKey,
         conditionThreshold,
@@ -156,8 +164,20 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
         ifBelowKey: leafBelow.key,
         variantIndex,
       },
+      hiddenData: { tabContents },
       answer,
     };
+  },
+
+  interactActions: ["tab"],
+
+  handleInteract(hiddenData, action, params) {
+    if (action === "tab") {
+      const index = params.index as number;
+      const tabContents = hiddenData.tabContents as Record<number, Array<{ key: string; value: string }>>;
+      return { content: tabContents[index] ?? [] };
+    }
+    return null;
   },
 };
 

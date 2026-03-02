@@ -23,6 +23,7 @@ interface FilterSearchPageData {
   aggregation: "count" | "total salary" | "average salary";
   employeesPerPage: number;
   initialVisibleCount: number;
+  totalEmployees?: number;
   variantIndex: number;
 }
 
@@ -111,14 +112,29 @@ export const filterSearchChallenge: ChallengeDefinition<FilterSearchPageData> = 
 
     return {
       pageData: {
-        employees,
+        employees: employees.slice(0, 12),
         filterConditions,
         aggregation,
         employeesPerPage: 10,
         initialVisibleCount: 12,
+        totalEmployees: employees.length,
         variantIndex,
       },
+      hiddenData: { allEmployees: employees },
       answer,
     };
+  },
+
+  interactActions: ["page"],
+
+  handleInteract(hiddenData, action, params) {
+    if (action === "page") {
+      const page = (params.page as number) ?? 1;
+      const perPage = 10;
+      const allEmployees = hiddenData.allEmployees as Array<Record<string, unknown>>;
+      const start = page * perPage;
+      return { employees: allEmployees.slice(start, start + perPage), page };
+    }
+    return null;
   },
 };

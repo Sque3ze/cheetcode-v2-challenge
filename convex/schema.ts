@@ -44,4 +44,14 @@ export default defineSchema({
   })
     .index("by_score", ["score"])
     .index("by_github", ["github"]),
+
+  // ─── Challenge Views ───────────────────────────────────────
+  // Tracks when a challenge was loaded (for timing constraints + render tokens).
+  challengeViews: defineTable({
+    sessionId: v.id("sessions"),
+    challengeId: v.string(),
+    viewedAt: v.number(),
+    renderToken: v.string(),
+    lastInteractAt: v.optional(v.number()),
+  }).index("by_session_challenge", ["sessionId", "challengeId"]),
 });

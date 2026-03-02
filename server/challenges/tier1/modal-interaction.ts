@@ -14,15 +14,14 @@ interface CardData {
   name: string;
   category: string;
   price: number;
-  sku: string;
-  supplier: string;
+  sku?: string;
+  supplier?: string;
 }
 
 interface ModalInteractionPageData {
   cards: CardData[];
   targetCondition: string;
   targetField: string;
-  targetCardName: string;
   targetCategory: string;
   modalLoadDelay: number;
   variantIndex: number;
@@ -104,17 +103,34 @@ export const modalInteractionChallenge: ChallengeDefinition<ModalInteractionPage
     const targetField = data.pick(["sku", "supplier"] as const);
     const answer = targetField === "sku" ? targetCard.sku : targetCard.supplier;
 
+    // Build card details map for gating (sku/supplier hidden behind modal)
+    const cardDetails: Record<number, { sku: string; supplier: string }> = {};
+    for (const card of cards) {
+      cardDetails[card.id] = { sku: card.sku, supplier: card.supplier };
+    }
+
     return {
       pageData: {
-        cards,
+        cards: cards.map(({ sku, supplier, ...rest }) => rest),
         targetCondition: conditionType,
         targetField,
-        targetCardName: targetCard.name,
         targetCategory,
         modalLoadDelay: 800,
         variantIndex,
       },
+      hiddenData: { cardDetails },
       answer,
     };
+  },
+
+  interactActions: ["modal"],
+
+  handleInteract(hiddenData, action, params) {
+    if (action === "modal") {
+      const cardId = params.cardId as number;
+      const cardDetails = hiddenData.cardDetails as Record<number, { sku: string; supplier: string }>;
+      return cardDetails[cardId] ?? null;
+    }
+    return null;
   },
 };

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
+import { useInteract } from "../../../../lib/use-interact";
 
 interface Order {
   id: string;
@@ -24,8 +25,8 @@ interface ShippingOption {
 
 interface MultiStepWizardPageData {
   orders: Order[];
-  discountCodes: DiscountCode[];
-  shippingOptions: ShippingOption[];
+  discountCodes?: DiscountCode[];
+  shippingOptions?: ShippingOption[];
   orderCondition: string;
   targetStatus: string;
   discountCondition: string;
@@ -36,36 +37,84 @@ interface MultiStepWizardPageData {
 interface Props {
   pageData: MultiStepWizardPageData;
   answerRef: MutableRefObject<string>;
+  sessionId: string;
+  challengeId: string;
+  renderToken: string;
 }
 
-export default function MultiStepWizardChallenge({ pageData, answerRef }: Props) {
+export default function MultiStepWizardChallenge({ pageData, answerRef, sessionId, challengeId, renderToken }: Props) {
   const [step, setStep] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedDiscount, setSelectedDiscount] = useState<DiscountCode | null>(null);
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
   const [budgetError, setBudgetError] = useState(false);
   const [answer, setAnswer] = useState("");
+  const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>(pageData.discountCodes ?? []);
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>(pageData.shippingOptions ?? []);
+  const [budgetLimit, setBudgetLimit] = useState<number | undefined>(pageData.budgetLimit);
+  const [loadingStep, setLoadingStep] = useState(false);
+  const interact = useInteract(challengeId, sessionId, renderToken);
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
 
-  // Check budget when entering step 3
-  const handleDiscountSelect = (dc: DiscountCode) => {
+  const goToStep2 = async (order: Order) => {
+    setSelectedOrder(order);
+    if (discountCodes.length === 0) {
+      setLoadingStep(true);
+      try {
+        const result = await interact("step", { step: 2 }) as { discountCodes: DiscountCode[] };
+        if (result?.discountCodes) setDiscountCodes(result.discountCodes);
+      } catch (err) {
+        console.error("Failed to load step 2:", err);
+      } finally {
+        setLoadingStep(false);
+      }
+    }
+    setStep(2);
+  };
+
+  const handleDiscountSelect = async (dc: DiscountCode) => {
     setSelectedDiscount(dc);
     setBudgetError(false);
 
-    if (selectedOrder && pageData.budgetLimit) {
+    // Fetch step 3 data if needed
+    if (shippingOptions.length === 0) {
+      setLoadingStep(true);
+      try {
+        const result = await interact("step", { step: 3 }) as { shippingOptions: ShippingOption[]; budgetLimit: number };
+        if (result?.shippingOptions) setShippingOptions(result.shippingOptions);
+        if (result?.budgetLimit) setBudgetLimit(result.budgetLimit);
+      } catch (err) {
+        console.error("Failed to load step 3:", err);
+      } finally {
+        setLoadingStep(false);
+      }
+    }
+
+    if (selectedOrder && budgetLimit) {
       const subtotal = selectedOrder.quantity * selectedOrder.unitPrice;
       const discountedSubtotal = subtotal * (1 - dc.percent / 100);
-      if (discountedSubtotal > pageData.budgetLimit) {
+      if (discountedSubtotal > budgetLimit) {
         setBudgetError(true);
-        setStep(3); // Go to step 3 but show error
+        setStep(3);
         return;
       }
     }
     setStep(3);
   };
+
+  // Re-check budget when budgetLimit loads async
+  useEffect(() => {
+    if (step === 3 && selectedOrder && selectedDiscount && budgetLimit && !budgetError) {
+      const subtotal = selectedOrder.quantity * selectedOrder.unitPrice;
+      const discountedSubtotal = subtotal * (1 - selectedDiscount.percent / 100);
+      if (discountedSubtotal > budgetLimit) {
+        setBudgetError(true);
+      }
+    }
+  }, [budgetLimit, step, selectedOrder, selectedDiscount, budgetError]);
 
   return (
     <div>
@@ -90,7 +139,7 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
         ))}
       </div>
 
-      {/* Step 1: Find the order by condition */}
+      {/* Step 1: Find the order */}
       {step === 1 && (
         <div>
           <h3 className="text-sm font-medium text-gray-400 mb-3">
@@ -121,10 +170,7 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
                     <td className="px-4 py-3 text-gray-400" {...testAttr('status')}>{order.status}</td>
                     <td className="px-4 py-3 text-center">
                       <button
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setStep(2);
-                        }}
+                        onClick={() => goToStep2(order)}
                         className="text-sm text-blue-400 hover:text-blue-300"
                         {...testAttr('select-order', order.id)}
                       >
@@ -139,7 +185,7 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
         </div>
       )}
 
-      {/* Step 2: Apply discount code by condition */}
+      {/* Step 2: Apply discount */}
       {step === 2 && selectedOrder && (
         <div>
           <h3 className="text-sm font-medium text-gray-400 mb-3">
@@ -152,37 +198,43 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
               {selectedOrder.quantity} × ${selectedOrder.unitPrice.toFixed(2)} = ${(selectedOrder.quantity * selectedOrder.unitPrice).toFixed(2)}
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-            {pageData.discountCodes.map((dc) => (
-              <button
-                key={dc.code}
-                onClick={() => handleDiscountSelect(dc)}
-                className="p-4 rounded-lg border bg-gray-900 border-gray-800 hover:border-blue-500 text-left transition-colors"
-                {...testAttr('discount-code', dc.code)}
-              >
-                <p className="font-mono font-medium">{dc.code}</p>
-                <p className="text-sm text-gray-400" {...testAttr('discount-percent', String(dc.percent))}>{dc.percent}% off</p>
-              </button>
-            ))}
-          </div>
+          {loadingStep ? (
+            <div className="flex items-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400" />
+              <span className="ml-3 text-sm text-gray-400">Loading discount codes...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              {discountCodes.map((dc) => (
+                <button
+                  key={dc.code}
+                  onClick={() => handleDiscountSelect(dc)}
+                  className="p-4 rounded-lg border bg-gray-900 border-gray-800 hover:border-blue-500 text-left transition-colors"
+                  {...testAttr('discount-code', dc.code)}
+                >
+                  <p className="font-mono font-medium">{dc.code}</p>
+                  <p className="text-sm text-gray-400" {...testAttr('discount-percent', String(dc.percent))}>{dc.percent}% off</p>
+                </button>
+              ))}
+            </div>
+          )}
           <button onClick={() => setStep(1)} className="text-sm text-gray-500 hover:text-gray-300">
             &larr; Back to Step 1
           </button>
         </div>
       )}
 
-      {/* Step 3: Select shipping (with budget check) */}
+      {/* Step 3: Select shipping */}
       {step === 3 && selectedOrder && selectedDiscount && (
         <div>
           <h3 className="text-sm font-medium text-gray-400 mb-3">
             Step 3: Select <span className="text-white font-mono">&quot;{pageData.targetShipping}&quot;</span> shipping
           </h3>
 
-          {/* Budget limit info */}
-          {pageData.budgetLimit && (
+          {budgetLimit && (
             <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-4">
               <p className="text-sm text-gray-400">
-                Budget Limit: <span className="font-mono text-white" {...testAttr('budget-limit')}>${pageData.budgetLimit.toFixed(2)}</span>
+                Budget Limit: <span className="font-mono text-white" {...testAttr('budget-limit')}>${budgetLimit.toFixed(2)}</span>
               </p>
               <p className="text-sm text-gray-400 mt-1">Order: <span className="font-mono text-white">{selectedOrder.id}</span></p>
               <p className="text-sm text-gray-400 mt-1">Discount: <span className="font-mono text-white">{selectedDiscount.code} ({selectedDiscount.percent}%)</span></p>
@@ -194,19 +246,14 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
             </div>
           )}
 
-          {/* Budget exceeded error */}
           {budgetError && (
             <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4 mb-4" {...testAttr('budget-error')}>
               <p className="text-red-400 font-medium">Budget Exceeded!</p>
               <p className="text-sm text-red-300 mt-1">
-                The discounted subtotal exceeds the budget limit of ${pageData.budgetLimit?.toFixed(2)}. Please go back and select a different discount code.
+                The discounted subtotal exceeds the budget limit of ${budgetLimit?.toFixed(2)}. Please go back and select a different discount code.
               </p>
               <button
-                onClick={() => {
-                  setBudgetError(false);
-                  setSelectedDiscount(null);
-                  setStep(2);
-                }}
+                onClick={() => { setBudgetError(false); setSelectedDiscount(null); setStep(2); }}
                 className="mt-3 px-4 py-2 text-sm bg-red-800/50 text-red-200 rounded hover:bg-red-800 transition-colors"
                 {...testAttr('back-to-step2')}
               >
@@ -215,25 +262,28 @@ export default function MultiStepWizardChallenge({ pageData, answerRef }: Props)
             </div>
           )}
 
-          {/* Shipping options — only show if no budget error */}
           {!budgetError && (
             <>
-              <div className="space-y-2 mb-4">
-                {pageData.shippingOptions.map((opt) => (
-                  <button
-                    key={opt.name}
-                    onClick={() => {
-                      setSelectedShipping(opt);
-                      setStep(4);
-                    }}
-                    className="w-full p-4 rounded-lg border bg-gray-900 border-gray-800 hover:border-blue-500 text-left transition-colors flex justify-between items-center"
-                    {...testAttr('shipping', opt.name)}
-                  >
-                    <span className="font-medium">{opt.name}</span>
-                    <span className="font-mono text-gray-400" {...testAttr('shipping-cost', String(opt.cost))}>${opt.cost.toFixed(2)}</span>
-                  </button>
-                ))}
-              </div>
+              {loadingStep ? (
+                <div className="flex items-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400" />
+                  <span className="ml-3 text-sm text-gray-400">Loading shipping options...</span>
+                </div>
+              ) : (
+                <div className="space-y-2 mb-4">
+                  {shippingOptions.map((opt) => (
+                    <button
+                      key={opt.name}
+                      onClick={() => { setSelectedShipping(opt); setStep(4); }}
+                      className="w-full p-4 rounded-lg border bg-gray-900 border-gray-800 hover:border-blue-500 text-left transition-colors flex justify-between items-center"
+                      {...testAttr('shipping', opt.name)}
+                    >
+                      <span className="font-medium">{opt.name}</span>
+                      <span className="font-mono text-gray-400" {...testAttr('shipping-cost', String(opt.cost))}>${opt.cost.toFixed(2)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <button onClick={() => setStep(2)} className="text-sm text-gray-500 hover:text-gray-300">
                 &larr; Back to Step 2
               </button>

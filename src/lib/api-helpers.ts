@@ -18,8 +18,8 @@ import { auth } from "../../auth";
 export async function resolveGitHub(
   request: Request
 ): Promise<string | null> {
-  // Dev mode bypass — no auth required
-  if (process.env.DEV_USER) {
+  // Dev mode bypass — no auth required (disabled in production)
+  if (process.env.DEV_USER && process.env.NODE_ENV !== "production") {
     return process.env.DEV_USER;
   }
 

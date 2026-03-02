@@ -30,13 +30,13 @@ interface ShippingOption {
 
 interface MultiStepWizardPageData {
   orders: Order[];
-  discountCodes: DiscountCode[];
-  shippingOptions: ShippingOption[];
+  discountCodes?: DiscountCode[];
+  shippingOptions?: ShippingOption[];
   orderCondition: string;
   targetStatus: string;
   discountCondition: string;
   targetShipping: string;
-  budgetLimit: number;
+  budgetLimit?: number;
   variantIndex: number;
 }
 
@@ -172,16 +172,28 @@ export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageDa
     return {
       pageData: {
         orders,
-        discountCodes,
-        shippingOptions,
         orderCondition,
         targetStatus,
         discountCondition,
         targetShipping: targetShipping.name,
-        budgetLimit,
         variantIndex,
+      },
+      hiddenData: {
+        step2: { discountCodes },
+        step3: { shippingOptions, budgetLimit },
       },
       answer,
     };
+  },
+
+  interactActions: ["step"],
+
+  handleInteract(hiddenData, action, params) {
+    if (action === "step") {
+      const step = params.step as number;
+      if (step === 2) return hiddenData.step2;
+      if (step === 3) return hiddenData.step3;
+    }
+    return null;
   },
 };

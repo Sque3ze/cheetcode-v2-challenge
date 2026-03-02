@@ -15,13 +15,12 @@ interface MetricRow { label: string; q1: number; q2: number; q3: number; q4: num
 
 interface RedHerringPageData {
   dataA: MetricRow[];
-  dataB: MetricRow[];
+  dataB?: MetricRow[];
   fakeResult: number;
   fakeLabel: string;
   targetMetric: string;
   targetQuarters: string[];
   operation: "sum" | "difference";
-  correctTab: "a" | "b";
   variantIndex: number;
 }
 
@@ -127,10 +126,21 @@ export const redHerringChallenge: ChallengeDefinition<RedHerringPageData> = {
 
     return {
       pageData: {
-        dataA, dataB, fakeResult, fakeLabel,
-        targetMetric, targetQuarters, operation, correctTab, variantIndex,
+        dataA, fakeResult, fakeLabel,
+        targetMetric, targetQuarters, operation, variantIndex,
       },
+      hiddenData: { dataB },
       answer,
     };
+  },
+
+  interactActions: ["tab"],
+
+  handleInteract(hiddenData, action, params) {
+    if (action === "tab") {
+      const tab = params.tab as string;
+      if (tab === "b") return { dataB: hiddenData.dataB };
+    }
+    return null;
   },
 };

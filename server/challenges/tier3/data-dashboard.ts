@@ -16,8 +16,9 @@ interface TaxRow { region: string; taxRate: number; }
 
 interface DataDashboardPageData {
   sales: SalesRow[];
-  costs: CostRow[];
-  taxes: TaxRow[];
+  costs?: CostRow[];
+  taxes?: TaxRow[];
+  totalSales?: number;
   targetProduct: string;
   targetRegion: string;
   targetQuarters: string[];
@@ -117,13 +118,39 @@ export const dataDashboardChallenge: ChallengeDefinition<DataDashboardPageData> 
     }, 0);
     const quickStatsTotal = Math.round(wrongProfit * 100) / 100;
 
+    // Gate: only sales page 1 visible initially; costs and taxes behind tabs
+    const salesPerPage = 10;
+    const salesPages: Record<number, SalesRow[]> = {};
+    for (let i = 0; i < Math.ceil(sales.length / salesPerPage); i++) {
+      salesPages[i] = sales.slice(i * salesPerPage, (i + 1) * salesPerPage);
+    }
+
     return {
       pageData: {
-        sales, costs, taxes, targetProduct, targetRegion, targetQuarters,
-        quickStatsTotal, salesPerPage: 10, variantIndex,
+        sales: salesPages[0] ?? [],
+        totalSales: sales.length,
+        targetProduct, targetRegion, targetQuarters,
+        quickStatsTotal, salesPerPage, variantIndex,
       },
+      hiddenData: { costs, taxes, salesPages },
       answer,
     };
+  },
+
+  interactActions: ["tab", "page"],
+
+  handleInteract(hiddenData, action, params) {
+    if (action === "tab") {
+      const tab = params.tab as string;
+      if (tab === "costs") return { costs: hiddenData.costs };
+      if (tab === "taxes") return { taxes: hiddenData.taxes };
+    }
+    if (action === "page") {
+      const page = (params.page as number) ?? 0;
+      const salesPages = hiddenData.salesPages as Record<number, unknown[]>;
+      return { sales: salesPages[page] ?? [], page };
+    }
+    return null;
   },
 
   validateAnswer(submitted: string, correct: string): boolean {

@@ -20,6 +20,9 @@ interface DropdownSelectPageData {
 interface Props {
   pageData: DropdownSelectPageData;
   answerRef: MutableRefObject<string>;
+  sessionId?: string;
+  challengeId?: string;
+  renderToken?: string;
 }
 
 export default function DropdownSelectChallenge({ pageData, answerRef }: Props) {

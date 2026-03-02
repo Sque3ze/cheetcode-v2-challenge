@@ -12,13 +12,14 @@ import {
 import { getChallenge } from "../../../../../server/challenges/registry";
 import { ChallengeDataGenerator } from "../../../../lib/seed";
 import { TIER_POINTS } from "../../../../lib/config";
+import { generateRenderToken } from "../../../../lib/render-token";
 
 /**
  * GET /api/challenges/[challengeId]?sessionId=xxx
  *
  * Get the page data for a challenge (seed-parameterized).
  * Returns only the data needed to render the challenge page.
- * NEVER returns the answer.
+ * NEVER returns the answer or hiddenData.
  */
 export async function GET(
   request: Request,
@@ -46,7 +47,8 @@ export async function GET(
 
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   const serverSecret = process.env.SERVER_SECRET;
-  if (!convexUrl || !serverSecret) {
+  const mutationSecret = process.env.CONVEX_MUTATION_SECRET;
+  if (!convexUrl || !serverSecret || !mutationSecret) {
     return serverError("Server not configured");
   }
 
@@ -81,13 +83,30 @@ export async function GET(
     const solved = submissions.some((s) => s.correct);
     const attempts = submissions.length;
 
-    // Compute instructions
+    // Compute instructions (before stripping variantIndex)
     const instructions =
       typeof challenge.instructions === "function"
         ? challenge.instructions(generated.pageData)
         : challenge.instructions;
 
-    // Return page data (NEVER the answer)
+    // Strip variantIndex from pageData (used for instruction variants, not needed by client)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pageData = { ...(generated.pageData as any) };
+    delete pageData.variantIndex;
+
+    // Generate render token and record the view
+    const viewedAt = Date.now();
+    const renderToken = generateRenderToken(sessionId, challengeId, viewedAt, serverSecret);
+
+    await convex.action(api.challengeViews.recordView, {
+      secret: mutationSecret,
+      sessionId: session._id,
+      challengeId,
+      viewedAt,
+      renderToken,
+    });
+
+    // Return page data (NEVER the answer or hiddenData)
     return NextResponse.json({
       id: challenge.id,
       title: challenge.title,
@@ -95,7 +114,8 @@ export async function GET(
       points: TIER_POINTS[challenge.tier],
       description: challenge.description,
       instructions,
-      pageData: generated.pageData,
+      pageData,
+      renderToken,
       status: {
         solved,
         locked: attempts >= 3 && !solved,

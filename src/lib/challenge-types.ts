@@ -40,9 +40,21 @@ export interface ChallengeDefinition<TPageData = unknown> {
   generate(data: ChallengeData): {
     /** Data sent to the client to render the challenge page */
     pageData: TPageData;
+    /** Gated data — never sent to client directly, delivered via /interact */
+    hiddenData?: Record<string, unknown>;
     /** The correct answer. Server-only. Never sent to client. */
     answer: string;
   };
+
+  /** Interaction actions this challenge supports (e.g. ["tab", "page", "modal"]) */
+  interactActions?: string[];
+
+  /** Returns a slice of hiddenData in response to an interact call */
+  handleInteract?: (
+    hiddenData: Record<string, unknown>,
+    action: string,
+    params: Record<string, unknown>
+  ) => unknown;
 
   /**
    * Optional: custom answer validation.

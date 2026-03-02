@@ -28,6 +28,7 @@ interface ChallengePageData {
   description: string;
   instructions: string;
   pageData: unknown;
+  renderToken?: string;
   status: {
     solved: boolean;
     locked: boolean;
@@ -35,9 +36,17 @@ interface ChallengePageData {
   };
 }
 
+export interface ChallengeRendererProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pageData: any;
+  answerRef: React.MutableRefObject<string>;
+  sessionId: string;
+  challengeId: string;
+  renderToken: string;
+}
+
 // Map challenge IDs to their renderer components
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CHALLENGE_RENDERERS: Record<string, React.ComponentType<{ pageData: any; answerRef: React.MutableRefObject<string> }>> = {
+const CHALLENGE_RENDERERS: Record<string, React.ComponentType<ChallengeRendererProps>> = {
   "tier1-table-sort": TableSortChallenge,
   "tier1-form-fill": FormFillChallenge,
   "tier1-dropdown-select": DropdownSelectChallenge,
@@ -167,7 +176,13 @@ export default function ChallengePage({
       timeRemainingMs={timeRemainingMs}
       getAnswer={getAnswer}
     >
-      <Renderer pageData={challengeData.pageData} answerRef={answerRef} />
+      <Renderer
+        pageData={challengeData.pageData}
+        answerRef={answerRef}
+        sessionId={sessionId}
+        challengeId={challengeId}
+        renderToken={challengeData.renderToken ?? ""}
+      />
     </ChallengeLayout>
   );
 }

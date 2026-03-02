@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
+import { useInteract } from "../../../../lib/use-interact";
 
 interface Item {
   name: string;
@@ -25,7 +26,7 @@ interface ConstraintSolverPageData {
   requirements: Constraint[];
   budgetConstraints: Constraint[];
   exclusions: Constraint[];
-  advancedConstraints: Constraint[];
+  advancedConstraints?: Constraint[];
   optimization: string;
   optimizationField: "price" | "weight";
 }
@@ -33,12 +34,18 @@ interface ConstraintSolverPageData {
 interface Props {
   pageData: ConstraintSolverPageData;
   answerRef: MutableRefObject<string>;
+  sessionId: string;
+  challengeId: string;
+  renderToken: string;
 }
 
-export default function ConstraintSolverChallenge({ pageData, answerRef }: Props) {
+export default function ConstraintSolverChallenge({ pageData, answerRef, sessionId, challengeId, renderToken }: Props) {
   const [answer, setAnswer] = useState("");
   const [showPopover, setShowPopover] = useState(false);
+  const [advancedConstraints, setAdvancedConstraints] = useState<Constraint[]>(pageData.advancedConstraints ?? []);
+  const [loadingAdvanced, setLoadingAdvanced] = useState(false);
   const popoverAnchorRef = useRef<HTMLButtonElement>(null);
+  const interact = useInteract(challengeId, sessionId, renderToken);
 
   useEffect(() => {
     answerRef.current = answer;
@@ -59,9 +66,26 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
     return () => document.removeEventListener("mousedown", handler);
   }, [showPopover]);
 
+  const handleToggleAdvanced = async () => {
+    const newState = !showPopover;
+    setShowPopover(newState);
+
+    if (newState && advancedConstraints.length === 0) {
+      setLoadingAdvanced(true);
+      try {
+        const result = await interact("accordion") as { advancedConstraints: Constraint[] };
+        if (result?.advancedConstraints) setAdvancedConstraints(result.advancedConstraints);
+      } catch (err) {
+        console.error("Failed to load advanced constraints:", err);
+      } finally {
+        setLoadingAdvanced(false);
+      }
+    }
+  };
+
   return (
     <div>
-      {/* Inventory — horizontally scrollable card strip */}
+      {/* Inventory */}
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-400 mb-2">Inventory</h3>
         <div
@@ -115,7 +139,6 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
 
       {/* Constraint Panels */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        {/* Requirements */}
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
           <h3 className="text-sm font-medium text-blue-400 mb-3">Requirements</h3>
           <ul className="space-y-2" {...testAttr('panel', 'requirements')}>
@@ -128,7 +151,6 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
           </ul>
         </div>
 
-        {/* Budget Constraints */}
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
           <h3 className="text-sm font-medium text-yellow-400 mb-3">Budget &amp; Quality</h3>
           <ul className="space-y-2" {...testAttr('panel', 'budget')}>
@@ -141,7 +163,6 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
           </ul>
         </div>
 
-        {/* Exclusions */}
         <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
           <h3 className="text-sm font-medium text-red-400 mb-3">Exclusions</h3>
           <ul className="space-y-2" {...testAttr('panel', 'exclusions')}>
@@ -155,11 +176,11 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
         </div>
       </div>
 
-      {/* Additional Constraints — clickable link with popover */}
+      {/* Advanced Constraints */}
       <div className="mb-4 relative">
         <button
           ref={popoverAnchorRef}
-          onClick={() => setShowPopover(!showPopover)}
+          onClick={handleToggleAdvanced}
           className="text-sm text-purple-400 hover:text-purple-300 underline transition-colors cursor-pointer"
           {...testAttr('toggle-advanced')}
         >
@@ -172,14 +193,21 @@ export default function ConstraintSolverChallenge({ pageData, answerRef }: Props
             className="absolute left-0 top-8 z-30 bg-gray-900 rounded-lg border border-gray-700 p-4 shadow-xl min-w-72"
             {...testAttr('panel', 'advanced')}
           >
-            <ul className="space-y-2">
-              {pageData.advancedConstraints.map((c, i) => (
-                <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
-                  <span className="text-purple-400 mt-0.5">&#x2022;</span>
-                  <span>{c.label}</span>
-                </li>
-              ))}
-            </ul>
+            {loadingAdvanced ? (
+              <div className="flex items-center py-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-400" />
+                <span className="ml-2 text-sm text-gray-400">Loading...</span>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {advancedConstraints.map((c, i) => (
+                  <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
+                    <span className="text-purple-400 mt-0.5">&#x2022;</span>
+                    <span>{c.label}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </div>
