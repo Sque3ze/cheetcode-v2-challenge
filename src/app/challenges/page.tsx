@@ -9,6 +9,7 @@ interface ChallengeMeta {
   tier: number;
   description: string;
   points: number;
+  dependsOn: string[];
 }
 
 interface ChallengeStatus {
@@ -16,6 +17,7 @@ interface ChallengeStatus {
   solved: boolean;
   locked: boolean;
   attempts: number;
+  unmetPrerequisites: string[];
 }
 
 interface SessionData {
@@ -183,6 +185,9 @@ export default function ChallengesPage() {
   const statusMap = new Map(
     sessionData.challengeStatuses.map((s) => [s.challengeId, s])
   );
+  const challengeNameMap = new Map(
+    sessionData.challenges.map((c) => [c.id, c.title])
+  );
 
   return (
     <div className="min-h-screen">
@@ -321,12 +326,15 @@ export default function ChallengesPage() {
                   const cStatus = statusMap.get(challenge.id);
                   const solved = cStatus?.solved ?? false;
                   const locked = cStatus?.locked ?? false;
+                  const unmetPrereqs = cStatus?.unmetPrerequisites ?? [];
+                  const prerequisitesBlocked = unmetPrereqs.length > 0;
+                  const isDisabled = locked || isExpired || prerequisitesBlocked;
 
                   return (
                     <a
                       key={challenge.id}
                       href={
-                        isExpired ? undefined : `/challenges/${challenge.id}`
+                        isDisabled ? undefined : `/challenges/${challenge.id}`
                       }
                       className="card-surface"
                       style={{
@@ -338,9 +346,9 @@ export default function ChallengesPage() {
                         borderLeft: solved
                           ? "3px solid #42c366"
                           : undefined,
-                        opacity: locked || isExpired ? 0.4 : 1,
+                        opacity: isDisabled ? 0.4 : 1,
                         cursor:
-                          locked || isExpired ? "not-allowed" : "pointer",
+                          isDisabled ? "not-allowed" : "pointer",
                       }}
                     >
                       <div
@@ -418,8 +426,16 @@ export default function ChallengesPage() {
                           {solved && (
                             <span className="pill-solved">Solved</span>
                           )}
-                          {locked && !solved && (
+                          {locked && !solved && !prerequisitesBlocked && (
                             <span className="pill-locked">Locked</span>
+                          )}
+                          {prerequisitesBlocked && !solved && (
+                            <span
+                              className="pill-locked"
+                              title={`Requires: ${unmetPrereqs.map((id) => challengeNameMap.get(id) ?? id).join(", ")}`}
+                            >
+                              Requires: {unmetPrereqs.map((id) => challengeNameMap.get(id) ?? id).join(", ")}
+                            </span>
                           )}
                         </div>
                       </div>

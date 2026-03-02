@@ -8,7 +8,7 @@ import {
   rateLimited,
 } from "../../../lib/api-helpers";
 import { SESSION_DURATION_MS } from "../../../lib/config";
-import { getAllChallengeMetas } from "../../../../server/challenges/registry";
+import { getAllChallengeMetas, getUnmetPrerequisites } from "../../../../server/challenges/registry";
 
 /**
  * POST /api/session
@@ -84,6 +84,12 @@ export async function GET(request: Request) {
     const challenges = getAllChallengeMetas();
     const maxAttempts = 3;
 
+    // Build solved set for prerequisite checking
+    const solvedSet = new Set<string>();
+    for (const [id, status] of Object.entries(statuses)) {
+      if (status?.solved) solvedSet.add(id);
+    }
+
     // Build challenge status list
     const challengeStatuses = challenges.map((c) => {
       const status = statuses[c.id];
@@ -92,6 +98,7 @@ export async function GET(request: Request) {
         solved: status?.solved ?? false,
         locked: (status?.attempts ?? 0) >= maxAttempts && !status?.solved,
         attempts: status?.attempts ?? 0,
+        unmetPrerequisites: getUnmetPrerequisites(c.id, solvedSet),
       };
     });
 

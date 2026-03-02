@@ -77,6 +77,7 @@ export function getAllChallengeMetas(): ChallengeMeta[] {
     tier: c.tier,
     description: c.description,
     points: c.points ?? TIER_POINTS[c.tier],
+    dependsOn: c.dependsOn ?? [],
   }));
 }
 
@@ -105,3 +106,75 @@ export function validateAnswer(
   // Default: trim whitespace, lowercase, strict equality
   return submitted.trim().toLowerCase() === correct.trim().toLowerCase();
 }
+
+// ─── DAG prerequisite helpers ──────────────────────────────────
+
+/** Get the list of prerequisite challenge IDs that are NOT yet solved. */
+export function getUnmetPrerequisites(
+  challengeId: string,
+  solvedSet: Set<string>
+): string[] {
+  const challenge = challengeMap.get(challengeId);
+  if (!challenge?.dependsOn) return [];
+  return challenge.dependsOn.filter((dep) => !solvedSet.has(dep));
+}
+
+/** Check if all prerequisites for a challenge have been solved. */
+export function arePrerequisitesMet(
+  challengeId: string,
+  solvedSet: Set<string>
+): boolean {
+  return getUnmetPrerequisites(challengeId, solvedSet).length === 0;
+}
+
+// ─── Startup DAG validation ────────────────────────────────────
+
+(function validateDAG() {
+  const ids = new Set(CHALLENGES.map((c) => c.id));
+  const errors: string[] = [];
+
+  for (const c of CHALLENGES) {
+    if (!c.dependsOn) continue;
+    for (const dep of c.dependsOn) {
+      if (dep === c.id) {
+        errors.push(`Challenge "${c.id}" depends on itself`);
+      }
+      if (!ids.has(dep)) {
+        errors.push(
+          `Challenge "${c.id}" depends on unknown challenge "${dep}"`
+        );
+      }
+    }
+  }
+
+  // Cycle detection via DFS
+  const UNVISITED = 0, IN_PROGRESS = 1, DONE = 2;
+  const state = new Map<string, number>();
+  for (const c of CHALLENGES) state.set(c.id, UNVISITED);
+
+  function dfs(id: string, path: string[]): void {
+    state.set(id, IN_PROGRESS);
+    const deps = challengeMap.get(id)?.dependsOn ?? [];
+    for (const dep of deps) {
+      if (!state.has(dep)) continue; // unknown dep already reported
+      if (state.get(dep) === IN_PROGRESS) {
+        errors.push(
+          `Cycle detected: ${[...path, id, dep].join(" → ")}`
+        );
+      } else if (state.get(dep) === UNVISITED) {
+        dfs(dep, [...path, id]);
+      }
+    }
+    state.set(id, DONE);
+  }
+
+  for (const c of CHALLENGES) {
+    if (state.get(c.id) === UNVISITED) dfs(c.id, []);
+  }
+
+  if (errors.length > 0) {
+    throw new Error(
+      `Challenge DAG validation failed:\n${errors.join("\n")}`
+    );
+  }
+})();

@@ -35,6 +35,7 @@ export const constraintSolverChallenge: ChallengeDefinition<ConstraintSolverPage
   title: "Constraint Solver",
   tier: 3,
   points: 5,
+  dependsOn: ["tier2-linked-data-lookup"],
   description: "Find the item that satisfies all constraints (including advanced filters) with the best optimization.",
 
   instructions: (pageData) => {

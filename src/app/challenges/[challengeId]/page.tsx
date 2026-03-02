@@ -104,8 +104,17 @@ export default function ChallengePage({
     if (!challengeId || !sessionId) return;
 
     fetch(`/api/challenges/${challengeId}?sessionId=${sessionId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load challenge");
+      .then(async (res) => {
+        if (!res.ok) {
+          let data: { error?: string; message?: string } = {};
+          try { data = await res.json(); } catch { /* non-JSON error response */ }
+          if (data.error === "prerequisites_not_met") {
+            throw new Error(
+              `Prerequisites not met. ${data.message}`
+            );
+          }
+          throw new Error(data.error || `Failed to load challenge (${res.status})`);
+        }
         return res.json();
       })
       .then((data) => {

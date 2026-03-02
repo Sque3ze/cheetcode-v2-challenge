@@ -70,6 +70,7 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
   title: "Calculation Audit",
   tier: 4,
   points: 4,
+  dependsOn: ["tier2-sequential-calculator"],
   description: "Audit an expense report — verify line-item totals using the tiered tax rate schedule, sum only correct rows.",
 
   instructions: (pageData) => {

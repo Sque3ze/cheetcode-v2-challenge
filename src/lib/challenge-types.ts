@@ -27,6 +27,9 @@ export interface ChallengeDefinition<TPageData = unknown> {
   /** Override point value (defaults to TIER_POINTS[tier] if not set) */
   points?: number;
 
+  /** Challenge IDs that must be solved before this challenge is accessible */
+  dependsOn?: string[];
+
   /** Short description shown in the challenge list */
   description: string;
 
@@ -82,6 +85,7 @@ export interface ChallengeMeta {
   tier: Tier;
   description: string;
   points: number;
+  dependsOn: string[];
 }
 
 /**
@@ -92,6 +96,7 @@ export interface ChallengeStatus {
   solved: boolean;
   locked: boolean;
   attempts: number;
+  unmetPrerequisites: string[];
 }
 
 /**

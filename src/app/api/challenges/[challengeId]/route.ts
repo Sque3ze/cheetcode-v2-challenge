@@ -9,7 +9,7 @@ import {
   serverError,
   sessionExpired,
 } from "../../../../lib/api-helpers";
-import { getChallenge } from "../../../../../server/challenges/registry";
+import { getChallenge, arePrerequisitesMet, getUnmetPrerequisites } from "../../../../../server/challenges/registry";
 import { ChallengeDataGenerator } from "../../../../lib/seed";
 import { TIER_POINTS } from "../../../../lib/config";
 import { generateRenderToken } from "../../../../lib/render-token";
@@ -68,6 +68,27 @@ export async function GET(
     }
     if (session.status !== "active" || Date.now() > session.expiresAt) {
       return sessionExpired();
+    }
+
+    // Prerequisite check
+    const statuses = await convex.query(
+      api.submissions.getSessionChallengeStatuses,
+      { sessionId: session._id }
+    );
+    const solvedSet = new Set<string>();
+    for (const [id, status] of Object.entries(statuses)) {
+      if (status?.solved) solvedSet.add(id);
+    }
+    if (!arePrerequisitesMet(challengeId, solvedSet)) {
+      const unmet = getUnmetPrerequisites(challengeId, solvedSet);
+      return NextResponse.json(
+        {
+          error: "prerequisites_not_met",
+          message: `Solve these challenges first: ${unmet.join(", ")}`,
+          unmetPrerequisites: unmet,
+        },
+        { status: 403 }
+      );
     }
 
     // Generate challenge data from seed

@@ -15,6 +15,8 @@ import type { Tier } from "../../../../lib/config";
 import {
   getChallenge,
   validateAnswer,
+  arePrerequisitesMet,
+  getUnmetPrerequisites,
 } from "../../../../../server/challenges/registry";
 import { ChallengeDataGenerator } from "../../../../lib/seed";
 
@@ -91,6 +93,27 @@ export async function POST(
     // 3. Session is still active (SERVER-SIDE TIME CHECK)
     if (session.status !== "active" || Date.now() > session.expiresAt) {
       return sessionExpired();
+    }
+
+    // 3.5. Prerequisite check
+    const allStatuses = await convex.query(
+      api.submissions.getSessionChallengeStatuses,
+      { sessionId: session._id }
+    );
+    const solvedSet = new Set<string>();
+    for (const [id, status] of Object.entries(allStatuses)) {
+      if (status?.solved) solvedSet.add(id);
+    }
+    if (!arePrerequisitesMet(challengeId, solvedSet)) {
+      const unmet = getUnmetPrerequisites(challengeId, solvedSet);
+      return NextResponse.json(
+        {
+          error: "prerequisites_not_met",
+          message: `Solve these challenges first: ${unmet.join(", ")}`,
+          unmetPrerequisites: unmet,
+        },
+        { status: 403 }
+      );
     }
 
     // 5 & 6. Check existing submissions for this challenge

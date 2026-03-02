@@ -29,6 +29,7 @@ export const sequentialCalculatorChallenge: ChallengeDefinition<SequentialCalcul
   id: "tier2-sequential-calculator",
   title: "Sequential Calculator",
   tier: 2,
+  dependsOn: ["tier1-tab-navigation"],
   description: "Apply operations including conditionals and lookups to compute a final value.",
 
   instructions: (pageData) => {

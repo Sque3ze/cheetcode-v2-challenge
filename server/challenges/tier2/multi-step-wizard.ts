@@ -44,6 +44,7 @@ export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageDa
   id: "tier2-multi-step-wizard",
   title: "Multi-Step Wizard",
   tier: 2,
+  dependsOn: ["tier1-dropdown-select"],
   description: "Complete a 4-step order processing wizard with conditional lookups.",
 
   instructions: (pageData) => {

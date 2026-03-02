@@ -34,6 +34,7 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
   id: "tier2-linked-data-lookup",
   title: "Linked Data Lookup",
   tier: 2,
+  dependsOn: ["tier1-form-fill"],
   description: "Cross-reference tables with expandable rows to find a specific value.",
 
   instructions: (pageData) => {

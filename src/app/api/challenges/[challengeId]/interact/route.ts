@@ -11,7 +11,7 @@ import {
   sessionExpired,
   rateLimited,
 } from "../../../../../lib/api-helpers";
-import { getChallenge } from "../../../../../../server/challenges/registry";
+import { getChallenge, arePrerequisitesMet, getUnmetPrerequisites } from "../../../../../../server/challenges/registry";
 import { ChallengeDataGenerator } from "../../../../../lib/seed";
 import { MIN_INTERACT_INTERVAL_MS, RENDER_TOKEN_TTL_MS } from "../../../../../lib/config";
 
@@ -93,6 +93,27 @@ export async function POST(
     }
     if (session.status !== "active" || Date.now() > session.expiresAt) {
       return sessionExpired();
+    }
+
+    // 4.5. Prerequisite check
+    const allStatuses = await convex.query(
+      api.submissions.getSessionChallengeStatuses,
+      { sessionId: session._id }
+    );
+    const solvedSet = new Set<string>();
+    for (const [id, status] of Object.entries(allStatuses)) {
+      if (status?.solved) solvedSet.add(id);
+    }
+    if (!arePrerequisitesMet(challengeId, solvedSet)) {
+      const unmet = getUnmetPrerequisites(challengeId, solvedSet);
+      return NextResponse.json(
+        {
+          error: "prerequisites_not_met",
+          message: `Solve these challenges first: ${unmet.join(", ")}`,
+          unmetPrerequisites: unmet,
+        },
+        { status: 403 }
+      );
     }
 
     // 5. Validate render token

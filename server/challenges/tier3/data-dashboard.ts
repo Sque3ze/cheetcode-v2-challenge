@@ -35,6 +35,7 @@ export const dataDashboardChallenge: ChallengeDefinition<DataDashboardPageData> 
   id: "tier3-data-dashboard",
   title: "Data Dashboard",
   tier: 3,
+  dependsOn: ["tier2-sequential-calculator"],
   description: "Cross-reference sales, costs, and tax data across tabs to compute profit.",
 
   instructions: (pageData) => {
