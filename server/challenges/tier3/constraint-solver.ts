@@ -74,13 +74,26 @@ export const constraintSolverChallenge: ChallengeDefinition<ConstraintSolverPage
       { field: "inStock", operator: "equals", value: true, label: "Must be in stock" },
     ];
 
+    // Pick which budget constraint to replace with a relative one
+    const relativeConstraintType = data.pick(["below_avg_price", "above_avg_rating"] as const);
+
     const priceMax = Math.ceil(targetItem.price + data.int(30, 80));
     const ratingMin = Math.floor((targetItem.rating - 0.5) * 10) / 10;
 
-    const budgetConstraints: Constraint[] = [
-      { field: "price", operator: "lte", value: priceMax, label: `Price must be ≤ $${priceMax}` },
-      { field: "rating", operator: "gte", value: ratingMin, label: `Rating must be ≥ ${ratingMin}` },
-    ];
+    const budgetConstraints: Constraint[] = [];
+    if (relativeConstraintType === "below_avg_price") {
+      // Replace price constraint with relative; keep absolute rating
+      budgetConstraints.push(
+        { field: "price", operator: "below_avg", value: 0, label: "Price must be below the average price of in-stock items" },
+        { field: "rating", operator: "gte", value: ratingMin, label: `Rating must be ≥ ${ratingMin}` },
+      );
+    } else {
+      // Replace rating constraint with relative; keep absolute price
+      budgetConstraints.push(
+        { field: "price", operator: "lte", value: priceMax, label: `Price must be ≤ $${priceMax}` },
+        { field: "rating", operator: "above_avg", value: 0, label: "Rating must be above the average rating of all items" },
+      );
+    }
 
     const otherSuppliers = [...SUPPLIERS].filter((s) => s !== targetItem.supplier);
     const excludedSupplier = data.pick(otherSuppliers);
@@ -98,15 +111,40 @@ export const constraintSolverChallenge: ChallengeDefinition<ConstraintSolverPage
       ? "among qualifying items, submit the one with the lowest price"
       : "among qualifying items, submit the one with the lowest weight";
 
+    // Compute aggregates for relative constraints
+    const inStockItems = items.filter((it) => it.inStock);
+    const avgPrice = inStockItems.length > 0
+      ? Math.round(inStockItems.reduce((s, it) => s + it.price, 0) / inStockItems.length * 100) / 100
+      : 0;
+    const avgRating = items.length > 0
+      ? Math.round(items.reduce((s, it) => s + it.rating, 0) / items.length * 10) / 10
+      : 0;
+
     const passesAll = (item: Item) => {
       if (!allowedCategories.includes(item.category)) return false;
       if (!item.inStock) return false;
-      if (item.price > priceMax) return false;
-      if (item.rating < ratingMin) return false;
+      if (relativeConstraintType === "below_avg_price") {
+        if (item.price >= avgPrice) return false;
+      } else {
+        if (item.price > priceMax) return false;
+      }
+      if (relativeConstraintType === "above_avg_rating") {
+        if (item.rating <= avgRating) return false;
+      } else {
+        if (item.rating < ratingMin) return false;
+      }
       if (item.supplier === excludedSupplier) return false;
       if (item.weight > weightMax) return false;
       return true;
     };
+
+    // Fix target item to pass relative constraint if needed
+    if (relativeConstraintType === "below_avg_price" && targetItem.price >= avgPrice) {
+      targetItem.price = Math.round((avgPrice - data.int(1, 20)) * 100) / 100;
+    }
+    if (relativeConstraintType === "above_avg_rating" && targetItem.rating <= avgRating) {
+      targetItem.rating = Math.round((avgRating + data.int(1, 10) / 10) * 10) / 10;
+    }
 
     let passing = items.filter(passesAll);
 
@@ -123,7 +161,34 @@ export const constraintSolverChallenge: ChallengeDefinition<ConstraintSolverPage
       }
     }
 
-    const finalPassing = items.filter(passesAll);
+    // Recompute aggregates after mutations (prices/ratings may have changed)
+    const inStockItemsFinal = items.filter((it) => it.inStock);
+    const avgPriceFinal = inStockItemsFinal.length > 0
+      ? Math.round(inStockItemsFinal.reduce((s, it) => s + it.price, 0) / inStockItemsFinal.length * 100) / 100
+      : 0;
+    const avgRatingFinal = items.length > 0
+      ? Math.round(items.reduce((s, it) => s + it.rating, 0) / items.length * 10) / 10
+      : 0;
+
+    const passesAllFinal = (item: Item) => {
+      if (!allowedCategories.includes(item.category)) return false;
+      if (!item.inStock) return false;
+      if (relativeConstraintType === "below_avg_price") {
+        if (item.price >= avgPriceFinal) return false;
+      } else {
+        if (item.price > priceMax) return false;
+      }
+      if (relativeConstraintType === "above_avg_rating") {
+        if (item.rating <= avgRatingFinal) return false;
+      } else {
+        if (item.rating < ratingMin) return false;
+      }
+      if (item.supplier === excludedSupplier) return false;
+      if (item.weight > weightMax) return false;
+      return true;
+    };
+
+    const finalPassing = items.filter(passesAllFinal);
     const winner = finalPassing.reduce((best, item) =>
       item[optimizationField] < best[optimizationField] ? item : best
     );

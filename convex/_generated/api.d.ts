@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as debug from "../debug.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as sessions from "../sessions.js";
 import type * as submissions from "../submissions.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  debug: typeof debug;
   leaderboard: typeof leaderboard;
   sessions: typeof sessions;
   submissions: typeof submissions;

@@ -1,16 +1,21 @@
 /**
- * Tier 1 Challenge: Form Fill (Round 3 — Multiple Disclosure Mechanisms)
+ * Tier 1 Challenge: Form Fill (Round 4 — Field Transformations)
  *
  * 3 fields across 3 different disclosure mechanisms:
  * - Tab: A "Contact" tab alongside "Profile" — one field (e.g. city) is only there
  * - Inline expand: A "[+] Show full details" link reveals one field (e.g. role)
  * - Tooltip: Start date shown as "Joined: 2022" — clicking reveals full date "2022-03-15"
+ *
+ * Plus: 1 field requires a transformation before submission (salary_band, start_quarter, or dept_code).
  */
 
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
 import type { ChallengeData } from "../../../src/lib/seed";
 
 type DisclosureType = "tab" | "expand" | "tooltip";
+type TransformationType = "salary_band" | "start_quarter" | "dept_code";
+
+interface SalaryBand { min: number; max: number; label: string; }
 
 interface FormFillPageData {
   employee: {
@@ -24,6 +29,8 @@ interface FormFillPageData {
   };
   fieldsToFill: string[];
   fieldDisclosures: Array<{ field: string; type: DisclosureType }>;
+  transformations: Array<{ field: string; type: TransformationType }>;
+  salaryBands: SalaryBand[];
   variantIndex: number;
 }
 
@@ -36,19 +43,43 @@ const HIDEABLE_FIELDS: Array<{ field: string; disclosureType: DisclosureType }> 
   { field: "startDate", disclosureType: "tooltip" }, // Abbreviated, click to reveal
 ];
 
+const SALARY_BANDS: SalaryBand[] = [
+  { min: 0, max: 59999, label: "Junior" },
+  { min: 60000, max: 99999, label: "Mid" },
+  { min: 100000, max: 149999, label: "Senior" },
+  { min: 150000, max: Infinity, label: "Executive" },
+];
+
+function getSalaryBand(salary: number): string {
+  const band = SALARY_BANDS.find((b) => salary >= b.min && salary <= b.max);
+  return band?.label ?? "Unknown";
+}
+
+function getStartQuarter(startDate: string): string {
+  const month = parseInt(startDate.split("-")[1], 10);
+  if (month <= 3) return "Q1";
+  if (month <= 6) return "Q2";
+  if (month <= 9) return "Q3";
+  return "Q4";
+}
+
+function getDeptCode(department: string): string {
+  return department.substring(0, 3).toUpperCase();
+}
+
 export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
   id: "tier1-form-fill",
   title: "Form Fill",
   tier: 1,
-  description: "Read employee details (some hidden across tabs, expandable sections, and tooltips) and submit specific values.",
+  description: "Read employee details (some hidden across tabs, expandable sections, and tooltips) and submit specific values — some require transformation.",
 
   instructions: (pageData) => {
     const fields = pageData.fieldsToFill.join(", ");
     const variants = [
-      `Read the employee profile below and submit the following fields separated by a comma: ${fields}. Note: some fields are in other tabs, expandable sections, or abbreviated displays. Click to reveal full values.`,
-      `Look at the employee information. What are their ${fields}? Provide them comma-separated. Some data is in the Contact tab, some behind an expand link, and some abbreviated.`,
-      `From the profile data, extract and submit (comma-delimited): ${fields}. Check all tabs, expand any collapsed sections, and click abbreviated values to see full details.`,
-      `The employee record shows various attributes across tabs and expandable areas. Submit these values joined by commas: ${fields}. Explore all disclosure mechanisms.`,
+      `Read the employee profile below and submit the following fields separated by a comma: ${fields}. Note: some fields are in other tabs, expandable sections, or abbreviated displays. Click to reveal full values. Some fields require transformation — check the reference notes on the page.`,
+      `Look at the employee information. What are their ${fields}? Provide them comma-separated. Some data is in the Contact tab, some behind an expand link, and some abbreviated. Pay attention to any transformation rules.`,
+      `From the profile data, extract and submit (comma-delimited): ${fields}. Check all tabs, expand any collapsed sections, and click abbreviated values. Apply any required transformations noted on the page.`,
+      `The employee record shows various attributes across tabs and expandable areas. Submit these values joined by commas: ${fields}. Explore all disclosure mechanisms and apply transformation rules where needed.`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -57,12 +88,32 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
     const person = data.person();
     const variantIndex = data.int(0, 3);
 
-    // Pick 3 fields: 1 visible + all 3 hidden fields
+    // Pick 1 transformation type
+    const transformationType = data.pick(["salary_band", "start_quarter", "dept_code"] as const);
+
+    // Map transformation to the field it replaces
+    const transformFieldMap: Record<TransformationType, { originalField: string; newLabel: string }> = {
+      salary_band: { originalField: "salary", newLabel: "salary band" },
+      start_quarter: { originalField: "startDate", newLabel: "start quarter" },
+      dept_code: { originalField: "department", newLabel: "dept code" },
+    };
+
+    const transform = transformFieldMap[transformationType];
+
+    // Pick fields: 1 visible + all 3 hidden fields
     const visibleField = data.pick(ALWAYS_VISIBLE.filter((f) => f !== "name"));
-    const fieldsToFill = [
+
+    // Build field list, replacing the transformed field's label
+    const rawFields = [
       visibleField as string,
       ...HIDEABLE_FIELDS.map((h) => h.field),
     ];
+
+    // Replace the original field name with the transformed label
+    const fieldsToFill = rawFields.map((f) => {
+      if (f === transform.originalField) return transform.newLabel;
+      return f;
+    });
 
     // Shuffle to avoid predictable order
     const shuffled = data.pickN(fieldsToFill, fieldsToFill.length);
@@ -72,6 +123,9 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
       type: h.disclosureType,
     }));
 
+    const transformations = [{ field: transform.originalField, type: transformationType }];
+
+    // Build field values, applying transformation where needed
     const fieldValues: Record<string, string> = {
       name: person.fullName,
       department: person.department,
@@ -80,6 +134,10 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
       email: person.email,
       startDate: person.startDate,
       salary: `$${person.salary.toLocaleString()}`,
+      // Transformed values
+      "salary band": getSalaryBand(person.salary),
+      "start quarter": getStartQuarter(person.startDate),
+      "dept code": getDeptCode(person.department),
     };
 
     const answer = shuffled.map((f) => fieldValues[f]).join(", ");
@@ -97,6 +155,12 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
         },
         fieldsToFill: shuffled,
         fieldDisclosures,
+        transformations,
+        salaryBands: SALARY_BANDS.map((b) => ({
+          min: b.min,
+          max: b.max === Infinity ? 999999 : b.max,
+          label: b.label,
+        })),
         variantIndex,
       },
       answer,

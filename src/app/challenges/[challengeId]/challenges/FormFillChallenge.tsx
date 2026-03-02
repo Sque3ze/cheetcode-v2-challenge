@@ -3,6 +3,8 @@
 import { useState, useEffect, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
 
+interface SalaryBand { min: number; max: number; label: string; }
+
 interface FormFillPageData {
   employee: {
     name: string;
@@ -15,6 +17,8 @@ interface FormFillPageData {
   };
   fieldsToFill: string[];
   fieldDisclosures?: Array<{ field: string; type: "tab" | "expand" | "tooltip" }>;
+  transformations?: Array<{ field: string; type: "salary_band" | "start_quarter" | "dept_code" }>;
+  salaryBands?: SalaryBand[];
 }
 
 interface Props {
@@ -30,6 +34,9 @@ const FIELD_LABELS: Record<string, string> = {
   salary: "Salary",
   city: "City",
   startDate: "Start Date",
+  "salary band": "Salary Band",
+  "start quarter": "Start Quarter",
+  "dept code": "Dept Code",
 };
 
 export default function FormFillChallenge({ pageData, answerRef }: Props) {
@@ -37,13 +44,13 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
   const [activeTab, setActiveTab] = useState<"profile" | "contact">("profile");
   const [showExpand, setShowExpand] = useState(false);
   const [tooltipRevealed, setTooltipRevealed] = useState(false);
-  const { employee, fieldsToFill, fieldDisclosures } = pageData;
+  const { employee, fieldsToFill, fieldDisclosures, salaryBands } = pageData;
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
 
-  // Check if we have multi-disclosure mode (Round 3)
+  // Check if we have multi-disclosure mode (Round 3+)
   const hasDisclosures = fieldDisclosures && fieldDisclosures.length > 0;
 
   if (!hasDisclosures) {
@@ -56,6 +63,30 @@ export default function FormFillChallenge({ pageData, answerRef }: Props) {
 
   return (
     <div>
+      {/* Salary Band Reference Table — always shown (potential distraction if not needed) */}
+      {salaryBands && salaryBands.length > 0 && (
+        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-4" {...testAttr('salary-band-table')}>
+          <h4 className="text-xs font-medium text-amber-400 mb-2">Salary Band Reference</h4>
+          <div className="grid grid-cols-4 gap-2 text-xs">
+            {salaryBands.map((band) => (
+              <div key={band.label} className="text-center" {...testAttr('salary-band', band.label)}>
+                <p className="text-gray-200 font-medium">{band.label}</p>
+                <p className="text-gray-500 font-mono">
+                  {band.max >= 999999
+                    ? `$${band.min.toLocaleString()}+`
+                    : `$${band.min.toLocaleString()}-$${band.max.toLocaleString()}`}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dept code note */}
+      <p className="text-xs text-gray-500 mb-4" {...testAttr('dept-code-note')}>
+        Dept codes: first 3 letters, uppercased (e.g., Engineering → ENG)
+      </p>
+
       {/* Tab bar: Profile | Contact */}
       <div className="flex border-b border-gray-800 mb-0">
         <button

@@ -10,11 +10,11 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   displayedTotal: number;
-  runningTotal?: number;
 }
 
 interface CalculationAuditPageData {
   lineItems: LineItem[];
+  taxRates: Record<string, number>;
   summaryTotal: number;
   variantIndex: number;
 }
@@ -31,10 +31,25 @@ export default function CalculationAuditChallenge({ pageData, answerRef }: Props
     answerRef.current = answer;
   }, [answer, answerRef]);
 
-  const hasRunningTotals = pageData.lineItems.some((item) => item.runningTotal !== undefined);
+  const taxEntries = Object.entries(pageData.taxRates || {});
 
   return (
     <div>
+      {/* Tax Rate Schedule */}
+      {taxEntries.length > 0 && (
+        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-6" {...testAttr('tax-rate-legend')}>
+          <h3 className="text-sm font-medium text-amber-400 mb-3">Tax Rate Schedule</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {taxEntries.map(([category, rate]) => (
+              <div key={category} className="flex justify-between text-sm" {...testAttr('tax-rate', category)}>
+                <span className="text-gray-400">{category}</span>
+                <span className="font-mono text-gray-200" {...testAttr('tax-rate-value')}>{rate}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Summary card — shows total of ALL rows (trap) */}
       <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-xl border border-blue-500/30 p-4 mb-6">
         <div className="flex items-center justify-between">
@@ -76,14 +91,6 @@ export default function CalculationAuditChallenge({ pageData, answerRef }: Props
                 <span className="text-base font-bold font-mono text-gray-100" {...testAttr('exp-total')}>${item.displayedTotal.toFixed(2)}</span>
               </div>
             </div>
-
-            {/* Running total row */}
-            {hasRunningTotals && item.runningTotal !== undefined && (
-              <div className="flex justify-between mt-2 pt-1 border-t border-gray-800/50">
-                <span className="text-xs text-gray-500">Running Total</span>
-                <span className="text-xs font-mono text-gray-400" {...testAttr('exp-running-total')}>${item.runningTotal.toFixed(2)}</span>
-              </div>
-            )}
           </div>
         ))}
       </div>

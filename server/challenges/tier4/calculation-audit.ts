@@ -1,10 +1,10 @@
 /**
- * Tier 4 Challenge: Calculation Audit (Round 3 — Running Totals)
+ * Tier 4 Challenge: Calculation Audit (Round 4 — Per-Category Tax Rates)
  *
- * Each line item now has a running total. Error rows have wrong displayedTotal,
- * which makes their running total AND all subsequent running totals wrong.
- * New question: "Sum displayed totals of rows where BOTH the line-item math
- * (qty × unitPrice) AND the running total are correct."
+ * Each line item has a category with a specific tax rate shown in a legend.
+ * Correct total: round(qty × unitPrice × (1 + taxRate/100), 2).
+ * Error rows use either wrong base math or wrong category's tax rate.
+ * Answer: sum of displayedTotal where displayedTotal === correctTaxedTotal.
  */
 
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
@@ -17,11 +17,11 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   displayedTotal: number;
-  runningTotal: number;
 }
 
 interface CalculationAuditPageData {
   lineItems: LineItem[];
+  taxRates: Record<string, number>;
   summaryTotal: number;
   variantIndex: number;
 }
@@ -43,28 +43,26 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
   title: "Calculation Audit",
   tier: 4,
   points: 4,
-  description: "Audit an expense report — verify line-item math and running totals, sum only fully correct rows.",
+  description: "Audit an expense report — verify line-item totals include the correct per-category tax rate, sum only correct rows.",
 
   instructions: (pageData) => {
     const variants = [
-      `Review the expense report below. Each line item shows quantity, unit price, a displayed total, and a running total. ` +
-      `A row is correct ONLY if: (1) displayed total = quantity × unit price, AND (2) the running total = previous running total + displayed total. ` +
-      `Note: if a row has a wrong displayed total, its running total and ALL subsequent running totals will also be wrong. ` +
-      `Sum ONLY the displayed totals of rows where BOTH checks pass. Submit rounded to 2 decimal places.`,
+      `Review the expense report below. Each line item has a category with a specific tax rate (see the Tax Rate Schedule). ` +
+      `A row's total should equal: qty × unit price × (1 + category tax rate / 100), rounded to 2 decimal places. ` +
+      `Sum ONLY the displayed totals of rows where this formula holds. Submit rounded to 2 decimal places.`,
 
-      `Audit this expense report. Each row has a running total that should equal the cumulative sum of displayed totals. ` +
-      `Verify: (1) displayed total matches qty × unit price, (2) running total matches previous + current displayed total. ` +
-      `An error propagates — once a row is wrong, all rows after it have incorrect running totals too. ` +
-      `Sum the displayed totals of fully verified rows only. Round to 2 decimal places.`,
+      `Audit this expense report. Each category has a tax rate shown in the Tax Rate Schedule. ` +
+      `For each row, the correct total is qty × unit price × (1 + tax rate / 100), rounded to 2 decimals. ` +
+      `Some rows have errors — wrong base calculation or wrong tax rate applied. ` +
+      `Sum the displayed totals of correctly calculated rows only. Round to 2 decimal places.`,
 
-      `Each expense row has a line total and a running total. Check each row: ` +
-      `does the displayed total equal quantity × unit price? Does the running total equal the previous running total plus this row's displayed total? ` +
-      `Errors propagate through running totals. Include only rows where BOTH the line math and running total are correct. ` +
-      `Submit the sum to 2 decimal places.`,
+      `Each expense row should reflect: quantity × unit price × (1 + category tax rate / 100). ` +
+      `Look up each row's category in the Tax Rate Schedule to find the applicable rate. ` +
+      `Include only rows where the displayed total matches this formula (to 2 decimal places). ` +
+      `Submit the sum of correct rows, rounded to 2 decimal places.`,
 
-      `The expense report below includes running totals. A row is valid only if its displayed total = qty × unit price AND ` +
-      `its running total = sum of all displayed totals up to and including this row. ` +
-      `Remember: a single error makes all subsequent running totals wrong. ` +
+      `The expense report below uses per-category tax rates. Check the Tax Rate Schedule for each category's rate. ` +
+      `A valid row has displayed total = round(qty × unit price × (1 + rate/100), 2). ` +
       `Sum the displayed totals of valid rows. Round to 2 decimal places.`,
     ];
     return variants[pageData.variantIndex];
@@ -75,7 +73,13 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
     const itemCount = data.int(12, 18);
     const errorCount = data.int(2, 4);
 
-    // Pick which rows will have line-item errors (ensure first error is not row 0 to have some valid rows)
+    // Generate per-category tax rates (5-15%)
+    const taxRates: Record<string, number> = {};
+    for (const cat of EXPENSE_CATEGORIES) {
+      taxRates[cat] = data.int(5, 15);
+    }
+
+    // Pick which rows will have errors (not row 0)
     const errorIndices = new Set<number>();
     while (errorIndices.size < errorCount) {
       errorIndices.add(data.int(1, itemCount - 1));
@@ -83,37 +87,45 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
 
     const descriptions = data.pickN(EXPENSE_ITEMS, itemCount);
     const lineItems: LineItem[] = [];
-    let correctRunningTotal = 0;
-    let displayedRunningTotal = 0;
 
     for (let i = 0; i < itemCount; i++) {
       const quantity = data.int(1, 25);
       const unitPrice = data.int(10, 500) + data.int(0, 99) / 100;
-      const correctTotal = Math.round(quantity * unitPrice * 100) / 100;
+      const category = data.pick(EXPENSE_CATEGORIES);
+      const rate = taxRates[category];
+      const correctTotal = Math.round(quantity * unitPrice * (1 + rate / 100) * 100) / 100;
 
       let displayedTotal: number;
       if (errorIndices.has(i)) {
-        const errorPercent = data.int(3, 10);
-        const direction = data.pick([1, -1] as const);
-        displayedTotal = Math.round(correctTotal * (1 + direction * errorPercent / 100) * 100) / 100;
+        const errorType = data.pick(["wrong_base", "wrong_tax"] as const);
+        if (errorType === "wrong_base") {
+          // Perturb the base (qty × unitPrice) by 3-10% before applying tax
+          const errorPercent = data.int(3, 10);
+          const direction = data.pick([1, -1] as const);
+          const wrongBase = quantity * unitPrice * (1 + direction * errorPercent / 100);
+          displayedTotal = Math.round(wrongBase * (1 + rate / 100) * 100) / 100;
+        } else {
+          // Apply a different category's tax rate
+          const otherCategories = EXPENSE_CATEGORIES.filter((c) => c !== category);
+          const wrongCat = data.pick(otherCategories);
+          const wrongRate = taxRates[wrongCat];
+          displayedTotal = Math.round(quantity * unitPrice * (1 + wrongRate / 100) * 100) / 100;
+        }
+        // Ensure error row actually differs from correct
         if (displayedTotal === correctTotal) {
-          displayedTotal = Math.round((correctTotal + direction * 0.01) * 100) / 100;
+          displayedTotal = Math.round((correctTotal + 0.01) * 100) / 100;
         }
       } else {
         displayedTotal = correctTotal;
       }
 
-      // Running total uses the DISPLAYED totals (so errors propagate)
-      displayedRunningTotal = Math.round((displayedRunningTotal + displayedTotal) * 100) / 100;
-
       lineItems.push({
         id: `EXP-${String(i + 1).padStart(3, "0")}`,
         description: descriptions[i],
-        category: data.pick(EXPENSE_CATEGORIES),
+        category,
         quantity,
         unitPrice,
         displayedTotal,
-        runningTotal: displayedRunningTotal,
       });
     }
 
@@ -122,23 +134,12 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
       lineItems.reduce((sum, item) => sum + item.displayedTotal, 0) * 100
     ) / 100;
 
-    // Correct answer: sum of rows where BOTH line-item math AND running total are correct
-    // A row's running total is correct only if ALL previous rows' displayed totals are correct too
-    let expectedRunning = 0;
+    // Correct answer: sum of rows where displayedTotal === correctTaxedTotal
     let correctSum = 0;
-    let runningStillValid = true;
-
     for (const item of lineItems) {
-      const expectedLineTotal = Math.round(item.quantity * item.unitPrice * 100) / 100;
-      const lineCorrect = item.displayedTotal === expectedLineTotal;
-      expectedRunning = Math.round((expectedRunning + item.displayedTotal) * 100) / 100;
-      const runningCorrect = Math.abs(item.runningTotal - expectedRunning) < 0.001;
-
-      if (!lineCorrect) {
-        runningStillValid = false;
-      }
-
-      if (lineCorrect && runningStillValid && runningCorrect) {
+      const rate = taxRates[item.category];
+      const expectedTotal = Math.round(item.quantity * item.unitPrice * (1 + rate / 100) * 100) / 100;
+      if (Math.abs(item.displayedTotal - expectedTotal) < 0.001) {
         correctSum += item.displayedTotal;
       }
     }
@@ -146,7 +147,7 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
     const answer = (Math.round(correctSum * 100) / 100).toFixed(2);
 
     return {
-      pageData: { lineItems, summaryTotal, variantIndex },
+      pageData: { lineItems, taxRates, summaryTotal, variantIndex },
       answer,
     };
   },

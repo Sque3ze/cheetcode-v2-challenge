@@ -79,6 +79,7 @@ async function solveTableSort(page: Page): Promise<string> {
 /**
  * Form Fill: Read employee fields across multiple disclosure mechanisms
  * (tabs, expandable sections, tooltips) and submit comma-separated values.
+ * Some fields may require transformation (salary band, start quarter, dept code).
  */
 async function solveFormFill(page: Page): Promise<string> {
   await page.waitForSelector("[data-field]");
@@ -92,7 +93,8 @@ async function solveFormFill(page: Page): Promise<string> {
   if (match) {
     fieldNames = match[1].split(",").map((f) => f.trim().toLowerCase());
   } else {
-    const allFields = ["name", "email", "department", "role", "salary", "city", "start date", "startdate"];
+    const allFields = ["name", "email", "department", "role", "salary", "city", "start date", "startdate",
+      "salary band", "start quarter", "dept code"];
     fieldNames = allFields.filter((f) => instructions.toLowerCase().includes(f));
     if (fieldNames.length === 0) throw new Error(`Could not parse fields from: ${instructions}`);
   }
@@ -100,11 +102,32 @@ async function solveFormFill(page: Page): Promise<string> {
   const labelToKey: Record<string, string> = {
     name: "name", email: "email", department: "department",
     role: "role", salary: "salary", city: "city", "start date": "startDate",
-    startdate: "startDate",
+    startdate: "startDate", "salary band": "salary_band",
+    "start quarter": "start_quarter", "dept code": "dept_code",
   };
 
   // Check if we're in multi-disclosure mode (Profile/Contact tabs)
   const hasFormTabs = await page.locator("[data-form-tab]").count() > 0;
+
+  // Read salary band reference table if present
+  const salaryBands: Array<{ min: number; max: number; label: string }> = [];
+  const bandTable = page.locator("[data-salary-band-table]");
+  if (await bandTable.count() > 0) {
+    const bandEls = page.locator("[data-salary-band]");
+    const bandCount = await bandEls.count();
+    for (let i = 0; i < bandCount; i++) {
+      const el = bandEls.nth(i);
+      const label = (await el.getAttribute("data-salary-band")) ?? "";
+      const rangeText = (await el.locator(".font-mono").textContent())?.trim() ?? "";
+      // Parse range like "$60,000-$99,999" or "$150,000+"
+      const nums = rangeText.replace(/\$/g, "").replace(/,/g, "").match(/(\d+)/g);
+      if (nums) {
+        const min = parseInt(nums[0]);
+        const max = rangeText.includes("+") ? 999999 : (nums.length > 1 ? parseInt(nums[1]) : min);
+        salaryBands.push({ min, max, label });
+      }
+    }
+  }
 
   if (hasFormTabs) {
     // Reveal all hidden content on Profile tab (default tab)
@@ -133,6 +156,24 @@ async function solveFormFill(page: Page): Promise<string> {
     await page.locator('[data-form-tab="contact"]').click();
     await page.waitForSelector("[data-contact-panel]");
     fieldValues["city"] = (await page.locator('[data-field="city"]').textContent())?.trim() ?? "";
+
+    // Compute transformed values
+    // Salary band: look up salary in band table
+    const salaryNum = parseInt(fieldValues["salary"]?.replace(/[$,]/g, "") ?? "0");
+    const band = salaryBands.find((b) => salaryNum >= b.min && salaryNum <= b.max);
+    fieldValues["salary_band"] = band?.label ?? "Unknown";
+
+    // Start quarter: extract month from date
+    const startDate = fieldValues["startDate"] ?? "";
+    const month = parseInt(startDate.split("-")[1] ?? "0");
+    if (month <= 3) fieldValues["start_quarter"] = "Q1";
+    else if (month <= 6) fieldValues["start_quarter"] = "Q2";
+    else if (month <= 9) fieldValues["start_quarter"] = "Q3";
+    else fieldValues["start_quarter"] = "Q4";
+
+    // Dept code: first 3 letters uppercased
+    const dept = fieldValues["department"] ?? "";
+    fieldValues["dept_code"] = dept.substring(0, 3).toUpperCase();
 
     // Return requested fields in order
     const values: string[] = [];
@@ -871,6 +912,8 @@ async function solveConstraintSolver(page: Page): Promise<string> {
   let minRating = 0;
   let excludedSupplier: string | null = null;
   let maxWeight = Infinity;
+  let belowAvgPrice = false;
+  let aboveAvgRating = false;
 
   for (const r of requirements) {
     const catOrMatch = r.match(/Category must be "(.+?)" OR "(.+?)"/);
@@ -881,10 +924,18 @@ async function solveConstraintSolver(page: Page): Promise<string> {
   }
 
   for (const b of budgetConstraints) {
-    const priceMatch = b.match(/Price must be ≤ \$(\d+)/);
-    if (priceMatch) maxPrice = parseFloat(priceMatch[1]);
-    const ratingMatch = b.match(/Rating must be ≥ ([\d.]+)/);
-    if (ratingMatch) minRating = parseFloat(ratingMatch[1]);
+    if (b.includes("below the average price")) {
+      belowAvgPrice = true;
+    } else {
+      const priceMatch = b.match(/Price must be ≤ \$(\d+)/);
+      if (priceMatch) maxPrice = parseFloat(priceMatch[1]);
+    }
+    if (b.includes("above the average rating")) {
+      aboveAvgRating = true;
+    } else {
+      const ratingMatch = b.match(/Rating must be ≥ ([\d.]+)/);
+      if (ratingMatch) minRating = parseFloat(ratingMatch[1]);
+    }
   }
 
   for (const e of exclusions) {
@@ -906,7 +957,7 @@ async function solveConstraintSolver(page: Page): Promise<string> {
   const itemCount = await itemCards.count();
 
   interface ItemInfo { name: string; category: string; price: number; rating: number; supplier: string; inStock: boolean; weight: number }
-  const qualifying: ItemInfo[] = [];
+  const allItems: ItemInfo[] = [];
 
   for (let i = 0; i < itemCount; i++) {
     const card = itemCards.nth(i);
@@ -923,15 +974,42 @@ async function solveConstraintSolver(page: Page): Promise<string> {
     const inStock = stockStr === "Yes";
     const weight = parseFloat(weightStr);
 
-    if (allowedCategories.length > 0 && !allowedCategories.includes(category)) continue;
-    if (mustBeInStock && !inStock) continue;
-    if (price > maxPrice) continue;
-    if (rating < minRating) continue;
-    if (excludedSupplier && supplier === excludedSupplier) continue;
-    if (weight > maxWeight) continue;
-
-    qualifying.push({ name, category, price, rating, supplier, inStock, weight });
+    allItems.push({ name, category, price, rating, supplier, inStock, weight });
   }
+
+  // Compute aggregates for relative constraints
+  let avgPrice = 0;
+  let avgRating = 0;
+  if (belowAvgPrice) {
+    const inStockItems = allItems.filter((it) => it.inStock);
+    avgPrice = inStockItems.length > 0
+      ? Math.round(inStockItems.reduce((s, it) => s + it.price, 0) / inStockItems.length * 100) / 100
+      : 0;
+  }
+  if (aboveAvgRating) {
+    avgRating = allItems.length > 0
+      ? Math.round(allItems.reduce((s, it) => s + it.rating, 0) / allItems.length * 10) / 10
+      : 0;
+  }
+
+  // Filter items
+  const qualifying = allItems.filter((item) => {
+    if (allowedCategories.length > 0 && !allowedCategories.includes(item.category)) return false;
+    if (mustBeInStock && !item.inStock) return false;
+    if (belowAvgPrice) {
+      if (item.price >= avgPrice) return false;
+    } else {
+      if (item.price > maxPrice) return false;
+    }
+    if (aboveAvgRating) {
+      if (item.rating <= avgRating) return false;
+    } else {
+      if (item.rating < minRating) return false;
+    }
+    if (excludedSupplier && item.supplier === excludedSupplier) return false;
+    if (item.weight > maxWeight) return false;
+    return true;
+  });
 
   if (qualifying.length === 0) throw new Error("No item satisfies all constraints");
 
@@ -942,51 +1020,56 @@ async function solveConstraintSolver(page: Page): Promise<string> {
 // ─── Tier 4 Solvers ─────────────────────────────────────────────
 
 /**
- * Calculation Audit: Receipt cards with running totals.
- * Verify line-item math AND running total correctness. Error propagation
- * means once a row has wrong math, all subsequent running totals are wrong.
+ * Calculation Audit: Receipt cards with per-category tax rates.
+ * Read tax rate legend, compute correct total = round(qty × unitPrice × (1 + rate/100), 2),
+ * sum only rows where displayed total matches.
  */
 async function solveCalculationAudit(page: Page): Promise<string> {
   await page.waitForSelector("[data-expense-card]");
+
+  // Read tax rates from the legend
+  const taxRates: Record<string, number> = {};
+  const taxRateLegend = page.locator("[data-tax-rate-legend]");
+  if (await taxRateLegend.count() > 0) {
+    const taxEntries = page.locator("[data-tax-rate]");
+    const entryCount = await taxEntries.count();
+    for (let i = 0; i < entryCount; i++) {
+      const entry = taxEntries.nth(i);
+      const category = (await entry.getAttribute("data-tax-rate")) ?? "";
+      const rateStr = (await entry.locator("[data-tax-rate-value]").textContent())?.trim() ?? "0";
+      taxRates[category] = parseFloat(rateStr.replace("%", ""));
+    }
+  }
+
+  const hasTaxRates = Object.keys(taxRates).length > 0;
 
   // Read all expense cards in order
   const cards = page.locator("[data-expense-card]");
   const cardCount = await cards.count();
 
-  const hasRunningTotals = await page.locator("[data-exp-running-total]").count() > 0;
-
   let correctSum = 0;
-  let runningStillValid = true;
-  let expectedRunning = 0;
 
   for (let i = 0; i < cardCount; i++) {
     const card = cards.nth(i);
     const qtyStr = (await card.locator("[data-exp-qty]").textContent())?.trim() ?? "0";
     const unitPriceStr = (await card.locator("[data-exp-unit-price]").textContent())?.trim() ?? "0";
     const displayedTotalStr = (await card.locator("[data-exp-total]").textContent())?.trim() ?? "0";
+    const category = (await card.locator("[data-exp-category]").textContent())?.trim() ?? "";
 
     const qty = parseInt(qtyStr);
     const unitPrice = parseFloat(unitPriceStr.replace("$", ""));
     const displayedTotal = parseFloat(displayedTotalStr.replace("$", ""));
-    const expectedTotal = Math.round(qty * unitPrice * 100) / 100;
-    const lineCorrect = Math.abs(displayedTotal - expectedTotal) < 0.001;
 
-    if (hasRunningTotals) {
-      const runningTotalStr = (await card.locator("[data-exp-running-total]").textContent())?.trim() ?? "0";
-      const runningTotal = parseFloat(runningTotalStr.replace("$", ""));
-      expectedRunning = Math.round((expectedRunning + displayedTotal) * 100) / 100;
-      const runningCorrect = Math.abs(runningTotal - expectedRunning) < 0.001;
-
-      if (!lineCorrect) runningStillValid = false;
-
-      if (lineCorrect && runningStillValid && runningCorrect) {
-        correctSum += displayedTotal;
-      }
+    let expectedTotal: number;
+    if (hasTaxRates && category in taxRates) {
+      const rate = taxRates[category];
+      expectedTotal = Math.round(qty * unitPrice * (1 + rate / 100) * 100) / 100;
     } else {
-      // Legacy: only check line math
-      if (lineCorrect) {
-        correctSum += displayedTotal;
-      }
+      expectedTotal = Math.round(qty * unitPrice * 100) / 100;
+    }
+
+    if (Math.abs(displayedTotal - expectedTotal) < 0.001) {
+      correctSum += displayedTotal;
     }
   }
 
@@ -994,64 +1077,86 @@ async function solveCalculationAudit(page: Page): Promise<string> {
 }
 
 /**
- * Red Herring: Tab-based UI with Summary Report (wrong) and Raw Data Source (correct).
- * Must use raw data metric cards, not the summary table.
+ * Red Herring: Two datasets in Report A / Report B tabs.
+ * Must find the internally consistent dataset (where Annual = Q1+Q2+Q3+Q4 for every row),
+ * then compute the answer from it.
  */
 async function solveRedHerring(page: Page): Promise<string> {
   const instructions = await getInstructions(page);
-
-  // Click the "Raw Data Source" tab
-  await page.locator('[data-report-tab="raw"]').click();
-  await page.waitForSelector("[data-raw-data-panel]");
 
   // Extract metric name from instructions (in quotes)
   const metricMatch = instructions.match(/"([^"]+)"/);
   if (!metricMatch) throw new Error(`Could not parse metric: ${instructions}`);
   const targetMetric = metricMatch[1];
 
-  // Find the target metric card
-  const metricCard = page.locator(`[data-metric-card="${targetMetric}"]`);
+  // Helper: read a tab's table data
+  const readTabData = async (tabId: string) => {
+    await page.locator(`[data-report-tab="${tabId}"]`).click();
+    await page.waitForSelector(`[data-table="${tabId}"]`);
+    const rows = page.locator(`[data-table="${tabId}"] [data-metric-row]`);
+    const rowCount = await rows.count();
+    const data: Array<{ label: string; q1: number; q2: number; q3: number; q4: number; annual: number }> = [];
+    for (let i = 0; i < rowCount; i++) {
+      const row = rows.nth(i);
+      const label = (await row.getAttribute("data-metric-row")) ?? "";
+      const qCells = row.locator("[data-metric-q]");
+      const q1 = parseInt((await qCells.nth(0).textContent())?.trim().replace(/,/g, "") ?? "0");
+      const q2 = parseInt((await qCells.nth(1).textContent())?.trim().replace(/,/g, "") ?? "0");
+      const q3 = parseInt((await qCells.nth(2).textContent())?.trim().replace(/,/g, "") ?? "0");
+      const q4 = parseInt((await qCells.nth(3).textContent())?.trim().replace(/,/g, "") ?? "0");
+      const annualStr = (await row.locator("[data-metric-annual]").textContent())?.trim().replace(/,/g, "") ?? "0";
+      const annual = parseInt(annualStr);
+      data.push({ label, q1, q2, q3, q4, annual });
+    }
+    return data;
+  };
+
+  // Read both datasets
+  const dataA = await readTabData("a");
+  const dataB = await readTabData("b");
+
+  // Check consistency: Annual should equal Q1+Q2+Q3+Q4 for every row
+  const isConsistent = (dataset: typeof dataA) =>
+    dataset.every((row) => row.annual === row.q1 + row.q2 + row.q3 + row.q4);
+
+  const correctData = isConsistent(dataA) ? dataA : dataB;
+
+  // Find the target metric row
+  const targetRow = correctData.find((r) => r.label === targetMetric);
+  if (!targetRow) throw new Error(`Could not find metric: ${targetMetric}`);
 
   // Detect sum vs difference
   if (instructions.match(/\bsum\b|add|combined/i)) {
-    // Sum operation
     const quarterMatches = [...instructions.matchAll(/Q(\d)/g)].map((m) => `Q${m[1]}`);
     const quarters = [...new Set(quarterMatches)];
-
     let total = 0;
     for (const q of quarters) {
-      const cell = metricCard.locator(`[data-metric-q="${q}"]`);
-      const valStr = (await cell.textContent())?.trim() ?? "0";
-      total += parseInt(valStr.replace(/,/g, ""));
+      const key = q.toLowerCase() as "q1" | "q2" | "q3" | "q4";
+      total += targetRow[key];
     }
     return String(total);
   } else {
-    // Difference operation
-    let q1: string;
-    let q2: string;
+    let q1Key: string;
+    let q2Key: string;
 
-    // Handle "Subtract X from Y" specially (reverses operand order)
     const subtractFromMatch = instructions.match(/Subtract\s+(Q\d)\s+from\s+(Q\d)/i);
     if (subtractFromMatch) {
-      q1 = subtractFromMatch[2]; // minuend (subtracted FROM)
-      q2 = subtractFromMatch[1]; // subtrahend
+      q1Key = subtractFromMatch[2].toLowerCase();
+      q2Key = subtractFromMatch[1].toLowerCase();
     } else {
       const diffMatch = instructions.match(/(Q\d)\s*(?:minus|-)\s*(Q\d)/i)
         || instructions.match(/(Q\d)\s+and\s+(Q\d)/i);
       if (diffMatch) {
-        q1 = diffMatch[1];
-        q2 = diffMatch[2];
+        q1Key = diffMatch[1].toLowerCase();
+        q2Key = diffMatch[2].toLowerCase();
       } else {
-        // Fallback: take first two quarters in order
-        const qs = [...instructions.matchAll(/Q(\d)/g)].map((m) => `Q${m[1]}`);
-        q1 = qs[0];
-        q2 = qs[1];
+        const qs = [...instructions.matchAll(/Q(\d)/g)].map((m) => `q${m[1]}`);
+        q1Key = qs[0];
+        q2Key = qs[1];
       }
     }
 
-    const v1Str = (await metricCard.locator(`[data-metric-q="${q1}"]`).textContent())?.trim() ?? "0";
-    const v2Str = (await metricCard.locator(`[data-metric-q="${q2}"]`).textContent())?.trim() ?? "0";
-    return String(parseInt(v1Str.replace(/,/g, "")) - parseInt(v2Str.replace(/,/g, "")));
+    return String(targetRow[q1Key as "q1" | "q2" | "q3" | "q4"] - targetRow[q2Key as "q1" | "q2" | "q3" | "q4"]);
   }
 }
 
