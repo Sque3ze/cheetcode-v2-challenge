@@ -48,6 +48,7 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
   // Fetch card details when modal opens
   useEffect(() => {
     if (!openCard) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional state reset when modal closes
       setModalLoaded(false);
       setModalTab("overview");
       setCardDetails(null);

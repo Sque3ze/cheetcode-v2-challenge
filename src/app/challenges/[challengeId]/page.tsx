@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import ChallengeLayout from "../../../components/ChallengeLayout";
 import { MAX_ATTEMPTS_PER_CHALLENGE } from "../../../lib/config";
 
@@ -37,7 +38,6 @@ interface ChallengePageData {
 }
 
 export interface ChallengeRendererProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pageData: any;
   answerRef: React.MutableRefObject<string>;
   sessionId: string;
@@ -151,9 +151,9 @@ export default function ChallengePage({
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
-          <a href="/" className="text-blue-400 hover:underline">
+          <Link href="/" className="text-blue-400 hover:underline">
             Go home
-          </a>
+          </Link>
         </div>
       </div>
     );

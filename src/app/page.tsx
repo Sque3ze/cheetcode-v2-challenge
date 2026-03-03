@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
+import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
@@ -158,7 +159,7 @@ export default function Home() {
                 Sign in with GitHub
               </button>
             ) : hasActiveSession ? (
-              <a
+              <Link
                 href="/challenges"
                 className="btn-heat"
                 style={{
@@ -174,7 +175,7 @@ export default function Home() {
                 }}
               >
                 Continue Session &rarr;
-              </a>
+              </Link>
             ) : (
               <div>
                 <button

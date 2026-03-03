@@ -29,8 +29,7 @@ import { redHerringChallenge } from "./tier4/red-herring";
 
 // ─── Registry ──────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CHALLENGES: ChallengeDefinition<any>[] = [
+const CHALLENGES: ChallengeDefinition<unknown>[] = [
   // Tier 1 — Browser Fundamentals
   tableSortChallenge,
   formFillChallenge,

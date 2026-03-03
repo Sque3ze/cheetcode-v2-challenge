@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 
 interface ChallengeLayoutProps {
   /** Challenge metadata */
@@ -118,13 +119,13 @@ export default function ChallengeLayout({
       <header className="nav-header" style={{ position: "sticky", top: 0, zIndex: 10 }}>
         <div className="flex items-center justify-between" style={{ maxWidth: 896, margin: "0 auto", padding: "16px 24px" }}>
           <div className="flex items-center" style={{ gap: 16 }}>
-            <a
+            <Link
               href="/challenges"
               className="text-sm"
               style={{ color: "rgba(38,38,38,0.5)", textDecoration: "none" }}
             >
               &larr; Back
-            </a>
+            </Link>
             <h1 className="text-lg font-semibold">{title}</h1>
             <span
               className={`tier-badge-${tier}`}

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
+import Link from "next/link";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { classifyAgent } from "../../lib/agent-detection";
@@ -293,6 +294,7 @@ function RecentSessions() {
         </thead>
           {sessions.map((s, i) => {
             const isExpanded = expanded === s._id;
+            // eslint-disable-next-line react-hooks/purity -- Date.now() is intentional; Convex useQuery re-renders keep it fresh
             const duration = (s.status === "active" ? Date.now() : s.expiresAt) - s.startedAt;
             const agentTool = s.userAgent ? classifyAgent(s.userAgent).tool : "—";
 
@@ -477,8 +479,22 @@ function useAdminAuth(): { authorized: boolean; loading: boolean; reason?: strin
   return state;
 }
 
-// ─── Page ────────────────────────────────────────────────────
+// ─── Page (Suspense wrapper for useSearchParams) ─────────────
 export default function AdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+          <p style={{ color: DIM, fontSize: 14 }}>Loading...</p>
+        </div>
+      }
+    >
+      <AdminContent />
+    </Suspense>
+  );
+}
+
+function AdminContent() {
   const { authorized, loading, reason } = useAdminAuth();
 
   if (loading) {
@@ -502,7 +518,7 @@ export default function AdminPage() {
       {/* Header */}
       <div style={{ marginBottom: 40 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <a
+          <Link
             href="/"
             style={{
               fontSize: 13,
@@ -511,7 +527,7 @@ export default function AdminPage() {
             }}
           >
             &larr; Back
-          </a>
+          </Link>
         </div>
         <h1
           style={{

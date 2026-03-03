@@ -123,8 +123,7 @@ export async function GET(
         : challenge.instructions;
 
     // Strip variantIndex from pageData (used for instruction variants, not needed by client)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pageData = { ...(generated.pageData as any) };
+    const pageData = { ...(generated.pageData as Record<string, unknown>) };
     delete pageData.variantIndex;
 
     // Generate render token and record the view

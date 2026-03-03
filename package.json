@@ -9,13 +9,20 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check": "tsc --noEmit && npm run lint && npm run test",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "convex": "^1.31.7",
     "next": "16.1.6",
     "next-auth": "^5.0.0-beta.30",
-"react": "19.2.3",
+    "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
@@ -29,7 +36,9 @@
     "@vitest/coverage-v8": "^1.6.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "husky": "^9.1.7",
     "jsdom": "^24.1.0",
+    "lint-staged": "^16.3.1",
     "tailwindcss": "^4",
     "typescript": "5.9.3",
     "vitest": "^1.6.0"

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 interface ChallengeMeta {
   id: string;
@@ -160,7 +161,7 @@ export default function ChallengesPage() {
           >
             {error || "No session data"}
           </p>
-          <a
+          <Link
             href="/"
             style={{
               color: "#fa5d19",
@@ -169,7 +170,7 @@ export default function ChallengesPage() {
             }}
           >
             Go home
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -207,7 +208,7 @@ export default function ChallengesPage() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <a
+            <Link
               href="/"
               style={{
                 color: "rgba(38, 38, 38, 0.4)",
@@ -224,7 +225,7 @@ export default function ChallengesPage() {
               }
             >
               &larr; Home
-            </a>
+            </Link>
             <span
               style={{ fontSize: 14, fontWeight: 450, lineHeight: "20px" }}
             >
