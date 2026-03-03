@@ -41,20 +41,21 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
     const firstName = pageData.targetEmployeeName.split(" ")[0];
     const hint = pageData.disambiguationHint;
     const field = pageData.targetField;
+    const interactHint = `To reveal a department's hidden details, use the interact API with action "expand" and parameter deptId set to the department's ID (e.g. { "deptId": "DEPT-001" }).`;
     if (pageData.taskType === "department-field") {
       const variants = [
-        `Find employee "${firstName}" (${hint}) in the Employees table. Note their Department ID, then expand that department's row in the Departments table. Submit the department's ${field}.`,
-        `Locate "${firstName}" among employees — ${hint}. Note which department they belong to. Expand that department to reveal its details and provide the ${field}.`,
-        `In the Employees table, look up "${firstName}" (${hint}) and find their Dept ID. Use that ID to find the matching department, expand it, and submit its ${field}.`,
-        `Which department does "${firstName}" (${hint}) work in? Find that department row, expand it, and report the ${field}.`,
+        `Find employee "${firstName}" (${hint}) in the Employees table. Note their Department ID, then expand that department's row in the Departments table. Submit the department's ${field}. ${interactHint}`,
+        `Locate "${firstName}" among employees — ${hint}. Note which department they belong to. Expand that department to reveal its details and provide the ${field}. ${interactHint}`,
+        `In the Employees table, look up "${firstName}" (${hint}) and find their Dept ID. Use that ID to find the matching department, expand it, and submit its ${field}. ${interactHint}`,
+        `Which department does "${firstName}" (${hint}) work in? Find that department row, expand it, and report the ${field}. ${interactHint}`,
       ];
       return variants[pageData.variantIndex];
     }
     const variants = [
-      `Find employee "${firstName}" (${hint}) in the Employees table. Note their Department ID, then find all projects in that department from the Projects table. Submit the ${field}.`,
-      `Look up "${firstName}" (${hint}) in employees to get their department. Then check the Projects table for projects in that department and provide the ${field}.`,
-      `Locate "${firstName}" (${hint}), identify their department ID, and cross-reference it with the Projects table. Submit the ${field} for matching projects.`,
-      `Starting from "${firstName}" (${hint}) in the employee list, follow their department link to the Projects table. Your answer is the ${field}.`,
+      `Find employee "${firstName}" (${hint}) in the Employees table. Note their Department ID, then find all projects in that department from the Projects table. Submit the ${field}. ${interactHint}`,
+      `Look up "${firstName}" (${hint}) in employees to get their department. Then check the Projects table for projects in that department and provide the ${field}. ${interactHint}`,
+      `Locate "${firstName}" (${hint}), identify their department ID, and cross-reference it with the Projects table. Submit the ${field} for matching projects. ${interactHint}`,
+      `Starting from "${firstName}" (${hint}) in the employee list, follow their department link to the Projects table. Your answer is the ${field}. ${interactHint}`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -197,9 +198,17 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
 
   handleInteract(hiddenData, action, params) {
     if (action === "expand") {
-      const deptId = params.deptId as string;
+      const deptId = params.deptId as string | undefined;
+      if (!deptId) {
+        return { error: "Missing required parameter: deptId. Use { \"deptId\": \"DEPT-XXX\" }." };
+      }
       const deptDetails = hiddenData.deptDetails as Record<string, unknown>;
-      return deptDetails[deptId] ?? null;
+      const details = deptDetails[deptId];
+      if (!details) {
+        const validIds = Object.keys(deptDetails);
+        return { error: `Unknown deptId "${deptId}". Valid IDs: ${validIds.join(", ")}` };
+      }
+      return details;
     }
     return null;
   },

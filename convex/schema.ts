@@ -18,7 +18,8 @@ export default defineSchema({
     earnedPoints: v.optional(v.number()),
     totalPoints: v.optional(v.number()),
     wrongAttempts: v.optional(v.number()),
-    score: v.optional(v.number()),
+    score: v.optional(v.number()), // composite score (completion × 0.6 + orchestration × 0.4)
+    completionScore: v.optional(v.number()), // raw completion percentage (0-100)
     orchestrationScore: v.optional(v.number()),
     orchestrationMetrics: v.optional(
       v.object({
@@ -50,7 +51,8 @@ export default defineSchema({
   // Best score per user. Updated when a session completes with a better score.
   leaderboard: defineTable({
     github: v.string(),
-    score: v.number(), // percentage (0-100)
+    score: v.number(), // composite score: completion × 0.6 + orchestration × 0.4
+    completionScore: v.optional(v.number()), // raw completion percentage (0-100)
     earnedPoints: v.number(),
     totalPoints: v.number(),
     wrongAttempts: v.number(), // total incorrect submissions (tiebreaker 1)

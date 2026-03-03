@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, action, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { compareRank } from "./ranking";
+import { compareRank, COMPLETION_WEIGHT, ORCHESTRATION_WEIGHT } from "./ranking";
 
 const SESSION_COOLDOWN_MS = 10_000;
 
@@ -129,11 +129,15 @@ export const complete = internalMutation({
     if (!session) throw new Error("session not found");
     if (session.github !== args.github) throw new Error("github mismatch");
 
-    // Compute percentage score
-    const score =
+    // Compute completion percentage (raw)
+    const completionScore =
       args.totalPoints > 0
         ? Math.round((args.earnedPoints / args.totalPoints) * 10000) / 100
         : 0;
+
+    // Compute composite score
+    const orchPct = args.orchestrationScore ?? 0;
+    const score = Math.round((completionScore * COMPLETION_WEIGHT + orchPct * ORCHESTRATION_WEIGHT) * 100) / 100;
 
     // Mark session completed and persist metrics on the session record
     await ctx.db.patch(args.sessionId, {
@@ -142,6 +146,7 @@ export const complete = internalMutation({
       totalPoints: args.totalPoints,
       wrongAttempts: args.wrongAttempts,
       score,
+      completionScore,
       orchestrationScore: args.orchestrationScore,
       orchestrationMetrics: args.orchestrationMetrics,
     });
@@ -155,6 +160,7 @@ export const complete = internalMutation({
     const entry = {
       github: args.github,
       score,
+      completionScore,
       earnedPoints: args.earnedPoints,
       totalPoints: args.totalPoints,
       wrongAttempts: args.wrongAttempts,
@@ -174,7 +180,7 @@ export const complete = internalMutation({
       await ctx.db.patch(existing._id, entry);
     }
 
-    return { score, earnedPoints: args.earnedPoints, totalPoints: args.totalPoints };
+    return { score, completionScore, earnedPoints: args.earnedPoints, totalPoints: args.totalPoints };
   },
 });
 
@@ -250,7 +256,7 @@ export const completeSession = action({
   handler: async (
     ctx,
     args
-  ): Promise<{ score: number; earnedPoints: number; totalPoints: number }> => {
+  ): Promise<{ score: number; completionScore: number; earnedPoints: number; totalPoints: number }> => {
     if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
       throw new Error("unauthorized");
     }

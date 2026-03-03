@@ -347,7 +347,7 @@ export default function Home() {
               >
                 <thead>
                   <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
-                    {["#", "Player", "Score", "Orch.", "Wrong", "API Calls"].map((label, idx) => (
+                    {["#", "Player", "Score", "Solved", "Orch.", "Wrong"].map((label, idx) => (
                       <th
                         key={label}
                         style={{
@@ -437,7 +437,20 @@ export default function Home() {
                           color: "#262626",
                         }}
                       >
-                        {entry.score.toFixed(1)}%
+                        {entry.score.toFixed(1)}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 24px",
+                          textAlign: "right",
+                          fontFamily:
+                            "var(--font-geist-mono), monospace",
+                          color: "rgba(38, 38, 38, 0.5)",
+                        }}
+                      >
+                        {entry.completionScore != null
+                          ? `${entry.completionScore.toFixed(0)}%`
+                          : `${entry.score.toFixed(0)}%`}
                       </td>
                       <td
                         style={{
@@ -464,15 +477,6 @@ export default function Home() {
                         }}
                       >
                         {entry.wrongAttempts}
-                      </td>
-                      <td
-                        style={{
-                          padding: "12px 24px",
-                          textAlign: "right",
-                          color: "rgba(38, 38, 38, 0.35)",
-                        }}
-                      >
-                        {entry.apiCalls ?? "—"}
                       </td>
                     </tr>
                   ))}

@@ -125,6 +125,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       score: result.score,
+      completionScore: result.completionScore,
       earnedPoints: result.earnedPoints,
       totalPoints: result.totalPoints,
       solvedChallenges: stats.solvedChallenges,
