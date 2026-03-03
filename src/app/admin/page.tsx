@@ -1,15 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { classifyAgent } from "../../lib/agent-detection";
-
-const ADMIN_GITHUB = process.env.NEXT_PUBLIC_ADMIN_GITHUB;
-const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY;
 
 // ─── Color helpers ───────────────────────────────────────────
 const ACCENT = "#fa5d19";
@@ -454,27 +450,31 @@ function RecentSessions() {
   );
 }
 
-// ─── Auth Gate ───────────────────────────────────────────────
+// ─── Auth Gate (server-side check) ───────────────────────────
 function useAdminAuth(): { authorized: boolean; loading: boolean; reason?: string } {
-  const { data: session, status } = useSession();
   const searchParams = useSearchParams();
+  const [state, setState] = useState<{ authorized: boolean; loading: boolean; reason?: string }>({
+    authorized: false,
+    loading: true,
+  });
 
-  if (status === "loading") return { authorized: false, loading: true };
+  useEffect(() => {
+    const key = searchParams.get("key") || "";
+    fetch(`/api/admin/auth?key=${encodeURIComponent(key)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setState({
+          authorized: data.authorized,
+          loading: false,
+          reason: data.reason,
+        });
+      })
+      .catch(() => {
+        setState({ authorized: false, loading: false, reason: "Auth check failed." });
+      });
+  }, [searchParams]);
 
-  const github = (session?.user as { githubUsername?: string })?.githubUsername;
-  const key = searchParams.get("key");
-
-  // Check GitHub identity
-  if (!github || (ADMIN_GITHUB && github !== ADMIN_GITHUB)) {
-    return { authorized: false, loading: false, reason: "Unauthorized: admin access only." };
-  }
-
-  // Check secret key
-  if (ADMIN_KEY && key !== ADMIN_KEY) {
-    return { authorized: false, loading: false, reason: "Unauthorized: invalid admin key." };
-  }
-
-  return { authorized: true, loading: false };
+  return state;
 }
 
 // ─── Page ────────────────────────────────────────────────────
