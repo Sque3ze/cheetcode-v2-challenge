@@ -132,8 +132,13 @@ export const resilientCollectorChallenge: ChallengeDefinition<ResilientCollector
     if (action === "fetch") {
       const sourceId = params.sourceId as string;
       const sources = hiddenData.sources as Record<string, SourceHidden>;
+      if (!sourceId) {
+        return { error: "Missing required parameter: sourceId. Use { \"sourceId\": \"src-N\" }." };
+      }
       const source = sources[sourceId];
-      if (!source) return null;
+      if (!source) {
+        return { error: `Unknown sourceId "${sourceId}". Valid IDs: ${Object.keys(sources).join(", ")}` };
+      }
 
       // Stable source — always available
       if (!source.isFlaky || source.availableAfterMs === 0) {

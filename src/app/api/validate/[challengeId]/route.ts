@@ -11,6 +11,7 @@ import {
   sessionExpired,
 } from "../../../../lib/api-helpers";
 import { MAX_ATTEMPTS_PER_CHALLENGE, TIER_POINTS, MIN_SOLVE_TIME_MS } from "../../../../lib/config";
+import type { ChallengeStatusMap } from "../../../../lib/challenge-types";
 import type { Tier } from "../../../../lib/config";
 import {
   getChallenge,
@@ -82,7 +83,8 @@ export async function POST(
     const convex = new ConvexHttpClient(convexUrl);
 
     // 2. Session exists and belongs to this user
-    const session = await convex.query(api.sessions.get, {
+    const session = await convex.action(api.sessions.fetchSession, {
+      secret,
       sessionId: sessionId as unknown as Id<"sessions">,
     });
     if (!session) return badRequest("Session not found");
@@ -108,11 +110,20 @@ export async function POST(
         metadata,
       }).catch(() => {});
 
+    // Fetch statuses, submissions, and view in parallel (all depend only on session._id)
+    const [allStatuses, existingSubmissions, view] = await Promise.all([
+      convex.action(api.submissions.fetchSessionChallengeStatuses, {
+        secret, sessionId: session._id,
+      }) as Promise<ChallengeStatusMap>,
+      convex.action(api.submissions.fetchBySessionChallenge, {
+        secret, sessionId: session._id, challengeId,
+      }),
+      convex.action(api.challengeViews.fetchView, {
+        secret, sessionId: session._id, challengeId,
+      }),
+    ]);
+
     // 3.5. Prerequisite check
-    const allStatuses = await convex.query(
-      api.submissions.getSessionChallengeStatuses,
-      { sessionId: session._id }
-    );
     const solvedSet = new Set<string>();
     for (const [id, status] of Object.entries(allStatuses)) {
       if (status?.solved) solvedSet.add(id);
@@ -130,15 +141,7 @@ export async function POST(
     }
 
     // 5 & 6. Check existing submissions for this challenge
-    const existingSubmissions = await convex.query(
-      api.submissions.getBySessionChallenge,
-      {
-        sessionId: session._id,
-        challengeId,
-      }
-    );
-
-    const alreadySolved = existingSubmissions.some((s) => s.correct);
+    const alreadySolved = existingSubmissions.some((s: any) => s.correct);
     if (alreadySolved) {
       return NextResponse.json(
         { error: "Challenge already solved" },
@@ -160,10 +163,6 @@ export async function POST(
     }
 
     // 6.5. Timing constraint — must have viewed the challenge and spent minimum time
-    const view = await convex.query(api.challengeViews.get, {
-      sessionId: session._id,
-      challengeId,
-    });
     if (!view) {
       return badRequest("Challenge must be loaded before submitting an answer");
     }

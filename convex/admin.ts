@@ -1,6 +1,7 @@
 import { internalQuery, action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { assertSecret } from "./authHelpers";
 
 /**
  * Overview stats for the admin dashboard.
@@ -256,19 +257,13 @@ export const getSessionTimeline = internalQuery({
 
 // ─── Authenticated action gateways ──────────────────────────
 
-function assertAdmin(secret: string) {
-  if (secret !== process.env.CONVEX_MUTATION_SECRET) {
-    throw new Error("unauthorized");
-  }
-}
-
 // Return types are inferred from the internal queries; explicit `any` breaks
 // the circular reference that Convex codegen creates with action return types.
 
 export const fetchOverviewStats = action({
   args: { secret: v.string() },
   handler: async (ctx, args): Promise<any> => {
-    assertAdmin(args.secret);
+    assertSecret(args.secret);
     return await ctx.runQuery(internal.admin.getOverviewStats, {});
   },
 });
@@ -276,7 +271,7 @@ export const fetchOverviewStats = action({
 export const fetchChallengeAggregates = action({
   args: { secret: v.string() },
   handler: async (ctx, args): Promise<any> => {
-    assertAdmin(args.secret);
+    assertSecret(args.secret);
     return await ctx.runQuery(internal.admin.getChallengeAggregates, {});
   },
 });
@@ -284,7 +279,7 @@ export const fetchChallengeAggregates = action({
 export const fetchRecentSessions = action({
   args: { secret: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, args): Promise<any> => {
-    assertAdmin(args.secret);
+    assertSecret(args.secret);
     return await ctx.runQuery(internal.admin.getRecentSessions, { limit: args.limit });
   },
 });
@@ -292,7 +287,7 @@ export const fetchRecentSessions = action({
 export const fetchSessionTimeline = action({
   args: { secret: v.string(), sessionId: v.id("sessions") },
   handler: async (ctx, args): Promise<any> => {
-    assertAdmin(args.secret);
+    assertSecret(args.secret);
     return await ctx.runQuery(internal.admin.getSessionTimeline, { sessionId: args.sessionId });
   },
 });

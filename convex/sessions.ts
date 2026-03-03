@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { internalMutation, action, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, action } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { assertSecret } from "./authHelpers";
 import { compareRank, COMPLETION_WEIGHT, ORCHESTRATION_WEIGHT } from "./ranking";
 
 const SESSION_COOLDOWN_MS = 10_000;
@@ -70,7 +71,7 @@ export const incrementApiCalls = internalMutation({
 /**
  * Get a session by ID.
  */
-export const get = query({
+export const get = internalQuery({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.sessionId);
@@ -80,7 +81,7 @@ export const get = query({
 /**
  * Get the active session for a user (if any).
  */
-export const getActive = query({
+export const getActive = internalQuery({
   args: { github: v.string() },
   handler: async (ctx, args) => {
     const session = await ctx.db
@@ -207,9 +208,7 @@ export const createSession = action({
     ctx,
     args
   ): Promise<{ sessionId: string; startedAt: number; expiresAt: number }> => {
-    if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
-      throw new Error("unauthorized");
-    }
+    assertSecret(args.secret);
     return await ctx.runMutation(internal.sessions.create, {
       github: args.github,
       durationMs: args.durationMs,
@@ -222,9 +221,7 @@ export const createSession = action({
 export const trackApiCall = action({
   args: { secret: v.string(), sessionId: v.id("sessions") },
   handler: async (ctx, args): Promise<void> => {
-    if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
-      throw new Error("unauthorized");
-    }
+    assertSecret(args.secret);
     await ctx.runMutation(internal.sessions.incrementApiCalls, {
       sessionId: args.sessionId,
     });
@@ -257,10 +254,26 @@ export const completeSession = action({
     ctx,
     args
   ): Promise<{ score: number; completionScore: number; earnedPoints: number; totalPoints: number }> => {
-    if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
-      throw new Error("unauthorized");
-    }
+    assertSecret(args.secret);
     const { secret: _, ...mutationArgs } = args;
     return await ctx.runMutation(internal.sessions.complete, mutationArgs);
+  },
+});
+
+/** Authenticated gateway for reading a session by ID */
+export const fetchSession = action({
+  args: { secret: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runQuery(internal.sessions.get, { sessionId: args.sessionId });
+  },
+});
+
+/** Authenticated gateway for reading the active session */
+export const fetchActiveSession = action({
+  args: { secret: v.string(), github: v.string() },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runQuery(internal.sessions.getActive, { github: args.github });
   },
 });

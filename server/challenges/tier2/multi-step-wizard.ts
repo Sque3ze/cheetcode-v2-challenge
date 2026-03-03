@@ -191,9 +191,10 @@ export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageDa
 
   handleInteract(hiddenData, action, params) {
     if (action === "step") {
-      const step = params.step as number;
+      const step = params.step as number | undefined;
       if (step === 2) return hiddenData.step2;
       if (step === 3) return hiddenData.step3;
+      return { error: `Invalid step ${step ?? "(missing)"}. Use { "step": 2 } or { "step": 3 }.` };
     }
     return null;
   },

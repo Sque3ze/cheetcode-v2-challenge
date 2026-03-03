@@ -21,8 +21,7 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Generate Convex types
-        run: npx convex codegen
+      # Convex generated types are committed — no codegen needed in CI
 
       - name: TypeScript check
         run: npx tsc --noEmit

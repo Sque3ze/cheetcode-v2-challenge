@@ -156,9 +156,16 @@ export const sequentialCalculatorChallenge: ChallengeDefinition<SequentialCalcul
 
   handleInteract(hiddenData, action, params) {
     if (action === "reveal") {
-      const stepIndex = params.stepIndex as number;
+      const stepIndex = params.stepIndex as number | undefined;
+      if (stepIndex === undefined || stepIndex === null) {
+        return { error: "Missing required parameter: stepIndex. Use { \"stepIndex\": <number> }." };
+      }
       const revealedOperands = hiddenData.revealedOperands as Record<number, unknown>;
-      return { operand: revealedOperands[stepIndex] ?? null };
+      const operand = revealedOperands[stepIndex];
+      if (operand === undefined) {
+        return { error: `Unknown stepIndex ${stepIndex}. Valid indices: ${Object.keys(revealedOperands).join(", ")}` };
+      }
+      return { operand };
     }
     return null;
   },

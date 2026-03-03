@@ -27,6 +27,10 @@ import { dataDashboardChallenge } from "./tier3/data-dashboard";
 import { constraintSolverChallenge } from "./tier3/constraint-solver";
 import { fanOutAggregatorChallenge } from "./tier3/fan-out-aggregator";
 import { priceNegotiatorChallenge } from "./tier3/price-negotiator";
+import { inventoryReconciliationChallenge } from "./tier3/inventory-reconciliation";
+import { traceAnalyzerChallenge } from "./tier3/trace-analyzer";
+import { eventSourcingChallenge } from "./tier3/event-sourcing";
+import { configDebuggerChallenge } from "./tier2/config-debugger";
 import { calculationAuditChallenge } from "./tier4/calculation-audit";
 import { redHerringChallenge } from "./tier4/red-herring";
 
@@ -46,12 +50,16 @@ const CHALLENGES: ChallengeDefinition<unknown>[] = [
   linkedDataLookupChallenge,
   sequentialCalculatorChallenge,
   resilientCollectorChallenge,
+  configDebuggerChallenge,
 
   // Tier 3 — Complex Synthesis
   dataDashboardChallenge,
   constraintSolverChallenge,
   fanOutAggregatorChallenge,
   priceNegotiatorChallenge,
+  inventoryReconciliationChallenge,
+  traceAnalyzerChallenge,
+  eventSourcingChallenge,
 
   // Tier 4 — Advanced Analysis
   calculationAuditChallenge,

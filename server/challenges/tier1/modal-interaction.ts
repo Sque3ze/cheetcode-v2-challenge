@@ -127,9 +127,16 @@ export const modalInteractionChallenge: ChallengeDefinition<ModalInteractionPage
 
   handleInteract(hiddenData, action, params) {
     if (action === "modal") {
-      const cardId = params.cardId as number;
+      const cardId = params.cardId as number | undefined;
+      if (cardId === undefined || cardId === null) {
+        return { error: "Missing required parameter: cardId. Use { \"cardId\": <index> }." };
+      }
       const cardDetails = hiddenData.cardDetails as Record<number, { sku: string; supplier: string }>;
-      return cardDetails[cardId] ?? null;
+      const details = cardDetails[cardId];
+      if (!details) {
+        return { error: `Unknown cardId ${cardId}. Valid indices: ${Object.keys(cardDetails).join(", ")}` };
+      }
+      return details;
     }
     return null;
   },

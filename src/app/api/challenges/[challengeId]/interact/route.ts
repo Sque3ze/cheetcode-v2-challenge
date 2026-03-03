@@ -14,6 +14,7 @@ import {
 import { getChallenge, arePrerequisitesMet, getUnmetPrerequisites } from "../../../../../../server/challenges/registry";
 import { ChallengeDataGenerator } from "../../../../../lib/seed";
 import { MIN_INTERACT_INTERVAL_MS, RENDER_TOKEN_TTL_MS } from "../../../../../lib/config";
+import type { ChallengeStatusMap } from "../../../../../lib/challenge-types";
 
 /**
  * POST /api/challenges/[challengeId]/interact
@@ -81,7 +82,8 @@ export async function POST(
     const convex = new ConvexHttpClient(convexUrl);
 
     // 4. Validate session ownership + active status
-    const session = await convex.query(api.sessions.get, {
+    const session = await convex.action(api.sessions.fetchSession, {
+      secret: mutationSecret,
       sessionId: sessionId as unknown as Id<"sessions">,
     });
     if (!session) return notFound("Session not found");
@@ -98,20 +100,17 @@ export async function POST(
     // Track API call (fire-and-forget)
     convex.action(api.sessions.trackApiCall, { secret: mutationSecret, sessionId: session._id }).catch(() => {});
 
-    // Emit challenge_interacted event (fire-and-forget)
-    convex.action(api.sessionEvents.emitEvent, {
-      secret: mutationSecret,
-      sessionId: session._id,
-      type: "challenge_interacted" as const,
-      challengeId,
-      metadata: { action, params: interactParams },
-    }).catch(() => {});
+    // Fetch statuses and view in parallel (both depend only on session._id)
+    const [allStatuses, view] = await Promise.all([
+      convex.action(api.submissions.fetchSessionChallengeStatuses, {
+        secret: mutationSecret, sessionId: session._id,
+      }) as Promise<ChallengeStatusMap>,
+      convex.action(api.challengeViews.fetchView, {
+        secret: mutationSecret, sessionId: session._id, challengeId,
+      }),
+    ]);
 
     // 4.5. Prerequisite check
-    const allStatuses = await convex.query(
-      api.submissions.getSessionChallengeStatuses,
-      { sessionId: session._id }
-    );
     const solvedSet = new Set<string>();
     for (const [id, status] of Object.entries(allStatuses)) {
       if (status?.solved) solvedSet.add(id);
@@ -129,10 +128,6 @@ export async function POST(
     }
 
     // 5. Validate render token
-    const view = await convex.query(api.challengeViews.get, {
-      sessionId: session._id,
-      challengeId,
-    });
     if (!view) {
       return badRequest("Challenge must be loaded before interacting");
     }
@@ -163,6 +158,19 @@ export async function POST(
     const result = challenge.handleInteract(generated.hiddenData, action, interactParams, {
       viewedAt: view.viewedAt,
     });
+
+    // Detect success/failure from the result
+    const isError = result === null || result === undefined ||
+      (typeof result === "object" && result !== null && "error" in result);
+
+    // Emit challenge_interacted event with success tracking (fire-and-forget)
+    convex.action(api.sessionEvents.emitEvent, {
+      secret: mutationSecret,
+      sessionId: session._id,
+      type: "challenge_interacted" as const,
+      challengeId,
+      metadata: { action, params: interactParams, success: !isError },
+    }).catch(() => {});
 
     // 9. Update lastInteractAt
     await convex.action(api.challengeViews.recordInteractAction, {

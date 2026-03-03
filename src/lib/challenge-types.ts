@@ -9,6 +9,12 @@
 import type { Tier } from "./config";
 import type { ChallengeData } from "./seed";
 
+/** Per-challenge status as returned by getSessionChallengeStatuses (Convex). */
+export type ChallengeStatusMap = Record<
+  string,
+  { attempts: number; solved: boolean; lastCorrectAt?: number }
+>;
+
 /** Context passed from the interact route to handleInteract. */
 export interface InteractContext {
   /** Timestamp when the challenge page was loaded (from challengeViews record). */

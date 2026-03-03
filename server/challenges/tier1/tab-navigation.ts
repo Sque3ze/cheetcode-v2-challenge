@@ -173,9 +173,16 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
 
   handleInteract(hiddenData, action, params) {
     if (action === "tab") {
-      const index = params.index as number;
+      const index = params.index as number | undefined;
+      if (index === undefined || index === null) {
+        return { error: "Missing required parameter: index. Use { \"index\": <tab number> }." };
+      }
       const tabContents = hiddenData.tabContents as Record<number, Array<{ key: string; value: string }>>;
-      return { content: tabContents[index] ?? [] };
+      const content = tabContents[index];
+      if (!content) {
+        return { error: `Unknown tab index ${index}. Valid indices: ${Object.keys(tabContents).join(", ")}` };
+      }
+      return { content };
     }
     return null;
   },

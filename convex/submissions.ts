@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { internalMutation, action, query } from "./_generated/server";
+import { internalMutation, internalQuery, action } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { assertSecret } from "./authHelpers";
 
 /**
  * Record a submission attempt for a challenge.
@@ -29,7 +30,7 @@ export const record = internalMutation({
 /**
  * Get all submissions for a session.
  */
-export const getBySession = query({
+export const getBySession = internalQuery({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -42,7 +43,7 @@ export const getBySession = query({
 /**
  * Get submissions for a specific challenge in a session.
  */
-export const getBySessionChallenge = query({
+export const getBySessionChallenge = internalQuery({
   args: { sessionId: v.id("sessions"), challengeId: v.string() },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -58,7 +59,7 @@ export const getBySessionChallenge = query({
  * Get the attempt count and solved status for all challenges in a session.
  * Used by the session status API to return challenge statuses.
  */
-export const getSessionChallengeStatuses = query({
+export const getSessionChallengeStatuses = internalQuery({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     const submissions = await ctx.db
@@ -110,9 +111,7 @@ export const recordSubmission = action({
     attemptNumber: v.number(),
   },
   handler: async (ctx, args): Promise<void> => {
-    if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
-      throw new Error("unauthorized");
-    }
+    assertSecret(args.secret);
     const { secret: _, ...mutationArgs } = args;
     await ctx.runMutation(internal.submissions.record, mutationArgs);
   },
@@ -121,7 +120,7 @@ export const recordSubmission = action({
 /**
  * Get aggregate stats for a session (for scoring).
  */
-export const getSessionStats = query({
+export const getSessionStats = internalQuery({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     const submissions = await ctx.db
@@ -149,5 +148,41 @@ export const getSessionStats = query({
       wrongAttempts,
       lastCorrectAt,
     };
+  },
+});
+
+// ─── Read action gateways ─────────────────────────────────────
+
+/** Authenticated gateway for getBySessionChallenge */
+export const fetchBySessionChallenge = action({
+  args: { secret: v.string(), sessionId: v.id("sessions"), challengeId: v.string() },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runQuery(internal.submissions.getBySessionChallenge, {
+      sessionId: args.sessionId,
+      challengeId: args.challengeId,
+    });
+  },
+});
+
+/** Authenticated gateway for getSessionChallengeStatuses */
+export const fetchSessionChallengeStatuses = action({
+  args: { secret: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runQuery(internal.submissions.getSessionChallengeStatuses, {
+      sessionId: args.sessionId,
+    });
+  },
+});
+
+/** Authenticated gateway for getSessionStats */
+export const fetchSessionStats = action({
+  args: { secret: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runQuery(internal.submissions.getSessionStats, {
+      sessionId: args.sessionId,
+    });
   },
 });

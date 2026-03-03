@@ -62,11 +62,12 @@ export const priceNegotiatorChallenge: ChallengeDefinition<PriceNegotiatorPageDa
 
   instructions: (pageData) => {
     const { product, minBid, maxBid } = pageData;
+    const interactHint = `To place a bid, use the interact API with action "bid" and parameter amount set to an integer (e.g. { "amount": 1500 }). To get market intelligence, use action "market_intel" with no parameters.`;
     const variants = [
-      `You are negotiating to purchase a "${product.name}". Your budget ceiling is $${maxBid} and the minimum bid is $${minBid}. Submit bids to discover the vendor's exact minimum acceptable price (the lowest integer price they will accept). You may also request market intelligence to help narrow your search. Submit the exact floor price.`,
-      `Find the vendor's minimum acceptable price for "${product.name}". Bid range: $${minBid}–$${maxBid}. Each bid will be accepted or rejected. Use binary search or similar strategy to pinpoint the exact threshold. Optionally fetch market intel first. Submit the floor price (integer).`,
-      `Negotiate the price for "${product.name}". The vendor will accept bids at or above their floor price and reject those below. Your range is $${minBid}–$${maxBid}. Determine the exact floor price through iterative bidding. Market intelligence is available to narrow the range. Submit the exact minimum price.`,
-      `Determine what the vendor's lowest acceptable price is for "${product.name}" (an integer between $${minBid} and $${maxBid}). Place bids — "accepted" means at or above the floor, "rejected" means below. Find the exact boundary. Submit the floor price.`,
+      `You are negotiating to purchase a "${product.name}". Your budget ceiling is $${maxBid} and the minimum bid is $${minBid}. Submit bids to discover the vendor's exact minimum acceptable price (the lowest integer price they will accept). You may also request market intelligence to help narrow your search. Submit the exact floor price. ${interactHint}`,
+      `Find the vendor's minimum acceptable price for "${product.name}". Bid range: $${minBid}–$${maxBid}. Each bid will be accepted or rejected. Use binary search or similar strategy to pinpoint the exact threshold. Optionally fetch market intel first. Submit the floor price (integer). ${interactHint}`,
+      `Negotiate the price for "${product.name}". The vendor will accept bids at or above their floor price and reject those below. Your range is $${minBid}–$${maxBid}. Determine the exact floor price through iterative bidding. Market intelligence is available to narrow the range. Submit the exact minimum price. ${interactHint}`,
+      `Determine what the vendor's lowest acceptable price is for "${product.name}" (an integer between $${minBid} and $${maxBid}). Place bids — "accepted" means at or above the floor, "rejected" means below. Find the exact boundary. Submit the floor price. ${interactHint}`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -122,9 +123,12 @@ export const priceNegotiatorChallenge: ChallengeDefinition<PriceNegotiatorPageDa
 
   handleInteract(hiddenData, action, params) {
     if (action === "bid") {
+      if (params.amount === undefined || params.amount === null) {
+        return { error: "Missing required parameter: amount. Use { \"amount\": <integer> }." };
+      }
       const amount = Number(params.amount);
       if (isNaN(amount) || !Number.isInteger(amount)) {
-        return { result: "error", message: "Bid must be an integer" };
+        return { error: "Bid amount must be an integer. Use { \"amount\": <integer> }." };
       }
       const floorPrice = hiddenData.floorPrice as number;
       if (amount < floorPrice) {

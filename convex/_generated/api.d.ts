@@ -9,8 +9,8 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as authHelpers from "../authHelpers.js";
 import type * as challengeViews from "../challengeViews.js";
-import type * as debug from "../debug.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as ranking from "../ranking.js";
 import type * as sessionEvents from "../sessionEvents.js";
@@ -25,8 +25,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  authHelpers: typeof authHelpers;
   challengeViews: typeof challengeViews;
-  debug: typeof debug;
   leaderboard: typeof leaderboard;
   ranking: typeof ranking;
   sessionEvents: typeof sessionEvents;

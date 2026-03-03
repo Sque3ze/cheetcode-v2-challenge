@@ -142,9 +142,13 @@ export const dataDashboardChallenge: ChallengeDefinition<DataDashboardPageData> 
 
   handleInteract(hiddenData, action, params) {
     if (action === "tab") {
-      const tab = params.tab as string;
+      const tab = params.tab as string | undefined;
+      if (!tab) {
+        return { error: "Missing required parameter: tab. Use { \"tab\": \"costs\" } or { \"tab\": \"taxes\" }." };
+      }
       if (tab === "costs") return { costs: hiddenData.costs };
       if (tab === "taxes") return { taxes: hiddenData.taxes };
+      return { error: `Unknown tab "${tab}". Valid tabs: "costs", "taxes".` };
     }
     if (action === "page") {
       const page = (params.page as number) ?? 0;

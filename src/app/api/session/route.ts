@@ -9,6 +9,7 @@ import {
   rateLimited,
 } from "../../../lib/api-helpers";
 import { SESSION_DURATION_MS } from "../../../lib/config";
+import type { ChallengeStatusMap } from "../../../lib/challenge-types";
 import { getAllChallengeMetas, getUnmetPrerequisites } from "../../../../server/challenges/registry";
 
 /**
@@ -78,22 +79,23 @@ export async function GET(request: Request) {
   if (!github) return unauthorized();
 
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-  if (!convexUrl) return serverError("Server not configured");
+  const secret = process.env.CONVEX_MUTATION_SECRET;
+  if (!convexUrl || !secret) return serverError("Server not configured");
 
   try {
     const convex = new ConvexHttpClient(convexUrl);
 
     // Get active session
-    const session = await convex.query(api.sessions.getActive, { github });
+    const session = await convex.action(api.sessions.fetchActiveSession, { secret, github });
     if (!session) {
       return NextResponse.json({ session: null });
     }
 
     // Get challenge statuses
-    const statuses = await convex.query(
-      api.submissions.getSessionChallengeStatuses,
-      { sessionId: session._id }
-    );
+    const statuses = await convex.action(
+      api.submissions.fetchSessionChallengeStatuses,
+      { secret, sessionId: session._id }
+    ) as ChallengeStatusMap;
 
     const challenges = getAllChallengeMetas();
     const maxAttempts = 3;

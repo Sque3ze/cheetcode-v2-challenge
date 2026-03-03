@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { verifyAdminAuth } from "../../../../lib/api-helpers";
 
 /**
- * GET /api/admin/auth?key=xxx
+ * GET /api/admin/auth
  *
- * Server-side admin auth check. Returns { authorized: true } or { authorized: false, reason: string }.
+ * Server-side admin auth check. Reads admin key from X-Admin-Key header.
+ * Returns { authorized: true } or { authorized: false, reason: string }.
  */
 export async function GET(request: Request) {
   const result = await verifyAdminAuth(request);

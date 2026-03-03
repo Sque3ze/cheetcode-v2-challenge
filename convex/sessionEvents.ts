@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { internalMutation, action, query } from "./_generated/server";
+import { internalMutation, internalQuery, action } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { assertSecret } from "./authHelpers";
 
 const EVENT_TYPES = v.union(
   v.literal("session_started"),
@@ -47,9 +48,7 @@ export const emitEvent = action({
     metadata: v.optional(v.any()),
   },
   handler: async (ctx, args): Promise<void> => {
-    if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
-      throw new Error("unauthorized");
-    }
+    assertSecret(args.secret);
     await ctx.runMutation(internal.sessionEvents.emit, {
       sessionId: args.sessionId,
       type: args.type,
@@ -63,7 +62,7 @@ export const emitEvent = action({
  * Get all events for a session, ordered by timestamp ascending.
  * Used for session timeline replay.
  */
-export const getBySession = query({
+export const getBySession = internalQuery({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     const events = await ctx.db
@@ -77,7 +76,7 @@ export const getBySession = query({
 /**
  * Get events of a specific type for a session.
  */
-export const getBySessionAndType = query({
+export const getBySessionAndType = internalQuery({
   args: {
     sessionId: v.id("sessions"),
     type: EVENT_TYPES,
@@ -89,5 +88,16 @@ export const getBySessionAndType = query({
         q.eq("sessionId", args.sessionId).eq("type", args.type)
       )
       .collect();
+  },
+});
+
+/** Authenticated gateway for reading session events */
+export const fetchBySession = action({
+  args: { secret: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runQuery(internal.sessionEvents.getBySession, {
+      sessionId: args.sessionId,
+    });
   },
 });

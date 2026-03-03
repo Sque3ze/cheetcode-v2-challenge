@@ -118,9 +118,16 @@ export const fanOutAggregatorChallenge: ChallengeDefinition<FanOutAggregatorPage
 
   handleInteract(hiddenData, action, params) {
     if (action === "office") {
-      const officeId = params.officeId as string;
+      const officeId = params.officeId as string | undefined;
+      if (!officeId) {
+        return { error: "Missing required parameter: officeId. Use { \"officeId\": \"office-N\" }." };
+      }
       const offices = hiddenData.offices as Record<string, { products: ProductData[] }>;
-      return offices[officeId] ?? null;
+      const office = offices[officeId];
+      if (!office) {
+        return { error: `Unknown officeId "${officeId}". Valid IDs: ${Object.keys(offices).join(", ")}` };
+      }
+      return office;
     }
     return null;
   },

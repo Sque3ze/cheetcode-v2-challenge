@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { internalMutation, query, action } from "./_generated/server";
+import { internalMutation, internalQuery, action } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { assertSecret } from "./authHelpers";
 
 /**
  * Record (or update) a challenge view. Upserts by session+challenge.
@@ -40,7 +41,7 @@ export const record = internalMutation({
 /**
  * Get the challenge view record for a session+challenge.
  */
-export const get = query({
+export const get = internalQuery({
   args: {
     sessionId: v.id("sessions"),
     challengeId: v.string(),
@@ -90,9 +91,7 @@ export const recordView = action({
     renderToken: v.string(),
   },
   handler: async (ctx, args): Promise<void> => {
-    if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
-      throw new Error("unauthorized");
-    }
+    assertSecret(args.secret);
     const { secret: _, ...mutationArgs } = args;
     await ctx.runMutation(internal.challengeViews.record, mutationArgs);
   },
@@ -107,10 +106,20 @@ export const recordInteractAction = action({
     interactAt: v.number(),
   },
   handler: async (ctx, args): Promise<void> => {
-    if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
-      throw new Error("unauthorized");
-    }
+    assertSecret(args.secret);
     const { secret: _, ...mutationArgs } = args;
     await ctx.runMutation(internal.challengeViews.recordInteract, mutationArgs);
+  },
+});
+
+/** Authenticated gateway for reading a challenge view */
+export const fetchView = action({
+  args: { secret: v.string(), sessionId: v.id("sessions"), challengeId: v.string() },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runQuery(internal.challengeViews.get, {
+      sessionId: args.sessionId,
+      challengeId: args.challengeId,
+    });
   },
 });

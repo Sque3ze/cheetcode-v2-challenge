@@ -23,6 +23,10 @@ import RedHerringChallenge from "./challenges/RedHerringChallenge";
 import ResilientCollectorChallenge from "./challenges/ResilientCollectorChallenge";
 import FanOutAggregatorChallenge from "./challenges/FanOutAggregatorChallenge";
 import PriceNegotiatorChallenge from "./challenges/PriceNegotiatorChallenge";
+import ConfigDebuggerChallenge from "./challenges/ConfigDebuggerChallenge";
+import InventoryReconciliationChallenge from "./challenges/InventoryReconciliationChallenge";
+import TraceAnalyzerChallenge from "./challenges/TraceAnalyzerChallenge";
+import EventSourcingChallenge from "./challenges/EventSourcingChallenge";
 
 interface ChallengePageData {
   id: string;
@@ -66,6 +70,10 @@ const CHALLENGE_RENDERERS: Record<string, React.ComponentType<ChallengeRendererP
   "tier2-resilient-collector": ResilientCollectorChallenge,
   "tier3-fan-out-aggregator": FanOutAggregatorChallenge,
   "tier3-price-negotiator": PriceNegotiatorChallenge,
+  "tier2-config-debugger": ConfigDebuggerChallenge,
+  "tier3-inventory-reconciliation": InventoryReconciliationChallenge,
+  "tier3-trace-analyzer": TraceAnalyzerChallenge,
+  "tier3-event-sourcing": EventSourcingChallenge,
 };
 
 export default function ChallengePage({

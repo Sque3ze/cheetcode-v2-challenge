@@ -5,9 +5,10 @@ import { api } from "../../../../../convex/_generated/api";
 import { verifyAdminAuth } from "../../../../lib/api-helpers";
 
 /**
- * GET /api/admin/data?type=overview|challenges|sessions|timeline&key=xxx
+ * GET /api/admin/data?type=overview|challenges|sessions|timeline
  *
  * Authenticated proxy to admin Convex queries.
+ * Reads admin key from X-Admin-Key header.
  * Verifies admin identity before fetching any data.
  */
 export async function GET(request: Request) {

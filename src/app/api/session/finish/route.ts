@@ -50,7 +50,8 @@ export async function POST(request: Request) {
     const convex = new ConvexHttpClient(convexUrl);
 
     // Verify session
-    const session = await convex.query(api.sessions.get, {
+    const session = await convex.action(api.sessions.fetchSession, {
+      secret,
       sessionId: sessionId as unknown as Id<"sessions">,
     });
     if (!session) return badRequest("Session not found");
@@ -64,10 +65,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get session stats
-    const stats = await convex.query(api.submissions.getSessionStats, {
-      sessionId: session._id,
-    });
+    // Fetch stats and events in parallel (both depend only on session._id)
+    const [stats, events] = await Promise.all([
+      convex.action(api.submissions.fetchSessionStats, {
+        secret,
+        sessionId: session._id,
+      }),
+      convex.action(api.sessionEvents.fetchBySession, {
+        secret,
+        sessionId: session._id,
+      }),
+    ]);
 
     // Compute earned points
     const challenges = getAllChallengeMetas();
@@ -77,11 +85,6 @@ export async function POST(request: Request) {
       0
     );
     const totalPoints = getTotalPoints();
-
-    // Compute orchestration metrics from session events
-    const events = await convex.query(api.sessionEvents.getBySession, {
-      sessionId: session._id,
-    });
     const challengeInfos = challenges.map((c) => ({
       id: c.id,
       tier: c.tier,

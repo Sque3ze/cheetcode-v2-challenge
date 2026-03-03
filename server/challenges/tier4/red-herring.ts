@@ -139,8 +139,12 @@ export const redHerringChallenge: ChallengeDefinition<RedHerringPageData> = {
 
   handleInteract(hiddenData, action, params) {
     if (action === "tab") {
-      const tab = params.tab as string;
+      const tab = params.tab as string | undefined;
+      if (!tab) {
+        return { error: "Missing required parameter: tab." };
+      }
       if (tab === "b") return { dataB: hiddenData.dataB };
+      return { error: `Unknown tab "${tab}".` };
     }
     return null;
   },

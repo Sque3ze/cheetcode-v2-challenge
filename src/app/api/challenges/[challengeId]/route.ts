@@ -12,6 +12,7 @@ import {
 import { getChallenge, arePrerequisitesMet, getUnmetPrerequisites } from "../../../../../server/challenges/registry";
 import { ChallengeDataGenerator } from "../../../../lib/seed";
 import { TIER_POINTS } from "../../../../lib/config";
+import type { ChallengeStatusMap } from "../../../../lib/challenge-types";
 import { generateRenderToken } from "../../../../lib/render-token";
 
 /**
@@ -56,7 +57,8 @@ export async function GET(
     const convex = new ConvexHttpClient(convexUrl);
 
     // Verify session belongs to user and is active
-    const session = await convex.query(api.sessions.get, {
+    const session = await convex.action(api.sessions.fetchSession, {
+      secret: mutationSecret,
       sessionId: sessionId as unknown as Id<"sessions">,
     });
     if (!session) return notFound("Session not found");
@@ -73,11 +75,17 @@ export async function GET(
     // Track API call (fire-and-forget)
     convex.action(api.sessions.trackApiCall, { secret: mutationSecret, sessionId: session._id }).catch(() => {});
 
+    // Fetch statuses and submissions in parallel (both depend only on session._id)
+    const [statuses, submissions] = await Promise.all([
+      convex.action(api.submissions.fetchSessionChallengeStatuses, {
+        secret: mutationSecret, sessionId: session._id,
+      }) as Promise<ChallengeStatusMap>,
+      convex.action(api.submissions.fetchBySessionChallenge, {
+        secret: mutationSecret, sessionId: session._id, challengeId,
+      }),
+    ]);
+
     // Prerequisite check (before emitting telemetry so locked views aren't recorded)
-    const statuses = await convex.query(
-      api.submissions.getSessionChallengeStatuses,
-      { sessionId: session._id }
-    );
     const solvedSet = new Set<string>();
     for (const [id, status] of Object.entries(statuses)) {
       if (status?.solved) solvedSet.add(id);
@@ -107,12 +115,6 @@ export async function GET(
     const gen = new ChallengeDataGenerator(sessionId, serverSecret);
     const challengeData = gen.forChallenge(challengeId);
     const generated = challenge.generate(challengeData);
-
-    // Get submission status for this challenge
-    const submissions = await convex.query(
-      api.submissions.getBySessionChallenge,
-      { sessionId: session._id, challengeId }
-    );
     const solved = submissions.some((s) => s.correct);
     const attempts = submissions.length;
 

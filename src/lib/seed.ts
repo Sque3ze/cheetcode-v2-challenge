@@ -61,8 +61,9 @@ export class SeededRandom {
   /** Pick N unique elements from an array */
   pickN<T>(arr: readonly T[], n: number): T[] {
     const copy = [...arr];
+    const count = Math.min(n, copy.length);
     const result: T[] = [];
-    for (let i = 0; i < Math.min(n, copy.length); i++) {
+    for (let i = 0; i < count; i++) {
       const idx = Math.floor(this.next() * copy.length);
       result.push(copy[idx]);
       copy.splice(idx, 1);

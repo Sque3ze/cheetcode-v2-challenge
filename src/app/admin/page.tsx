@@ -9,9 +9,14 @@ import { classifyAgent } from "../../lib/agent-detection";
 // ─── Authenticated fetch hook (proxies through /api/admin/data) ──
 type AdminQueryType = "overview" | "challenges" | "sessions" | "timeline";
 
-function useAdminQuery<T>(type: AdminQueryType, params?: Record<string, string>): T | undefined {
+function useAdminKey(): string {
   const searchParams = useSearchParams();
-  const key = searchParams.get("key") || "";
+  const [key] = useState(() => searchParams.get("key") || "");
+  return key;
+}
+
+function useAdminQuery<T>(type: AdminQueryType, params?: Record<string, string>): T | undefined {
+  const key = useAdminKey();
   const [data, setData] = useState<T | undefined>(undefined);
 
   // Stable serialization of params for the dependency array
@@ -19,8 +24,10 @@ function useAdminQuery<T>(type: AdminQueryType, params?: Record<string, string>)
 
   useEffect(() => {
     const extra = paramsKey ? JSON.parse(paramsKey) as Record<string, string> : {};
-    const qs = new URLSearchParams({ type, key, ...extra });
-    fetch(`/api/admin/data?${qs}`)
+    const qs = new URLSearchParams({ type, ...extra });
+    fetch(`/api/admin/data?${qs}`, {
+      headers: { "x-admin-key": key },
+    })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d) setData(d); })
       .catch(() => {});
@@ -513,15 +520,16 @@ function RecentSessions() {
 
 // ─── Auth Gate (server-side check) ───────────────────────────
 function useAdminAuth(): { authorized: boolean; loading: boolean; reason?: string } {
-  const searchParams = useSearchParams();
+  const key = useAdminKey();
   const [state, setState] = useState<{ authorized: boolean; loading: boolean; reason?: string }>({
     authorized: false,
     loading: true,
   });
 
   useEffect(() => {
-    const key = searchParams.get("key") || "";
-    fetch(`/api/admin/auth?key=${encodeURIComponent(key)}`)
+    fetch("/api/admin/auth", {
+      headers: { "x-admin-key": key },
+    })
       .then((r) => r.json())
       .then((data) => {
         setState({
@@ -533,7 +541,7 @@ function useAdminAuth(): { authorized: boolean; loading: boolean; reason?: strin
       .catch(() => {
         setState({ authorized: false, loading: false, reason: "Auth check failed." });
       });
-  }, [searchParams]);
+  }, [key]);
 
   return state;
 }
