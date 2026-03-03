@@ -9,7 +9,7 @@ const SESSION_COOLDOWN_MS = 10_000;
  * Server sets the clock — no client-reported timestamps trusted.
  */
 export const create = internalMutation({
-  args: { github: v.string(), durationMs: v.number() },
+  args: { github: v.string(), durationMs: v.number(), userAgent: v.optional(v.string()) },
   handler: async (ctx, args) => {
     // Rate limit: reject if user has an active or very recent session
     const active = await ctx.db
@@ -45,6 +45,7 @@ export const create = internalMutation({
       startedAt,
       expiresAt,
       status: "active",
+      userAgent: args.userAgent,
     });
 
     return { sessionId, startedAt, expiresAt };
@@ -111,6 +112,16 @@ export const complete = internalMutation({
     wrongAttempts: v.number(),
     lastCorrectAt: v.optional(v.number()),
     apiCalls: v.optional(v.number()),
+    orchestrationScore: v.optional(v.number()),
+    orchestrationMetrics: v.optional(
+      v.object({
+        parallelizationScore: v.number(),
+        dagEfficiency: v.number(),
+        criticalPathSpeed: v.number(),
+        submissionConfidence: v.number(),
+        tiersReached: v.number(),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
@@ -142,6 +153,8 @@ export const complete = internalMutation({
       apiCalls: args.apiCalls,
       completedAt: Date.now(),
       sessionId: args.sessionId,
+      orchestrationScore: args.orchestrationScore,
+      orchestrationMetrics: args.orchestrationMetrics,
     };
 
     if (!existing) {
@@ -178,7 +191,7 @@ export const expire = internalMutation({
 
 /** Authenticated gateway for creating sessions */
 export const createSession = action({
-  args: { secret: v.string(), github: v.string(), durationMs: v.number() },
+  args: { secret: v.string(), github: v.string(), durationMs: v.number(), userAgent: v.optional(v.string()) },
   handler: async (
     ctx,
     args
@@ -189,6 +202,7 @@ export const createSession = action({
     return await ctx.runMutation(internal.sessions.create, {
       github: args.github,
       durationMs: args.durationMs,
+      userAgent: args.userAgent,
     });
   },
 });
@@ -217,6 +231,16 @@ export const completeSession = action({
     wrongAttempts: v.number(),
     lastCorrectAt: v.optional(v.number()),
     apiCalls: v.optional(v.number()),
+    orchestrationScore: v.optional(v.number()),
+    orchestrationMetrics: v.optional(
+      v.object({
+        parallelizationScore: v.number(),
+        dagEfficiency: v.number(),
+        criticalPathSpeed: v.number(),
+        submissionConfidence: v.number(),
+        tiersReached: v.number(),
+      })
+    ),
   },
   handler: async (
     ctx,

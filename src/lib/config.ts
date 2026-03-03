@@ -2,7 +2,7 @@
 // All tunable values in one place for easy calibration.
 
 /** Session duration in milliseconds. */
-export const SESSION_DURATION_MS = 30 * 60 * 1000;
+export const SESSION_DURATION_MS = 5 * 60 * 1000;
 
 /** Maximum wrong attempts per challenge before it locks. */
 export const MAX_ATTEMPTS_PER_CHALLENGE = 3;

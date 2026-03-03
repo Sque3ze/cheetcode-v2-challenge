@@ -8,9 +8,11 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as challengeViews from "../challengeViews.js";
 import type * as debug from "../debug.js";
 import type * as leaderboard from "../leaderboard.js";
+import type * as sessionEvents from "../sessionEvents.js";
 import type * as sessions from "../sessions.js";
 import type * as submissions from "../submissions.js";
 
@@ -21,9 +23,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   challengeViews: typeof challengeViews;
   debug: typeof debug;
   leaderboard: typeof leaderboard;
+  sessionEvents: typeof sessionEvents;
   sessions: typeof sessions;
   submissions: typeof submissions;
 }>;

@@ -9,7 +9,12 @@ import {
   serverError,
 } from "../../../../lib/api-helpers";
 import { getTotalPoints, getAllChallengeMetas } from "../../../../../server/challenges/registry";
-import { TIER_POINTS } from "../../../../lib/config";
+import { MIN_SOLVE_TIME_MS } from "../../../../lib/config";
+import {
+  computeOrchestrationMetrics,
+  computeCombinedScore,
+  type SessionEvent,
+} from "../../../../lib/orchestration-metrics";
 
 /**
  * POST /api/session/finish
@@ -68,10 +73,27 @@ export async function POST(request: Request) {
     const challenges = getAllChallengeMetas();
     const solvedSet = new Set(stats.solvedChallenges);
     const earnedPoints = challenges.reduce(
-      (sum, c) => sum + (solvedSet.has(c.id) ? TIER_POINTS[c.tier] : 0),
+      (sum, c) => sum + (solvedSet.has(c.id) ? c.points : 0),
       0
     );
     const totalPoints = getTotalPoints();
+
+    // Compute orchestration metrics from session events
+    const events = await convex.query(api.sessionEvents.getBySession, {
+      sessionId: session._id,
+    });
+    const challengeInfos = challenges.map((c) => ({
+      id: c.id,
+      tier: c.tier,
+      dependsOn: c.dependsOn,
+    }));
+    const orchMetrics = computeOrchestrationMetrics(
+      events as SessionEvent[],
+      challengeInfos,
+      session.startedAt,
+      MIN_SOLVE_TIME_MS
+    );
+    const orchScore = computeCombinedScore(orchMetrics);
 
     // Complete the session
     const result = await convex.action(api.sessions.completeSession, {
@@ -83,7 +105,23 @@ export async function POST(request: Request) {
       wrongAttempts: stats.wrongAttempts,
       lastCorrectAt: stats.lastCorrectAt,
       apiCalls: session.apiCalls ?? 0,
+      orchestrationScore: orchScore,
+      orchestrationMetrics: orchMetrics,
     });
+
+    // Emit session_completed event (fire-and-forget)
+    convex.action(api.sessionEvents.emitEvent, {
+      secret,
+      sessionId: session._id,
+      type: "session_completed" as const,
+      metadata: {
+        score: result.score,
+        earnedPoints: result.earnedPoints,
+        totalPoints: result.totalPoints,
+        solvedChallenges: stats.solvedChallenges,
+        wrongAttempts: stats.wrongAttempts,
+      },
+    }).catch(() => {});
 
     return NextResponse.json({
       score: result.score,
@@ -91,6 +129,8 @@ export async function POST(request: Request) {
       totalPoints: result.totalPoints,
       solvedChallenges: stats.solvedChallenges,
       wrongAttempts: stats.wrongAttempts,
+      orchestrationScore: orchScore,
+      orchestrationMetrics: orchMetrics,
     });
   } catch (err) {
     console.error("/api/session/finish error:", err);

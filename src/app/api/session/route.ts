@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
+import type { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 import {
   resolveGitHub,
@@ -27,11 +28,24 @@ export async function POST(request: Request) {
 
   try {
     const convex = new ConvexHttpClient(convexUrl);
+    const userAgent = request.headers.get("user-agent") || "unknown";
     const result = await convex.action(api.sessions.createSession, {
       secret,
       github,
       durationMs: SESSION_DURATION_MS,
+      userAgent,
     });
+
+    // Emit session_started event (fire-and-forget)
+    convex.action(api.sessionEvents.emitEvent, {
+      secret,
+      sessionId: result.sessionId as unknown as Id<"sessions">,
+      type: "session_started" as const,
+      metadata: {
+        userAgent: request.headers.get("user-agent") || "unknown",
+        challengeCount: getAllChallengeMetas().length,
+      },
+    }).catch(() => {});
 
     return NextResponse.json({
       sessionId: result.sessionId,

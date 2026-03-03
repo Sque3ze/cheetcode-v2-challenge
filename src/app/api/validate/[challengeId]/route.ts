@@ -98,6 +98,16 @@ export async function POST(
     // Track API call (fire-and-forget)
     convex.action(api.sessions.trackApiCall, { secret, sessionId: session._id }).catch(() => {});
 
+    // Helper to emit events without blocking
+    const emitEvent = (type: string, metadata?: Record<string, unknown>) =>
+      convex.action(api.sessionEvents.emitEvent, {
+        secret,
+        sessionId: session._id,
+        type: type as "answer_submitted",
+        challengeId,
+        metadata,
+      }).catch(() => {});
+
     // 3.5. Prerequisite check
     const allStatuses = await convex.query(
       api.submissions.getSessionChallengeStatuses,
@@ -188,8 +198,13 @@ export async function POST(
       attemptNumber: newAttemptNumber,
     });
 
+    // Emit telemetry events (fire-and-forget)
+    const solveTimeMs = Date.now() - view.viewedAt;
+    emitEvent("answer_submitted", { attemptNumber: newAttemptNumber, correct: isCorrect });
+
     if (isCorrect) {
-      const points = TIER_POINTS[challenge.tier];
+      const points = challenge.points ?? TIER_POINTS[challenge.tier];
+      emitEvent("answer_correct", { attemptNumber: newAttemptNumber, points, solveTimeMs });
       return NextResponse.json({
         correct: true,
         points,
@@ -198,6 +213,11 @@ export async function POST(
     }
 
     const attemptsRemaining = MAX_ATTEMPTS_PER_CHALLENGE - newAttemptNumber;
+    if (attemptsRemaining === 0) {
+      emitEvent("challenge_locked", { totalAttempts: newAttemptNumber });
+    } else {
+      emitEvent("answer_wrong", { attemptNumber: newAttemptNumber, attemptsRemaining });
+    }
     return NextResponse.json({
       correct: false,
       attemptsRemaining,

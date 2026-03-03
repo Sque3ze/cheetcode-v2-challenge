@@ -346,7 +346,7 @@ export default function Home() {
               >
                 <thead>
                   <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
-                    {["#", "Player", "Score", "Wrong", "API Calls"].map((label, idx) => (
+                    {["#", "Player", "Score", "Orch.", "Wrong", "API Calls"].map((label, idx) => (
                       <th
                         key={label}
                         style={{
@@ -437,6 +437,23 @@ export default function Home() {
                         }}
                       >
                         {entry.score.toFixed(1)}%
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 24px",
+                          textAlign: "right",
+                          fontFamily:
+                            "var(--font-geist-mono), monospace",
+                          color: entry.orchestrationScore != null
+                            ? entry.orchestrationScore >= 70
+                              ? "#16a34a"
+                              : entry.orchestrationScore >= 40
+                                ? "#ca8a04"
+                                : "rgba(38, 38, 38, 0.35)"
+                            : "rgba(38, 38, 38, 0.35)",
+                        }}
+                      >
+                        {entry.orchestrationScore != null ? entry.orchestrationScore : "—"}
                       </td>
                       <td
                         style={{

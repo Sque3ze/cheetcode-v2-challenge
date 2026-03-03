@@ -73,6 +73,15 @@ export async function GET(
     // Track API call (fire-and-forget)
     convex.action(api.sessions.trackApiCall, { secret: mutationSecret, sessionId: session._id }).catch(() => {});
 
+    // Emit challenge_viewed event (fire-and-forget)
+    convex.action(api.sessionEvents.emitEvent, {
+      secret: mutationSecret,
+      sessionId: session._id,
+      type: "challenge_viewed" as const,
+      challengeId,
+      metadata: { tier: challenge.tier },
+    }).catch(() => {});
+
     // Prerequisite check
     const statuses = await convex.query(
       api.submissions.getSessionChallengeStatuses,
