@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { Id } from "../../../convex/_generated/dataModel";
+import type { SessionEvent } from "../../lib/orchestration-metrics";
 import { classifyAgent } from "../../lib/agent-detection";
 
 // ─── Authenticated fetch hook (proxies through /api/admin/data) ──
@@ -70,6 +71,357 @@ const EVENT_COLORS: Record<string, string> = {
   challenge_locked: "#991b1b",
   session_completed: "#6366f1",
 };
+
+// ─── Gantt Chart Types & Constants ──────────────────────────
+interface GanttRow {
+  challengeId: string;
+  label: string;
+  tier: number;
+  startMs: number;
+  endMs: number;
+  result: "solved" | "wrong" | "locked" | "none";
+  interactions: number[];
+  submissions: number[];
+}
+
+interface GanttTierGroup {
+  tier: number;
+  rows: GanttRow[];
+}
+
+const GANTT = {
+  LABEL_WIDTH: 180,
+  ROW_HEIGHT: 26,
+  BAR_HEIGHT: 14,
+  TIER_GAP: 8,
+  TIER_HEADER_HEIGHT: 20,
+  AXIS_HEIGHT: 28,
+  DOT_RADIUS: 3,
+  TICK_INTERVAL_S: 30,
+} as const;
+
+const GANTT_COLORS: Record<string, string> = {
+  solved: "#16a34a",
+  wrong: "#dc2626",
+  locked: "#dc2626",
+  none: "rgba(38,38,38,0.12)",
+};
+
+function buildGanttData(events: SessionEvent[], startedAt: number): GanttTierGroup[] {
+  const challengeMap = new Map<string, {
+    firstView: number;
+    lastEvent: number;
+    lastSubmit: number | null;
+    result: "solved" | "wrong" | "locked" | "none";
+    interactions: number[];
+    submissions: number[];
+    tier: number;
+  }>();
+
+  for (const e of events) {
+    if (!e.challengeId) continue;
+    let entry = challengeMap.get(e.challengeId);
+    if (!entry) {
+      let tier = 0;
+      const tierVal = e.metadata?.tier;
+      if (typeof tierVal === "number") {
+        tier = tierVal;
+      } else {
+        const m = e.challengeId.match(/^tier(\d)/);
+        if (m) tier = parseInt(m[1]);
+      }
+      entry = {
+        firstView: e.timestamp, lastEvent: e.timestamp, lastSubmit: null,
+        result: "none", interactions: [], submissions: [], tier,
+      };
+      challengeMap.set(e.challengeId, entry);
+    }
+
+    const metaTier = e.metadata?.tier;
+    if (e.type === "challenge_viewed" && typeof metaTier === "number") {
+      entry.tier = metaTier;
+    }
+    if (e.type === "challenge_viewed" && e.timestamp < entry.firstView) {
+      entry.firstView = e.timestamp;
+    }
+    entry.lastEvent = Math.max(entry.lastEvent, e.timestamp);
+    if (e.type === "answer_submitted") {
+      entry.lastSubmit = Math.max(entry.lastSubmit ?? 0, e.timestamp);
+      entry.submissions.push(e.timestamp);
+    }
+    if (e.type === "challenge_interacted") {
+      entry.interactions.push(e.timestamp);
+    }
+    if (e.type === "answer_correct") {
+      entry.result = "solved";
+    } else if (e.type === "challenge_locked" && entry.result !== "solved") {
+      entry.result = "locked";
+    } else if (e.type === "answer_wrong" && entry.result !== "solved" && entry.result !== "locked") {
+      entry.result = "wrong";
+    }
+  }
+
+  const rows: GanttRow[] = [];
+  for (const [challengeId, data] of challengeMap) {
+    const startMs = Math.max(0, data.firstView - startedAt);
+    const endMs = Math.max(startMs, (data.lastSubmit ?? data.lastEvent) - startedAt);
+    const label = challengeId
+      .replace(/^tier\d-/, "")
+      .split("-")
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+    rows.push({
+      challengeId, label, tier: data.tier, startMs, endMs, result: data.result,
+      interactions: data.interactions.map(t => Math.max(0, t - startedAt)),
+      submissions: data.submissions.map(t => Math.max(0, t - startedAt)),
+    });
+  }
+
+  const tierMap = new Map<number, GanttRow[]>();
+  for (const row of rows) {
+    const arr = tierMap.get(row.tier) || [];
+    arr.push(row);
+    tierMap.set(row.tier, arr);
+  }
+
+  return [...tierMap.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([tier, tierRows]) => {
+      tierRows.sort((a, b) => a.startMs - b.startMs);
+      return { tier, rows: tierRows };
+    });
+}
+
+function SessionGantt({ events, startedAt, durationMs }: {
+  events: SessionEvent[];
+  startedAt: number;
+  durationMs: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; row: GanttRow } | null>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(entries => {
+      for (const entry of entries) setContainerWidth(entry.contentRect.width);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const groups = useMemo(() => buildGanttData(events, startedAt), [events, startedAt]);
+
+  const wrongCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of events) {
+      if (e.type === "answer_wrong" && e.challengeId) {
+        counts.set(e.challengeId, (counts.get(e.challengeId) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [events]);
+
+  if (groups.length === 0) return null;
+
+  const totalRows = groups.reduce((sum, g) => sum + g.rows.length, 0);
+  const totalHeight =
+    GANTT.AXIS_HEIGHT +
+    groups.length * (GANTT.TIER_HEADER_HEIGHT + GANTT.TIER_GAP) +
+    totalRows * GANTT.ROW_HEIGHT +
+    8;
+  const chartWidth = Math.max(0, containerWidth - GANTT.LABEL_WIDTH);
+  const timeScale = chartWidth > 0 && durationMs > 0 ? chartWidth / durationMs : 0;
+
+  const tickIntervalMs = GANTT.TICK_INTERVAL_S * 1000;
+  const ticks: number[] = [];
+  for (let t = 0; t <= durationMs; t += tickIntervalMs) ticks.push(t);
+
+  let currentY = GANTT.AXIS_HEIGHT;
+  const tierPositions: Array<{
+    tier: number;
+    headerY: number;
+    rows: Array<{ row: GanttRow; y: number }>;
+  }> = [];
+  for (const group of groups) {
+    const headerY = currentY;
+    currentY += GANTT.TIER_HEADER_HEIGHT;
+    const groupRows: Array<{ row: GanttRow; y: number }> = [];
+    for (const row of group.rows) {
+      groupRows.push({ row, y: currentY });
+      currentY += GANTT.ROW_HEIGHT;
+    }
+    tierPositions.push({ tier: group.tier, headerY, rows: groupRows });
+    currentY += GANTT.TIER_GAP;
+  }
+
+  return (
+    <div style={{ padding: "12px 14px", borderTop: `1px solid ${BORDER}`, background: "rgba(0,0,0,0.015)" }}>
+      <div style={{ fontSize: 11, fontWeight: 500, color: DIM, marginBottom: 8 }}>Session Gantt</div>
+      <div ref={containerRef} style={{ position: "relative" }}>
+        {containerWidth > 0 && (
+          <svg
+            width={containerWidth}
+            height={totalHeight}
+            style={{ display: "block", fontFamily: "var(--font-geist-mono), monospace" }}
+          >
+            {/* Gridlines */}
+            {ticks.map(t => (
+              <line
+                key={t}
+                x1={GANTT.LABEL_WIDTH + t * timeScale}
+                y1={GANTT.AXIS_HEIGHT - 4}
+                x2={GANTT.LABEL_WIDTH + t * timeScale}
+                y2={totalHeight}
+                stroke={BORDER}
+                strokeDasharray="4 3"
+              />
+            ))}
+            {/* Time axis labels */}
+            {ticks.map(t => (
+              <text
+                key={`t-${t}`}
+                x={GANTT.LABEL_WIDTH + t * timeScale}
+                y={GANTT.AXIS_HEIGHT - 10}
+                textAnchor="middle"
+                fontSize={10}
+                fill={DIM}
+              >
+                {`${Math.floor(t / 60000)}:${String(Math.floor((t % 60000) / 1000)).padStart(2, "0")}`}
+              </text>
+            ))}
+            {/* Tier groups */}
+            {tierPositions.map(({ tier, headerY, rows: posRows }) => (
+              <g key={tier}>
+                <text x={8} y={headerY + 14} fontSize={11} fontWeight={600} fill={ACCENT}>
+                  Tier {tier}
+                </text>
+                {posRows.map(({ row, y: rowY }) => {
+                  const barX = GANTT.LABEL_WIDTH + row.startMs * timeScale;
+                  const barW = Math.max(4, (row.endMs - row.startMs) * timeScale);
+                  const barY = rowY + (GANTT.ROW_HEIGHT - GANTT.BAR_HEIGHT) / 2;
+                  const color = GANTT_COLORS[row.result] || GANTT_COLORS.none;
+                  return (
+                    <g key={row.challengeId}>
+                      {/* Label */}
+                      <text
+                        x={GANTT.LABEL_WIDTH - 8}
+                        y={rowY + GANTT.ROW_HEIGHT / 2 + 4}
+                        textAnchor="end"
+                        fontSize={11}
+                        fill="#262626"
+                      >
+                        {row.label}
+                      </text>
+                      {/* Bar */}
+                      <rect
+                        x={barX}
+                        y={barY}
+                        width={barW}
+                        height={GANTT.BAR_HEIGHT}
+                        rx={3}
+                        fill={color}
+                        opacity={row.result === "none" ? 0.4 : 0.85}
+                      />
+                      {/* Interaction dots */}
+                      {row.interactions.map((t, idx) => {
+                        const cx = GANTT.LABEL_WIDTH + t * timeScale;
+                        if (cx < barX - 1 || cx > barX + barW + 1) return null;
+                        return (
+                          <circle
+                            key={idx}
+                            cx={cx}
+                            cy={barY + GANTT.BAR_HEIGHT / 2}
+                            r={GANTT.DOT_RADIUS}
+                            fill="white"
+                            stroke={row.result === "none" ? "#666" : color}
+                            strokeWidth={1.5}
+                          />
+                        );
+                      })}
+                      {/* Submission markers */}
+                      {row.submissions.map((t, idx) => (
+                        <rect
+                          key={`s${idx}`}
+                          x={GANTT.LABEL_WIDTH + t * timeScale - 1.5}
+                          y={barY - 1}
+                          width={3}
+                          height={GANTT.BAR_HEIGHT + 2}
+                          fill={GANTT_COLORS[row.result === "solved" ? "solved" : "wrong"]}
+                          opacity={0.9}
+                          rx={1}
+                        />
+                      ))}
+                      {/* Hover target */}
+                      <rect
+                        x={0}
+                        y={rowY}
+                        width={containerWidth}
+                        height={GANTT.ROW_HEIGHT}
+                        fill="transparent"
+                        style={{ cursor: "pointer" }}
+                        onMouseEnter={() => setTooltip({ x: barX, y: rowY + GANTT.ROW_HEIGHT, row })}
+                        onMouseLeave={() => setTooltip(null)}
+                      />
+                    </g>
+                  );
+                })}
+              </g>
+            ))}
+          </svg>
+        )}
+        {/* Tooltip */}
+        {tooltip && (
+          <div
+            style={{
+              position: "absolute",
+              left: Math.min(tooltip.x, containerWidth - 220),
+              top: tooltip.y + 4,
+              background: "#262626",
+              color: "white",
+              padding: "8px 12px",
+              borderRadius: 6,
+              fontSize: 11,
+              fontFamily: "var(--font-geist-mono), monospace",
+              lineHeight: 1.6,
+              pointerEvents: "none",
+              zIndex: 10,
+              minWidth: 180,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 2 }}>{tooltip.row.label}</div>
+            <div style={{ color: "rgba(255,255,255,0.7)" }}>
+              {formatTime(startedAt + tooltip.row.startMs, startedAt)} →{" "}
+              {formatTime(startedAt + tooltip.row.endMs, startedAt)}{" "}
+              ({formatMs(tooltip.row.endMs - tooltip.row.startMs)})
+            </div>
+            <div
+              style={{
+                color: tooltip.row.result === "none"
+                  ? "rgba(255,255,255,0.5)"
+                  : GANTT_COLORS[tooltip.row.result],
+              }}
+            >
+              {tooltip.row.result === "solved"
+                ? "Solved"
+                : tooltip.row.result === "wrong"
+                  ? `Wrong (${wrongCounts.get(tooltip.row.challengeId) || 0} attempts)`
+                  : tooltip.row.result === "locked"
+                    ? "Locked"
+                    : "No submission"}
+            </div>
+            <div style={{ color: "rgba(255,255,255,0.5)" }}>
+              {tooltip.row.interactions.length} interaction
+              {tooltip.row.interactions.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ─── Overview Cards ──────────────────────────────────────────
 function OverviewCards() {
@@ -245,15 +597,7 @@ function ChallengeAnalytics() {
 }
 
 // ─── Session Timeline ────────────────────────────────────────
-function SessionTimeline({ sessionId, startedAt }: { sessionId: Id<"sessions">; startedAt: number }) {
-  const events = useAdminQuery<Array<{
-    type: string;
-    challengeId?: string;
-    timestamp: number;
-    metadata?: Record<string, unknown>;
-  }>>("timeline", { sessionId });
-
-  if (!events) return <p style={{ color: DIM, fontSize: 12, padding: "8px 14px" }}>Loading timeline...</p>;
+function SessionTimeline({ events, startedAt }: { events: SessionEvent[]; startedAt: number }) {
   if (events.length === 0) return <p style={{ color: DIM, fontSize: 12, padding: "8px 14px" }}>No events recorded.</p>;
 
   return (
@@ -310,6 +654,23 @@ function SessionTimeline({ sessionId, startedAt }: { sessionId: Id<"sessions">; 
   );
 }
 
+function SessionExpandedContent({ sessionId, startedAt, durationMs }: {
+  sessionId: Id<"sessions">;
+  startedAt: number;
+  durationMs: number;
+}) {
+  const events = useAdminQuery<SessionEvent[]>("timeline", { sessionId });
+
+  if (!events) return <p style={{ color: DIM, fontSize: 12, padding: "8px 14px" }}>Loading timeline...</p>;
+
+  return (
+    <>
+      <SessionGantt events={events} startedAt={startedAt} durationMs={durationMs} />
+      <SessionTimeline events={events} startedAt={startedAt} />
+    </>
+  );
+}
+
 // ─── Recent Sessions ─────────────────────────────────────────
 function RecentSessions() {
   const sessions = useAdminQuery<Array<{
@@ -329,6 +690,7 @@ function RecentSessions() {
       dagEfficiency: number;
       criticalPathSpeed: number;
       submissionConfidence: number;
+      failureRecoveryScore?: number;
       tiersReached: number;
     } | null;
   }>>("sessions", { limit: "20" });
@@ -499,6 +861,14 @@ function RecentSessions() {
                             </strong>
                           </span>
                           <span style={{ color: DIM }}>
+                            Recovery:{" "}
+                            <strong style={{ color: "#262626" }}>
+                              {s.orchestrationMetrics.failureRecoveryScore != null
+                                ? `${(s.orchestrationMetrics.failureRecoveryScore * 100).toFixed(0)}%`
+                                : "—"}
+                            </strong>
+                          </span>
+                          <span style={{ color: DIM }}>
                             Tiers Reached:{" "}
                             <strong style={{ color: "#262626" }}>
                               {s.orchestrationMetrics.tiersReached}
@@ -506,7 +876,7 @@ function RecentSessions() {
                           </span>
                         </div>
                       )}
-                      <SessionTimeline sessionId={s._id} startedAt={s.startedAt} />
+                      <SessionExpandedContent sessionId={s._id} startedAt={s.startedAt} durationMs={duration} />
                     </td>
                   </tr>
                 )}

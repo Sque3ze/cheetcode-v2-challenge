@@ -133,11 +133,12 @@ export const configDebuggerChallenge: ChallengeDefinition<ConfigDebuggerPageData
   description: "Trace through layered config overrides to find which layer introduced a bad value.",
 
   instructions: (pageData) => {
+    const interactHint = `To load a config layer, use the interact API with action "layer" and parameter name set to the layer name (e.g. { "name": "defaults" }, { "name": "production" }, or { "name": "overrides" }).`;
     const variants = [
-      `A configuration system uses 3 layers: defaults → production → overrides (last wins). The resolved config below has one key flagged as problematic — "${pageData.flaggedKey}" has an unexpected value. Load each config layer, trace which layer introduced the bad override, and determine what the correct value should be (the value from the layer before the override). Submit your answer as "layerName:key:correctValue".`,
-      `The resolved configuration shows the final merged values from 3 layers (defaults, production, overrides). The key "${pageData.flaggedKey}" is flagged as causing issues. Investigate each layer to find which one overrode it to the wrong value, then report the layer name, key, and what the value should be. Format: "layer:key:value".`,
-      `Debug this config cascade. Three layers merge into the resolved config shown below. The key "${pageData.flaggedKey}" has a bad value. Load each layer via the panel below, find which layer is responsible for the override, and determine the correct value (what the previous layer had). Answer format: "layerName:key:correctValue".`,
-      `Something is wrong with "${pageData.flaggedKey}" in the resolved config. The config system has 3 layers (defaults → production → overrides) where later layers override earlier ones. Find which layer set the bad value and what it should be instead. Submit as "layer:key:value".`,
+      `A configuration system uses 3 layers: defaults → production → overrides (last wins). The resolved config below has one key flagged as problematic — "${pageData.flaggedKey}" has an unexpected value. Load each config layer, trace which layer introduced the bad override, and determine what the correct value should be (the value from the layer before the override). Submit your answer as "layerName:key:correctValue". ${interactHint}`,
+      `The resolved configuration shows the final merged values from 3 layers (defaults, production, overrides). The key "${pageData.flaggedKey}" is flagged as causing issues. Investigate each layer to find which one overrode it to the wrong value, then report the layer name, key, and what the value should be. Format: "layer:key:value". ${interactHint}`,
+      `Debug this config cascade. Three layers merge into the resolved config shown below. The key "${pageData.flaggedKey}" has a bad value. Load each layer via the panel below, find which layer is responsible for the override, and determine the correct value (what the previous layer had). Answer format: "layerName:key:correctValue". ${interactHint}`,
+      `Something is wrong with "${pageData.flaggedKey}" in the resolved config. The config system has 3 layers (defaults → production → overrides) where later layers override earlier ones. Find which layer set the bad value and what it should be instead. Submit as "layer:key:value". ${interactHint}`,
     ];
     return variants[pageData.variantIndex];
   },

@@ -70,11 +70,12 @@ export const inventoryReconciliationChallenge: ChallengeDefinition<InventoryReco
   description: "Reconcile conflicting data from three inventory systems using per-field trust rules.",
 
   instructions: (pageData) => {
+    const interactHint = `To load a system's data, use the interact API with action "source" and parameter system (e.g. { "system": "warehouse" }, { "system": "sales" }, or { "system": "shipping" }).`;
     const variants = [
-      `Three inventory systems track the same products but disagree on values. Load data from each system and reconcile using the rules shown. Then answer: ${pageData.question}`,
-      `Warehouse, Sales, and Shipping each report different data for ${pageData.products.length} products. Fetch each system's data, apply the reconciliation rules to determine the authoritative value for each field, then compute: ${pageData.question}`,
-      `This reconciliation dashboard has ${pageData.products.length} products tracked across 3 systems. Each system may report different quantities, statuses, locations, and prices. Use the trust rules to build the correct unified view, then answer: ${pageData.question}`,
-      `Load all three data sources (Warehouse, Sales, Shipping). For each product, apply the field-level trust rules to determine the correct values. Once reconciled, calculate: ${pageData.question}`,
+      `Three inventory systems track the same products but disagree on values. Load data from each system and reconcile using the rules shown. Then answer: ${pageData.question} ${interactHint}`,
+      `Warehouse, Sales, and Shipping each report different data for ${pageData.products.length} products. Fetch each system's data, apply the reconciliation rules to determine the authoritative value for each field, then compute: ${pageData.question} ${interactHint}`,
+      `This reconciliation dashboard has ${pageData.products.length} products tracked across 3 systems. Each system may report different quantities, statuses, locations, and prices. Use the trust rules to build the correct unified view, then answer: ${pageData.question} ${interactHint}`,
+      `Load all three data sources (Warehouse, Sales, Shipping). For each product, apply the field-level trust rules to determine the correct values. Once reconciled, calculate: ${pageData.question} ${interactHint}`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -254,10 +255,15 @@ export const inventoryReconciliationChallenge: ChallengeDefinition<InventoryReco
 
   handleInteract(hiddenData, action, params) {
     if (action === "source") {
-      const system = params.system as string;
+      const system = params.system as string | undefined;
+      if (!system) {
+        return { error: "Missing required parameter: system. Use { \"system\": \"warehouse\" }, { \"system\": \"sales\" }, or { \"system\": \"shipping\" }." };
+      }
       const systems = hiddenData.systems as Record<string, SystemProduct[]>;
       const data = systems[system];
-      if (!data) return null;
+      if (!data) {
+        return { error: `Unknown system "${system}". Valid systems: ${Object.keys(systems).join(", ")}` };
+      }
       return { system, products: data };
     }
     return null;

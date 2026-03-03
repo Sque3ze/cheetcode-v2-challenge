@@ -14,12 +14,48 @@ export interface SessionEvent {
   metadata?: Record<string, unknown>;
 }
 
+function isCorrectSubmission(e: SessionEvent): boolean {
+  return !!(e.metadata as { correct?: boolean } | undefined)?.correct;
+}
+
 export interface OrchestrationMetrics {
   parallelizationScore: number;  // 0-1
   dagEfficiency: number;         // 0-1
   criticalPathSpeed: number;     // 0-1
   submissionConfidence: number;  // 0-1
+  failureRecoveryScore: number;  // 0-1
   tiersReached: number;          // 1-4
+}
+
+export type FailurePattern =
+  | "investigate_succeed"  // interacted/re-viewed, then correct  (1.0)
+  | "quick_retry_succeed"  // retried <10s without investigation  (0.7)
+  | "pivot"                // moved to different challenge         (0.5)
+  | "investigate_fail"     // interacted/re-viewed, then wrong    (0.2)
+  | "abandon"              // never retried this challenge         (0.3)
+  | "quick_retry_fail";    // retried <10s, wrong again            (0.0)
+
+const PATTERN_SCORES: Record<FailurePattern, number> = {
+  investigate_succeed: 1.0,
+  quick_retry_succeed: 0.7,
+  pivot: 0.5,
+  investigate_fail: 0.2,
+  abandon: 0.3,
+  quick_retry_fail: 0.0,
+};
+
+export interface FailureRecoveryDetail {
+  challengeId: string;
+  failureTimestamp: number;
+  pattern: FailurePattern;
+  recoveryTimeMs: number | null;
+}
+
+export interface FailureRecoveryResult {
+  score: number;
+  totalFailures: number;
+  patterns: Record<FailurePattern, number>;
+  details: FailureRecoveryDetail[];
 }
 
 interface ChallengeInfo {
@@ -29,15 +65,19 @@ interface ChallengeInfo {
 }
 
 // The two critical path chains in the DAG
-const CRITICAL_PATH_ROOTS = ["tier1-form-fill", "tier1-tab-navigation"];
+const CRITICAL_PATH_ROOTS = ["tier1-form-fill", "tier1-tab-navigation", "tier1-filter-search"];
 const CRITICAL_CHAINS: string[][] = [
   ["tier1-form-fill", "tier2-linked-data-lookup", "tier3-constraint-solver"],
   ["tier1-form-fill", "tier2-linked-data-lookup", "tier3-fan-out-aggregator"],
+  ["tier1-form-fill", "tier2-linked-data-lookup", "tier3-inventory-reconciliation"],
   ["tier1-form-fill", "tier2-linked-data-lookup", "tier4-red-herring"],
+  ["tier1-filter-search", "tier2-config-debugger"],
   ["tier1-tab-navigation", "tier2-sequential-calculator", "tier3-data-dashboard"],
   ["tier1-tab-navigation", "tier2-sequential-calculator", "tier3-price-negotiator"],
+  ["tier1-tab-navigation", "tier2-sequential-calculator", "tier3-event-sourcing"],
   ["tier1-tab-navigation", "tier2-sequential-calculator", "tier4-calculation-audit"],
   ["tier1-tab-navigation", "tier2-resilient-collector"],
+  ["tier1-tab-navigation", "tier2-resilient-collector", "tier3-trace-analyzer"],
 ];
 
 /**
@@ -205,6 +245,120 @@ export function computeCriticalPathSpeed(
 }
 
 /**
+ * Analyze failure recovery behavior: after each wrong submission, what does
+ * the agent do? Investigate and retry? Immediately brute-force? Pivot away?
+ *
+ * Returns both a 0-1 score and per-failure detail for telemetry display.
+ * Score of 1.0 when there are no failures (never needed recovery).
+ */
+export function analyzeFailureRecovery(events: SessionEvent[]): FailureRecoveryResult {
+  // Find all wrong submissions
+  const failures: Array<{ idx: number; challengeId: string; timestamp: number }> = [];
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i];
+    if (
+      e.type === "answer_submitted" &&
+      e.challengeId &&
+      !isCorrectSubmission(e)
+    ) {
+      failures.push({ idx: i, challengeId: e.challengeId, timestamp: e.timestamp });
+    }
+  }
+
+  if (failures.length === 0) {
+    return {
+      score: 1,
+      totalFailures: 0,
+      patterns: { investigate_succeed: 0, quick_retry_succeed: 0, pivot: 0, investigate_fail: 0, abandon: 0, quick_retry_fail: 0 },
+      details: [],
+    };
+  }
+
+  const details: FailureRecoveryDetail[] = [];
+  const patternCounts: Record<FailurePattern, number> = {
+    investigate_succeed: 0, quick_retry_succeed: 0, pivot: 0,
+    investigate_fail: 0, abandon: 0, quick_retry_fail: 0,
+  };
+
+  for (const failure of failures) {
+    let investigated = false;
+    let pattern: FailurePattern = "abandon";
+    let recoveryTimeMs: number | null = null;
+
+    for (let j = failure.idx + 1; j < events.length; j++) {
+      const next = events[j];
+
+      // Skip the answer_wrong / challenge_locked events that accompany the failure
+      if (
+        next.challengeId === failure.challengeId &&
+        (next.type === "answer_wrong" || next.type === "challenge_locked")
+      ) {
+        continue;
+      }
+
+      // Same challenge interaction = investigating
+      if (
+        next.challengeId === failure.challengeId &&
+        next.type === "challenge_interacted"
+      ) {
+        investigated = true;
+        continue;
+      }
+
+      // Same challenge re-view = investigating
+      if (
+        next.challengeId === failure.challengeId &&
+        next.type === "challenge_viewed"
+      ) {
+        investigated = true;
+        continue;
+      }
+
+      // Same challenge retry (next submission attempt)
+      if (
+        next.challengeId === failure.challengeId &&
+        next.type === "answer_submitted"
+      ) {
+        const isCorrect = isCorrectSubmission(next);
+        const elapsed = next.timestamp - failure.timestamp;
+        const isQuick = elapsed < 10000;
+        recoveryTimeMs = elapsed;
+
+        if (isCorrect) {
+          pattern = investigated || !isQuick ? "investigate_succeed" : "quick_retry_succeed";
+        } else {
+          pattern = investigated || !isQuick ? "investigate_fail" : "quick_retry_fail";
+        }
+        break;
+      }
+
+      // Action on a different challenge = pivot
+      if (
+        next.challengeId &&
+        next.challengeId !== failure.challengeId &&
+        (next.type === "challenge_viewed" || next.type === "answer_submitted")
+      ) {
+        pattern = "pivot";
+        recoveryTimeMs = next.timestamp - failure.timestamp;
+        break;
+      }
+    }
+
+    patternCounts[pattern]++;
+    details.push({
+      challengeId: failure.challengeId,
+      failureTimestamp: failure.timestamp,
+      pattern,
+      recoveryTimeMs,
+    });
+  }
+
+  const score = details.reduce((sum, d) => sum + PATTERN_SCORES[d.pattern], 0) / details.length;
+
+  return { score, totalFailures: failures.length, patterns: patternCounts, details };
+}
+
+/**
  * Compute submission confidence: ratio of correct to total answer submissions.
  */
 export function computeSubmissionConfidence(events: SessionEvent[]): number {
@@ -213,9 +367,7 @@ export function computeSubmissionConfidence(events: SessionEvent[]): number {
   for (const e of events) {
     if (e.type === "answer_submitted") {
       total++;
-      if (e.metadata && (e.metadata as { correct?: boolean }).correct) {
-        correct++;
-      }
+      if (isCorrectSubmission(e)) correct++;
     }
   }
   return total > 0 ? correct / total : 0;
@@ -253,6 +405,7 @@ export function computeOrchestrationMetrics(
     dagEfficiency: computeDagEfficiency(events, challenges),
     criticalPathSpeed: computeCriticalPathSpeed(events, sessionStartedAt, minSolveTimes),
     submissionConfidence: computeSubmissionConfidence(events),
+    failureRecoveryScore: analyzeFailureRecovery(events).score,
     tiersReached: computeTiersReached(events, challenges),
   };
 }
@@ -263,9 +416,10 @@ export function computeOrchestrationMetrics(
  */
 export function computeCombinedScore(metrics: OrchestrationMetrics): number {
   const weighted =
-    metrics.parallelizationScore * 0.30 +
-    metrics.dagEfficiency * 0.30 +
+    metrics.parallelizationScore * 0.25 +
+    metrics.dagEfficiency * 0.25 +
     metrics.criticalPathSpeed * 0.20 +
-    metrics.submissionConfidence * 0.20;
+    metrics.submissionConfidence * 0.15 +
+    (metrics.failureRecoveryScore ?? 1) * 0.15;
   return Math.round(weighted * 100);
 }

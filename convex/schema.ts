@@ -27,6 +27,7 @@ export default defineSchema({
         dagEfficiency: v.number(),
         criticalPathSpeed: v.number(),
         submissionConfidence: v.number(),
+        failureRecoveryScore: v.optional(v.number()),
         tiersReached: v.number(),
       })
     ),
@@ -67,6 +68,7 @@ export default defineSchema({
         dagEfficiency: v.number(), // 0-1: how close to optimal topological ordering
         criticalPathSpeed: v.number(), // 0-1: ratio of theoretical min vs actual critical path time
         submissionConfidence: v.number(), // 0-1: correct / total submissions
+        failureRecoveryScore: v.optional(v.number()), // 0-1: adaptive behavior after wrong answers
         tiersReached: v.number(), // highest tier solved (1-4)
       })
     ),

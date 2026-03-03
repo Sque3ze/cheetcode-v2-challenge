@@ -41,7 +41,9 @@ export async function verifyGitHubToken(token: string): Promise<string | null> {
 
 /**
  * Extract the GitHub username from a request.
- * Checks Authorization header (PAT) first, returns null if not present/invalid.
+ * Checks Authorization header for:
+ *   1. Test auth: "Bearer test:<TEST_AUTH_SECRET>" + X-Test-User header
+ *   2. GitHub PAT: "Bearer ghp_..."
  */
 export async function resolveGitHubFromHeader(
   request: Request,
@@ -50,5 +52,16 @@ export async function resolveGitHubFromHeader(
   if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7).trim();
   if (!token) return null;
+
+  // Test auth: "Bearer test:<secret>" with X-Test-User header
+  if (token.startsWith("test:")) {
+    const testSecret = process.env.TEST_AUTH_SECRET;
+    if (!testSecret) return null;
+    const provided = token.slice(5);
+    if (provided !== testSecret) return null;
+    const testUser = request.headers.get("x-test-user")?.trim();
+    return testUser || null;
+  }
+
   return verifyGitHubToken(token);
 }

@@ -12,7 +12,7 @@
 import type { ChallengeDefinition } from "../../../src/lib/challenge-types";
 import type { ChallengeData } from "../../../src/lib/seed";
 
-interface InventoryReconciliationPageData {
+interface TraceAnalyzerPageData {
   traceId: string;
   services: string[];
   requestSummary: {
@@ -89,7 +89,7 @@ function makeTimestamp(data: ChallengeData, baseMinute: number): string {
   return `2025-03-15T14:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}.${String(ms).padStart(3, "0")}Z`;
 }
 
-export const traceAnalyzerChallenge: ChallengeDefinition<InventoryReconciliationPageData> = {
+export const traceAnalyzerChallenge: ChallengeDefinition<TraceAnalyzerPageData> = {
   id: "tier3-trace-analyzer",
   title: "Distributed Trace Analyzer",
   tier: 3,
@@ -97,11 +97,12 @@ export const traceAnalyzerChallenge: ChallengeDefinition<InventoryReconciliation
   description: "Trace a failed request through microservices to find the failing service and error code.",
 
   instructions: (pageData) => {
+    const interactHint = `To load a service's logs, use the interact API with action "logs" and parameter service set to the service name (e.g. { "service": "${pageData.services[0]}" }).`;
     const variants = [
-      `A request with trace ID "${pageData.traceId}" has failed. Load logs from each of the ${pageData.services.length} services to find which service encountered the error and what error code was returned. Submit your answer as "ServiceName:ERROR_CODE".`,
-      `Trace the failed request "${pageData.traceId}" through the microservice architecture. Query each service's logs, filter for the target trace ID, and identify the service that produced the error. Answer format: "ServiceName:ERROR_CODE".`,
-      `The request "${pageData.traceId}" failed somewhere in the pipeline. Investigate by loading logs from each service. Most services processed this request successfully — find the one that didn't. Submit as "ServiceName:ERROR_CODE".`,
-      `Debug this failed request. Load log data from all ${pageData.services.length} services, search for trace ID "${pageData.traceId}", and find the error. Your answer should be the service name and error code, separated by a colon.`,
+      `A request with trace ID "${pageData.traceId}" has failed. Load logs from each of the ${pageData.services.length} services to find which service encountered the error and what error code was returned. Submit your answer as "ServiceName:ERROR_CODE". ${interactHint}`,
+      `Trace the failed request "${pageData.traceId}" through the microservice architecture. Query each service's logs, filter for the target trace ID, and identify the service that produced the error. Answer format: "ServiceName:ERROR_CODE". ${interactHint}`,
+      `The request "${pageData.traceId}" failed somewhere in the pipeline. Investigate by loading logs from each service. Most services processed this request successfully — find the one that didn't. Submit as "ServiceName:ERROR_CODE". ${interactHint}`,
+      `Debug this failed request. Load log data from all ${pageData.services.length} services, search for trace ID "${pageData.traceId}", and find the error. Your answer should be the service name and error code, separated by a colon. ${interactHint}`,
     ];
     return variants[pageData.variantIndex];
   },
@@ -230,10 +231,15 @@ export const traceAnalyzerChallenge: ChallengeDefinition<InventoryReconciliation
 
   handleInteract(hiddenData, action, params) {
     if (action === "logs") {
-      const service = params.service as string;
+      const service = params.service as string | undefined;
+      if (!service) {
+        return { error: "Missing required parameter: service. Use { \"service\": \"<service name>\" }." };
+      }
       const logs = hiddenData.logs as Record<string, LogEntry[]>;
       const entries = logs[service];
-      if (!entries) return null;
+      if (!entries) {
+        return { error: `Unknown service "${service}". Valid services: ${Object.keys(logs).join(", ")}` };
+      }
       return { service, entries };
     }
     return null;

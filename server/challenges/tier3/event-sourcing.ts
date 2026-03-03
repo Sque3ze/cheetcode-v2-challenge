@@ -86,11 +86,12 @@ export const eventSourcingChallenge: ChallengeDefinition<EventSourcingPageData> 
 
   instructions: (pageData) => {
     const remaining = pageData.snapshot.totalEvents - pageData.snapshot.snapshotEventId;
+    const interactHint = `To load events, use the interact API with action "events" and an optional page parameter (e.g. { "page": 1 }). Events are paginated, 4 per page.`;
     const variants = [
-      `The order snapshot below is stale — it reflects state as of event #${pageData.snapshot.snapshotEventId}, but ${remaining} more events have occurred. Load the event log, apply each event in order to the snapshot, and answer: ${pageData.question}`,
-      `This order has ${pageData.snapshot.totalEvents} total events but the snapshot only covers the first ${pageData.snapshot.snapshotEventId}. Fetch the remaining events and replay them to reconstruct the current state. Be careful — some events cancel previous ones. Question: ${pageData.question}`,
-      `The displayed snapshot is outdated by ${remaining} events. Load the events via the panel below and apply them sequentially. Events like "discount_removed" cancel earlier "discount_applied" events, and "item_removed" removes items entirely. Once you have the current state, answer: ${pageData.question}`,
-      `Replay ${remaining} events on top of the stale snapshot to get the current order state. Events must be applied in order — later events may override or cancel earlier ones. Answer: ${pageData.question}`,
+      `The order snapshot below is stale — it reflects state as of event #${pageData.snapshot.snapshotEventId}, but ${remaining} more events have occurred. Load the event log, apply each event in order to the snapshot, and answer: ${pageData.question} ${interactHint}`,
+      `This order has ${pageData.snapshot.totalEvents} total events but the snapshot only covers the first ${pageData.snapshot.snapshotEventId}. Fetch the remaining events and replay them to reconstruct the current state. Be careful — some events cancel previous ones. Question: ${pageData.question} ${interactHint}`,
+      `The displayed snapshot is outdated by ${remaining} events. Load the events via the panel below and apply them sequentially. Events like "discount_removed" cancel earlier "discount_applied" events, and "item_removed" removes items entirely. Once you have the current state, answer: ${pageData.question} ${interactHint}`,
+      `Replay ${remaining} events on top of the stale snapshot to get the current order state. Events must be applied in order — later events may override or cancel earlier ones. Answer: ${pageData.question} ${interactHint}`,
     ];
     return variants[pageData.variantIndex];
   },
