@@ -5,6 +5,7 @@ import { query } from "./_generated/server";
  * 1. Score (percentage) descending
  * 2. Wrong attempts ascending (tiebreaker 1)
  * 3. Last correct submission time ascending (tiebreaker 2)
+ * 4. Fewer API calls ascending (tiebreaker 3)
  */
 export const getAll = query({
   args: {},
@@ -25,7 +26,11 @@ export const getAll = query({
       // Tiebreaker 2: earlier last correct answer wins
       const aTime = a.lastCorrectAt ?? Infinity;
       const bTime = b.lastCorrectAt ?? Infinity;
-      return aTime - bTime;
+      if (aTime !== bTime) return aTime - bTime;
+      // Tiebreaker 3: fewer API calls wins
+      const aCalls = a.apiCalls ?? Infinity;
+      const bCalls = b.apiCalls ?? Infinity;
+      return aCalls - bCalls;
     });
   },
 });

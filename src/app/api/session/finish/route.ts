@@ -82,6 +82,7 @@ export async function POST(request: Request) {
       totalPoints,
       wrongAttempts: stats.wrongAttempts,
       lastCorrectAt: stats.lastCorrectAt,
+      apiCalls: session.apiCalls ?? 0,
     });
 
     return NextResponse.json({

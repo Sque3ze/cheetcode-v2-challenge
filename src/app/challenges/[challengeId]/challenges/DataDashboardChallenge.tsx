@@ -127,31 +127,36 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
   return (
     <div>
       {/* Quick Stats card */}
-      <div className="bg-gradient-to-r from-emerald-900/30 to-teal-900/30 rounded-xl border border-emerald-500/30 p-4 mb-6">
+      <div style={{ background: "rgba(26,147,56,0.04)", border: "1px solid rgba(26,147,56,0.2)", borderRadius: 12, padding: 16, marginBottom: 24 }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-emerald-400 uppercase tracking-wider">Quick Stats</p>
-            <p className="text-sm text-gray-300 mt-1">
+            <p className="text-xs" style={{ color: "#1a9338", textTransform: "uppercase", letterSpacing: "0.05em" }}>Quick Stats</p>
+            <p className="text-sm" style={{ color: "rgba(38,38,38,0.7)", marginTop: 4 }}>
               Total Profit: {pageData.targetProduct} / {pageData.targetRegion}
             </p>
           </div>
-          <p className="text-2xl font-bold font-mono text-emerald-300" {...testAttr('quick-stats')}>
+          <p className="text-2xl font-bold font-mono" style={{ color: "#1a9338" }} {...testAttr('quick-stats')}>
             ${pageData.quickStatsTotal.toFixed(2)}
           </p>
         </div>
       </div>
 
       {/* Tab buttons */}
-      <div className="flex gap-1 mb-4 border-b border-gray-800">
+      <div className="flex" style={{ gap: 4, marginBottom: 16, borderBottom: "1px solid #e8e8e8" }}>
         {tabs.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => handleTabChange(key)}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === key
-                ? "text-blue-400 border-b-2 border-blue-400"
-                : "text-gray-500 hover:text-gray-300"
-            }`}
+            className="text-sm font-medium"
+            style={{
+              padding: "8px 16px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              ...(activeTab === key
+                ? { color: "#fa5d19", borderBottom: "2px solid #fa5d19" }
+                : { color: "rgba(38,38,38,0.5)" }),
+            }}
             {...testAttr('dashboard-tab', key)}
           >
             {label}
@@ -161,36 +166,36 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
 
       {/* Sales Tab */}
       {activeTab === "sales" && (
-        <div className="mb-6">
-          <div className="overflow-x-auto rounded-lg border border-gray-800">
+        <div style={{ marginBottom: 24 }}>
+          <div className="card-surface overflow-x-auto" style={{ borderRadius: 12, overflow: "hidden" }}>
             <table className="w-full text-sm" {...testAttr('table', 'sales')}>
               <thead>
-                <tr className="bg-gray-900">
-                  <th className="px-3 py-2 text-left text-gray-400 font-medium">ID</th>
-                  <th className="px-3 py-2 text-left text-gray-400 font-medium">Region</th>
-                  <th className="px-3 py-2 text-left text-gray-400 font-medium">Product</th>
-                  <th className="px-3 py-2 text-right text-gray-400 font-medium">Revenue</th>
-                  <th className="px-3 py-2 text-right text-gray-400 font-medium">Units</th>
-                  <th className="px-3 py-2 text-left text-gray-400 font-medium">Quarter</th>
+                <tr style={{ background: "#f3f3f3" }}>
+                  <th className="text-left font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>ID</th>
+                  <th className="text-left font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Region</th>
+                  <th className="text-left font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Product</th>
+                  <th className="text-right font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Revenue</th>
+                  <th className="text-right font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Units</th>
+                  <th className="text-left font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Quarter</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingPage ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-gray-400">
-                      <div className="animate-spin inline-block rounded-full h-6 w-6 border-b-2 border-blue-400 mr-2" />
+                    <td colSpan={6} style={{ padding: "32px 12px", textAlign: "center", color: "rgba(38,38,38,0.5)" }}>
+                      <div className="animate-spin" style={{ display: "inline-block", width: 24, height: 24, borderRadius: "50%", borderBottom: "2px solid #fa5d19", marginRight: 8 }} />
                       Loading...
                     </td>
                   </tr>
                 ) : (
                   salesSlice.map((row) => (
-                    <tr key={row.id} className="border-t border-gray-800" {...testAttr('sale-id', row.id)}>
-                      <td className="px-3 py-2 font-mono text-xs">{row.id}</td>
-                      <td className="px-3 py-2" {...testAttr('region')}>{row.region}</td>
-                      <td className="px-3 py-2" {...testAttr('product')}>{row.product}</td>
-                      <td className="px-3 py-2 text-right font-mono" {...testAttr('revenue')}>${row.revenue.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right" {...testAttr('units')}>{row.units}</td>
-                      <td className="px-3 py-2 text-gray-400" {...testAttr('quarter')}>{row.quarter}</td>
+                    <tr key={row.id} style={{ borderTop: "1px solid #e8e8e8" }} {...testAttr('sale-id', row.id)}>
+                      <td className="font-mono text-xs" style={{ padding: "8px 12px" }}>{row.id}</td>
+                      <td style={{ padding: "8px 12px" }} {...testAttr('region')}>{row.region}</td>
+                      <td style={{ padding: "8px 12px" }} {...testAttr('product')}>{row.product}</td>
+                      <td className="text-right font-mono" style={{ padding: "8px 12px" }} {...testAttr('revenue')}>${row.revenue.toFixed(2)}</td>
+                      <td className="text-right" style={{ padding: "8px 12px" }} {...testAttr('units')}>{row.units}</td>
+                      <td style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }} {...testAttr('quarter')}>{row.quarter}</td>
                     </tr>
                   ))
                 )}
@@ -198,15 +203,16 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
             </table>
           </div>
 
-          <div className="flex items-center justify-between mt-3">
-            <p className="text-xs text-gray-500">
+          <div className="flex items-center justify-between" style={{ marginTop: 12 }}>
+            <p className="text-xs" style={{ color: "rgba(38,38,38,0.35)" }}>
               Page {salesPage + 1} of {totalPages} ({totalSales} total rows)
             </p>
-            <div className="flex gap-2">
+            <div className="flex" style={{ gap: 8 }}>
               <button
                 onClick={() => handleSalesPageChange(Math.max(0, salesPage - 1))}
                 disabled={salesPage === 0}
-                className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
+                className="btn-ghost text-sm"
+                style={{ padding: "4px 12px", borderRadius: 6 }}
                 {...testAttr('page-prev')}
               >
                 Previous
@@ -214,7 +220,8 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
               <button
                 onClick={() => handleSalesPageChange(Math.min(totalPages - 1, salesPage + 1))}
                 disabled={salesPage === totalPages - 1}
-                className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
+                className="btn-ghost text-sm"
+                style={{ padding: "4px 12px", borderRadius: 6 }}
                 {...testAttr('page-next')}
               >
                 Next
@@ -226,28 +233,28 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
 
       {/* Costs Tab */}
       {activeTab === "costs" && (
-        <div className="mb-6">
+        <div style={{ marginBottom: 24 }}>
           {loadingTab ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400" />
-              <span className="ml-3 text-sm text-gray-400">Loading costs...</span>
+            <div className="flex items-center justify-center" style={{ padding: "32px 0" }}>
+              <div className="animate-spin" style={{ width: 24, height: 24, borderRadius: "50%", borderBottom: "2px solid #fa5d19" }} />
+              <span className="text-sm" style={{ marginLeft: 12, color: "rgba(38,38,38,0.5)" }}>Loading costs...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-800">
+            <div className="card-surface overflow-x-auto" style={{ borderRadius: 12, overflow: "hidden" }}>
               <table className="w-full text-sm" {...testAttr('table', 'costs')}>
                 <thead>
-                  <tr className="bg-gray-900">
-                    <th className="px-3 py-2 text-left text-gray-400 font-medium">Product</th>
-                    <th className="px-3 py-2 text-right text-gray-400 font-medium">Cost/Unit</th>
-                    <th className="px-3 py-2 text-right text-gray-400 font-medium">Shipping</th>
+                  <tr style={{ background: "#f3f3f3" }}>
+                    <th className="text-left font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Product</th>
+                    <th className="text-right font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Cost/Unit</th>
+                    <th className="text-right font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Shipping</th>
                   </tr>
                 </thead>
                 <tbody>
                   {costs.map((row) => (
-                    <tr key={row.product} className="border-t border-gray-800" {...testAttr('cost-product', row.product)}>
-                      <td className="px-3 py-2">{row.product}</td>
-                      <td className="px-3 py-2 text-right font-mono" {...testAttr('cost-per-unit')}>${row.costPerUnit.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right font-mono" {...testAttr('shipping')}>${row.shipping.toFixed(2)}</td>
+                    <tr key={row.product} style={{ borderTop: "1px solid #e8e8e8" }} {...testAttr('cost-product', row.product)}>
+                      <td style={{ padding: "8px 12px" }}>{row.product}</td>
+                      <td className="text-right font-mono" style={{ padding: "8px 12px" }} {...testAttr('cost-per-unit')}>${row.costPerUnit.toFixed(2)}</td>
+                      <td className="text-right font-mono" style={{ padding: "8px 12px" }} {...testAttr('shipping')}>${row.shipping.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -259,26 +266,26 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
 
       {/* Taxes Tab */}
       {activeTab === "taxes" && (
-        <div className="mb-6">
+        <div style={{ marginBottom: 24 }}>
           {loadingTab ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400" />
-              <span className="ml-3 text-sm text-gray-400">Loading taxes...</span>
+            <div className="flex items-center justify-center" style={{ padding: "32px 0" }}>
+              <div className="animate-spin" style={{ width: 24, height: 24, borderRadius: "50%", borderBottom: "2px solid #fa5d19" }} />
+              <span className="text-sm" style={{ marginLeft: 12, color: "rgba(38,38,38,0.5)" }}>Loading taxes...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-800">
+            <div className="card-surface overflow-x-auto" style={{ borderRadius: 12, overflow: "hidden" }}>
               <table className="w-full text-sm" {...testAttr('table', 'taxes')}>
                 <thead>
-                  <tr className="bg-gray-900">
-                    <th className="px-3 py-2 text-left text-gray-400 font-medium">Region</th>
-                    <th className="px-3 py-2 text-right text-gray-400 font-medium">Tax Rate</th>
+                  <tr style={{ background: "#f3f3f3" }}>
+                    <th className="text-left font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Region</th>
+                    <th className="text-right font-medium" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.5)" }}>Tax Rate</th>
                   </tr>
                 </thead>
                 <tbody>
                   {taxes.map((row) => (
-                    <tr key={row.region} className="border-t border-gray-800" {...testAttr('tax-region', row.region)}>
-                      <td className="px-3 py-2">{row.region}</td>
-                      <td className="px-3 py-2 text-right font-mono" {...testAttr('tax-rate')}>{row.taxRate}%</td>
+                    <tr key={row.region} style={{ borderTop: "1px solid #e8e8e8" }} {...testAttr('tax-region', row.region)}>
+                      <td style={{ padding: "8px 12px" }}>{row.region}</td>
+                      <td className="text-right font-mono" style={{ padding: "8px 12px" }} {...testAttr('tax-rate')}>{row.taxRate}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -290,13 +297,13 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
 
       {/* Answer input */}
       <div>
-        <label className="block text-sm text-gray-400 mb-2">Total Profit</label>
+        <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Total Profit</label>
         <input
           type="text"
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder="Enter the total profit..."
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>

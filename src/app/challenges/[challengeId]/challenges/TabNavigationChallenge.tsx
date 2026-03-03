@@ -71,16 +71,21 @@ export default function TabNavigationChallenge({ pageData, answerRef, sessionId,
   return (
     <div>
       {/* Tab bar */}
-      <div className="flex border-b border-gray-800 mb-0">
+      <div className="flex" style={{ borderBottom: "1px solid #e8e8e8" }}>
         {tabs.map((tab, i) => (
           <button
             key={i}
             onClick={() => handleTabClick(i)}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === i
-                ? "text-white border-b-2 border-blue-500 bg-gray-900"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
+            className="text-sm font-medium"
+            style={{
+              padding: "12px 24px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              ...(activeTab === i
+                ? { color: "#fa5d19", borderBottom: "2px solid #fa5d19" }
+                : { color: "rgba(38,38,38,0.5)" }),
+            }}
             {...testAttr('tab', tab.label)}
           >
             {tab.label}
@@ -89,18 +94,25 @@ export default function TabNavigationChallenge({ pageData, answerRef, sessionId,
       </div>
 
       {/* Tab content */}
-      <div className="bg-gray-900 rounded-b-lg border border-t-0 border-gray-800 p-6">
+      <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderTop: "none", borderRadius: "0 0 12px 12px", padding: 24 }}>
         {loadingTab ? (
-          <div className="flex items-center justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400" />
-            <span className="ml-3 text-sm text-gray-400">Loading...</span>
+          <div className="flex items-center justify-center" style={{ padding: "16px 0" }}>
+            <div className="animate-spin" style={{ width: 24, height: 24, borderRadius: "50%", borderBottom: "2px solid #fa5d19" }} />
+            <span className="text-sm" style={{ marginLeft: 12, color: "rgba(38,38,38,0.5)" }}>Loading...</span>
           </div>
         ) : (
-          <dl className="space-y-4">
+          <dl style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {tabs[activeTab].content.map((item, i) => (
-              <div key={i} className="flex justify-between items-center py-2 border-b border-gray-800 last:border-0">
-                <dt className="text-gray-400" {...testAttr('key', item.key)}>{item.key}</dt>
-                <dd className="text-gray-100 font-mono" {...testAttr('value', item.key)}>{item.value}</dd>
+              <div
+                key={i}
+                className="flex justify-between items-center"
+                style={{
+                  padding: "8px 0",
+                  borderBottom: i < tabs[activeTab].content.length - 1 ? "1px solid #e8e8e8" : "none",
+                }}
+              >
+                <dt style={{ color: "rgba(38,38,38,0.5)" }} {...testAttr('key', item.key)}>{item.key}</dt>
+                <dd className="font-mono" style={{ color: "#262626" }} {...testAttr('value', item.key)}>{item.value}</dd>
               </div>
             ))}
           </dl>
@@ -108,14 +120,14 @@ export default function TabNavigationChallenge({ pageData, answerRef, sessionId,
       </div>
 
       {/* Answer input */}
-      <div className="mt-6">
-        <label className="block text-sm text-gray-400 mb-2">Your Answer</label>
+      <div style={{ marginTop: 24 }}>
+        <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Your Answer</label>
         <input
           type="text"
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder="Enter the value..."
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>

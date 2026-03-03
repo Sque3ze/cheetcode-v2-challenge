@@ -81,19 +81,21 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
   return (
     <div>
       {/* Card grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 16, marginBottom: 24 }}>
         {pageData.cards.map((card) => (
           <div
             key={card.id}
-            className="bg-gray-900 rounded-lg border border-gray-800 p-4"
+            className="card-surface"
+            style={{ borderRadius: 12, padding: 16 }}
             {...testAttr('card-category', card.category)}
           >
-            <h3 className="font-medium mb-1">{card.name}</h3>
-            <p className="text-sm text-gray-400 mb-1" {...testAttr('category-label')}>{card.category}</p>
-            <p className="text-sm font-mono mb-3" {...testAttr('card-price')}>${card.price.toFixed(2)}</p>
+            <h3 className="font-medium" style={{ marginBottom: 4 }}>{card.name}</h3>
+            <p className="text-sm" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 4 }} {...testAttr('category-label')}>{card.category}</p>
+            <p className="text-sm font-mono" style={{ marginBottom: 12 }} {...testAttr('card-price')}>${card.price.toFixed(2)}</p>
             <button
               onClick={() => setOpenCard(card)}
-              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-sm"
+              style={{ color: "#fa5d19", background: "none", border: "none", padding: 0, cursor: "pointer" }}
               {...testAttr('card-name', card.name)}
             >
               View Details
@@ -105,19 +107,21 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
       {/* Modal with async loading + tabs */}
       {openCard && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: "rgba(0,0,0,0.5)" }}
           onClick={() => setOpenCard(null)}
         >
           <div
-            className="bg-gray-900 rounded-lg border border-gray-700 p-6 max-w-md w-full mx-4"
+            className="w-full"
+            style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8e8", padding: 24, maxWidth: 448, margin: "0 16px" }}
             onClick={(e) => e.stopPropagation()}
             {...testAttr('modal', 'true')}
           >
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start" style={{ marginBottom: 16 }}>
               <h3 className="text-lg font-semibold">{openCard.name}</h3>
               <button
                 onClick={() => setOpenCard(null)}
-                className="text-gray-400 hover:text-gray-200"
+                style={{ color: "rgba(38,38,38,0.5)", background: "none", border: "none", cursor: "pointer", fontSize: 20, lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -125,9 +129,9 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
 
             {/* Loading spinner */}
             {!modalLoaded && (
-              <div className="flex items-center justify-center py-8" {...testAttr('modal-loading')}>
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400" />
-                <span className="ml-3 text-sm text-gray-400">Loading details...</span>
+              <div className="flex items-center justify-center" style={{ padding: "32px 0" }} {...testAttr('modal-loading')}>
+                <div className="animate-spin" style={{ width: 32, height: 32, borderRadius: "50%", borderBottom: "2px solid #fa5d19" }} />
+                <span className="text-sm" style={{ marginLeft: 12, color: "rgba(38,38,38,0.5)" }}>Loading details...</span>
               </div>
             )}
 
@@ -135,25 +139,35 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
             {modalLoaded && (
               <div>
                 {/* Tab bar inside modal */}
-                <div className="flex border-b border-gray-700 mb-4">
+                <div className="flex" style={{ borderBottom: "1px solid #e8e8e8", marginBottom: 16 }}>
                   <button
                     onClick={() => setModalTab("overview")}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      modalTab === "overview"
-                        ? "text-white border-b-2 border-blue-500"
-                        : "text-gray-400 hover:text-gray-200"
-                    }`}
+                    className="text-sm font-medium"
+                    style={{
+                      padding: "8px 16px",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      ...(modalTab === "overview"
+                        ? { color: "#fa5d19", borderBottom: "2px solid #fa5d19" }
+                        : { color: "rgba(38,38,38,0.5)" }),
+                    }}
                     {...testAttr('modal-tab', 'overview')}
                   >
                     Overview
                   </button>
                   <button
                     onClick={() => setModalTab("details")}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      modalTab === "details"
-                        ? "text-white border-b-2 border-blue-500"
-                        : "text-gray-400 hover:text-gray-200"
-                    }`}
+                    className="text-sm font-medium"
+                    style={{
+                      padding: "8px 16px",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      ...(modalTab === "details"
+                        ? { color: "#fa5d19", borderBottom: "2px solid #fa5d19" }
+                        : { color: "rgba(38,38,38,0.5)" }),
+                    }}
                     {...testAttr('modal-tab', 'details')}
                   >
                     Details
@@ -162,13 +176,13 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
 
                 {/* Overview tab: category + price */}
                 {modalTab === "overview" && (
-                  <dl className="space-y-3" {...testAttr('modal-panel', 'overview')}>
+                  <dl style={{ display: "flex", flexDirection: "column", gap: 12 }} {...testAttr('modal-panel', 'overview')}>
                     <div>
-                      <dt className="text-sm text-gray-400">Category</dt>
+                      <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Category</dt>
                       <dd>{openCard.category}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm text-gray-400">Price</dt>
+                      <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Price</dt>
                       <dd className="font-mono">${openCard.price.toFixed(2)}</dd>
                     </div>
                   </dl>
@@ -176,14 +190,14 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
 
                 {/* Details tab: SKU + supplier (fetched via interact) */}
                 {modalTab === "details" && (
-                  <dl className="space-y-3" {...testAttr('modal-panel', 'details')}>
+                  <dl style={{ display: "flex", flexDirection: "column", gap: 12 }} {...testAttr('modal-panel', 'details')}>
                     <div>
-                      <dt className="text-sm text-gray-400">SKU</dt>
-                      <dd className="font-mono" {...testAttr('field', 'sku')}>{cardDetails?.sku ?? "—"}</dd>
+                      <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>SKU</dt>
+                      <dd className="font-mono" {...testAttr('field', 'sku')}>{cardDetails?.sku ?? "\u2014"}</dd>
                     </div>
                     <div>
-                      <dt className="text-sm text-gray-400">Supplier</dt>
-                      <dd {...testAttr('field', 'supplier')}>{cardDetails?.supplier ?? "—"}</dd>
+                      <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Supplier</dt>
+                      <dd {...testAttr('field', 'supplier')}>{cardDetails?.supplier ?? "\u2014"}</dd>
                     </div>
                   </dl>
                 )}
@@ -195,7 +209,7 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
 
       {/* Answer input */}
       <div>
-        <label className="block text-sm text-gray-400 mb-2">
+        <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Your Answer ({pageData.targetField})
         </label>
         <input
@@ -203,7 +217,7 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder={`Enter the ${pageData.targetField}...`}
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>

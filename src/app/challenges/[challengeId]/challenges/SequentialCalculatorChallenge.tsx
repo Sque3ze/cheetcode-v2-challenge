@@ -101,31 +101,33 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
   return (
     <div>
       {/* Starting value */}
-      <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-6">
-        <p className="text-sm text-gray-400">Starting Value</p>
+      <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 24 }}>
+        <p className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Starting Value</p>
         <p className="text-2xl font-mono font-bold" {...testAttr('start-value')}>{pageData.startValue}</p>
       </div>
 
       {/* Operations */}
-      <div className="space-y-3 mb-6">
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
         {pageData.operations.map((op, i) => (
           <div
             key={i}
-            className="bg-gray-900 rounded-lg border border-gray-800 p-4"
+            className="card-surface"
+            style={{ borderRadius: 12, padding: 16 }}
             {...testAttr('step', String(i))}
             {...testAttr('step-type', op.type)}
           >
             {op.type === "normal" && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500 w-14">{op.label}</span>
-                <span className="text-lg font-mono text-blue-400">{OP_SYMBOLS[op.operator]}</span>
+              <div className="flex items-center" style={{ gap: 12 }}>
+                <span className="text-sm" style={{ color: "rgba(38,38,38,0.35)", width: 56 }}>{op.label}</span>
+                <span className="text-lg font-mono" style={{ color: "#fa5d19" }}>{OP_SYMBOLS[op.operator]}</span>
                 {op.hidden && !revealedSteps.has(i) ? (
                   loadingReveal === i ? (
-                    <span className="text-sm text-gray-400">Loading...</span>
+                    <span className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Loading...</span>
                   ) : (
                     <button
                       onClick={() => revealStep(i)}
-                      className="px-3 py-1 text-sm bg-gray-800 rounded border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
+                      className="btn-ghost text-sm"
+                      style={{ padding: "4px 12px", borderRadius: 6 }}
                       {...testAttr('reveal', String(i))}
                     >
                       Reveal
@@ -143,23 +145,24 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
               const revealed = getRevealedConditional(i);
               return (
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-gray-500 w-14">{op.label}</span>
-                    <span className="text-sm text-amber-400 font-medium">CONDITIONAL</span>
+                  <div className="flex items-center" style={{ gap: 8, marginBottom: 8 }}>
+                    <span className="text-sm" style={{ color: "rgba(38,38,38,0.35)", width: 56 }}>{op.label}</span>
+                    <span className="text-sm font-medium" style={{ color: "#b45309" }}>CONDITIONAL</span>
                   </div>
-                  <div className="ml-14 text-sm space-y-1" {...testAttr('conditional', String(i))}>
-                    <p className="text-gray-300">
-                      IF current &gt; <span className="font-mono text-white" {...testAttr('threshold', String(i))}>{op.threshold}</span>:
+                  <div className="text-sm" style={{ marginLeft: 56, display: "flex", flexDirection: "column", gap: 4 }} {...testAttr('conditional', String(i))}>
+                    <p style={{ color: "rgba(38,38,38,0.7)" }}>
+                      IF current &gt; <span className="font-mono" style={{ color: "#262626" }} {...testAttr('threshold', String(i))}>{op.threshold}</span>:
                     </p>
-                    <p className="text-gray-400 ml-4">
+                    <p style={{ color: "rgba(38,38,38,0.5)", marginLeft: 16 }}>
                       {OP_SYMBOLS[op.ifAbove.operator]}{" "}
                       {op.hidden && !revealedSteps.has(i) ? (
                         loadingReveal === i ? (
-                          <span className="text-xs text-gray-400">Loading...</span>
+                          <span className="text-xs" style={{ color: "rgba(38,38,38,0.5)" }}>Loading...</span>
                         ) : (
                           <button
                             onClick={() => revealStep(i)}
-                            className="px-2 py-0.5 text-xs bg-gray-800 rounded border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors"
+                            className="btn-ghost text-xs"
+                            style={{ padding: "2px 8px", borderRadius: 4 }}
                             {...testAttr('reveal', String(i))}
                           >
                             Reveal
@@ -171,11 +174,11 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
                         </span>
                       )}
                     </p>
-                    <p className="text-gray-300">OTHERWISE:</p>
-                    <p className="text-gray-400 ml-4">
+                    <p style={{ color: "rgba(38,38,38,0.7)" }}>OTHERWISE:</p>
+                    <p style={{ color: "rgba(38,38,38,0.5)", marginLeft: 16 }}>
                       {OP_SYMBOLS[op.ifBelow.operator]}{" "}
                       {op.hidden && !revealedSteps.has(i) ? (
-                        <span className="text-xs text-gray-600">[Reveal above]</span>
+                        <span className="text-xs" style={{ color: "rgba(38,38,38,0.35)" }}>[Reveal above]</span>
                       ) : (
                         <span className="font-mono" {...testAttr('operand-below', String(i))}>
                           {op.ifBelow.operand !== null ? op.ifBelow.operand : revealed?.ifBelow ?? "?"}
@@ -188,10 +191,10 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
             })()}
 
             {op.type === "lookup" && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500 w-14">{op.label}</span>
-                <span className="text-lg font-mono text-blue-400">{OP_SYMBOLS[op.operator]}</span>
-                <span className="text-sm text-purple-400" {...testAttr('lookup-key', String(i))}>
+              <div className="flex items-center" style={{ gap: 12 }}>
+                <span className="text-sm" style={{ color: "rgba(38,38,38,0.35)", width: 56 }}>{op.label}</span>
+                <span className="text-lg font-mono" style={{ color: "#fa5d19" }}>{OP_SYMBOLS[op.operator]}</span>
+                <span className="text-sm" style={{ color: "#9061ff" }} {...testAttr('lookup-key', String(i))}>
                   value of &quot;{op.lookupKey}&quot; from reference table
                 </span>
               </div>
@@ -201,21 +204,21 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
       </div>
 
       {/* Reference Table */}
-      <div className="mb-6">
-        <h3 className="text-sm font-medium text-gray-400 mb-2">Reference Table</h3>
-        <div className="overflow-x-auto rounded-lg border border-gray-800">
+      <div style={{ marginBottom: 24 }}>
+        <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Reference Table</h3>
+        <div className="card-surface overflow-x-auto" style={{ borderRadius: 12, overflow: "hidden" }}>
           <table className="w-full text-sm" {...testAttr('table', 'reference')}>
             <thead>
-              <tr className="bg-gray-900">
-                <th className="px-4 py-2 text-left text-gray-400 font-medium">Key</th>
-                <th className="px-4 py-2 text-right text-gray-400 font-medium">Value</th>
+              <tr style={{ background: "#f3f3f3" }}>
+                <th className="text-left font-medium" style={{ padding: "8px 16px", color: "rgba(38,38,38,0.5)" }}>Key</th>
+                <th className="text-right font-medium" style={{ padding: "8px 16px", color: "rgba(38,38,38,0.5)" }}>Value</th>
               </tr>
             </thead>
             <tbody>
               {pageData.referenceTable.map((entry) => (
-                <tr key={entry.key} className="border-t border-gray-800" {...testAttr('ref-key', entry.key)}>
-                  <td className="px-4 py-2">{entry.key}</td>
-                  <td className="px-4 py-2 text-right font-mono" {...testAttr('ref-value')}>{entry.value}</td>
+                <tr key={entry.key} style={{ borderTop: "1px solid #e8e8e8" }} {...testAttr('ref-key', entry.key)}>
+                  <td style={{ padding: "8px 16px" }}>{entry.key}</td>
+                  <td className="text-right font-mono" style={{ padding: "8px 16px" }} {...testAttr('ref-value')}>{entry.value}</td>
                 </tr>
               ))}
             </tbody>
@@ -225,13 +228,13 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
 
       {/* Answer input */}
       <div>
-        <label className="block text-sm text-gray-400 mb-2">Final Result</label>
+        <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Final Result</label>
         <input
           type="text"
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder="Enter the final result..."
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>

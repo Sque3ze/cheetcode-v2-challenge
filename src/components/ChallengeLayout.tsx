@@ -37,13 +37,6 @@ const TIER_LABELS: Record<number, string> = {
   4: "Advanced Analysis",
 };
 
-const TIER_COLORS: Record<number, string> = {
-  1: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  2: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  3: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  4: "bg-red-500/10 text-red-400 border-red-500/20",
-};
-
 export default function ChallengeLayout({
   id,
   title,
@@ -117,40 +110,39 @@ export default function ChallengeLayout({
   }, [id, sessionId, getAnswer, submitting, isSolved, isLocked, onSolved]);
 
   const tierLabel = TIER_LABELS[tier] ?? `Tier ${tier}`;
-  const tierColor = TIER_COLORS[tier] ?? TIER_COLORS[1];
   const attemptsRemaining = maxAttempts - currentAttempts;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div style={{ minHeight: "100vh" }}>
       {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header className="nav-header" style={{ position: "sticky", top: 0, zIndex: 10 }}>
+        <div className="flex items-center justify-between" style={{ maxWidth: 896, margin: "0 auto", padding: "16px 24px" }}>
+          <div className="flex items-center" style={{ gap: 16 }}>
             <a
               href="/challenges"
-              className="text-gray-400 hover:text-gray-200 text-sm"
+              className="text-sm"
+              style={{ color: "rgba(38,38,38,0.5)", textDecoration: "none" }}
             >
               &larr; Back
             </a>
             <h1 className="text-lg font-semibold">{title}</h1>
             <span
-              className={`text-xs px-2 py-0.5 rounded border ${tierColor}`}
+              className={`tier-badge-${tier}`}
+              style={{ fontSize: 12, padding: "2px 8px", borderRadius: 999 }}
             >
               {tierLabel}
             </span>
-            <span className="text-sm text-gray-400">{points} pt{points !== 1 ? "s" : ""}</span>
+            <span className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>{points} pt{points !== 1 ? "s" : ""}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center" style={{ gap: 16 }}>
             {isSolved && (
-              <span className="text-emerald-400 text-sm font-medium">
-                Solved
-              </span>
+              <span className="pill-solved">Solved</span>
             )}
             {isLocked && !isSolved && (
-              <span className="text-red-400 text-sm font-medium">Locked</span>
+              <span className="pill-locked">Locked</span>
             )}
             {!isSolved && !isLocked && (
-              <span className="text-gray-400 text-sm">
+              <span className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>
                 {attemptsRemaining}/{maxAttempts} attempts
               </span>
             )}
@@ -160,27 +152,30 @@ export default function ChallengeLayout({
       </header>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main style={{ maxWidth: 896, margin: "0 auto", padding: "32px 24px" }}>
         {/* Instructions */}
-        <div className="mb-8 p-4 bg-gray-900 rounded-lg border border-gray-800">
-          <h2 className="text-sm font-medium text-gray-400 mb-2">
+        <div className="card-surface" style={{ marginBottom: 32, padding: 16, borderRadius: 12 }}>
+          <h2 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
             Instructions
           </h2>
-          <p className="text-gray-200">{instructions}</p>
+          <p style={{ color: "#262626" }}>{instructions}</p>
         </div>
 
         {/* Challenge interactive area */}
-        <div className="mb-8">{children}</div>
+        <div style={{ marginBottom: 32 }}>{children}</div>
 
         {/* Submission area */}
-        <div className="border-t border-gray-800 pt-6">
+        <div style={{ borderTop: "1px solid #e8e8e8", paddingTop: 24 }}>
           {feedback && (
             <div
-              className={`mb-4 p-3 rounded-lg border ${
-                feedback.correct
-                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                  : "bg-red-500/10 border-red-500/20 text-red-400"
-              }`}
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                borderRadius: 8,
+                border: `1px solid ${feedback.correct ? "rgba(26,147,56,0.2)" : "rgba(220,38,38,0.2)"}`,
+                background: feedback.correct ? "rgba(26,147,56,0.08)" : "rgba(220,38,38,0.08)",
+                color: feedback.correct ? "#1a9338" : "#dc2626",
+              }}
             >
               {feedback.message}
             </div>
@@ -189,15 +184,20 @@ export default function ChallengeLayout({
           <button
             onClick={handleSubmit}
             disabled={submitting || isSolved || isLocked}
-            className={`px-6 py-2.5 rounded-lg font-medium text-sm transition-colors ${
-              isSolved
-                ? "bg-emerald-500/20 text-emerald-400 cursor-not-allowed"
+            className={!(isSolved || isLocked || submitting) ? "btn-heat" : undefined}
+            style={{
+              padding: "10px 24px",
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 450,
+              ...(isSolved
+                ? { background: "rgba(26,147,56,0.08)", color: "#1a9338", border: "none", cursor: "not-allowed" }
                 : isLocked
-                  ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                  ? { background: "rgba(0,0,0,0.04)", color: "rgba(38,38,38,0.35)", border: "none", cursor: "not-allowed" }
                   : submitting
-                    ? "bg-gray-700 text-gray-400 cursor-wait"
-                    : "btn-heat"
-            }`}
+                    ? { background: "rgba(0,0,0,0.04)", color: "rgba(38,38,38,0.5)", border: "none", cursor: "wait" }
+                    : {}),
+            }}
           >
             {submitting
               ? "Submitting..."
@@ -223,7 +223,8 @@ function TimeDisplay({ timeRemainingMs }: { timeRemainingMs: number }) {
 
   return (
     <span
-      className={`font-mono text-sm ${isUrgent ? "text-red-400" : "text-gray-400"}`}
+      className="font-mono text-sm"
+      style={{ color: isUrgent ? "#dc2626" : "rgba(38,38,38,0.5)" }}
     >
       {mins}:{String(secs).padStart(2, "0")}
     </span>

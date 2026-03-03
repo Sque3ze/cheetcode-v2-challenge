@@ -77,45 +77,46 @@ export default function FilterSearchChallenge({ pageData, answerRef, sessionId, 
   return (
     <div>
       {/* Search input */}
-      <div className="mb-4">
+      <div style={{ marginBottom: 16 }}>
         <input
           type="text"
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
           placeholder="Type to filter employees..."
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
           {...testAttr('testid', 'filter-input')}
         />
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="text-xs" style={{ marginTop: 4, color: "rgba(38,38,38,0.35)" }}>
           Showing {filtered.length} matching ({allEmployees.length} loaded{pageData.totalEmployees ? `, ${pageData.totalEmployees} total` : ""})
         </p>
       </div>
 
       {/* Employee cards grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4" {...testAttr('employee-grid')}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 16, marginBottom: 16 }} {...testAttr('employee-grid')}>
         {filtered.map((emp, i) => (
           <div
             key={i}
-            className="bg-gray-900 rounded-lg border border-gray-800 p-4"
+            className="card-surface"
+            style={{ borderRadius: 12, padding: 16 }}
             {...testAttr('employee-card', emp.name)}
           >
-            <h4 className="font-medium text-gray-100 mb-3 text-base">{emp.name}</h4>
-            <div className="space-y-1.5 text-sm">
+            <h4 className="font-medium text-base" style={{ color: "#262626", marginBottom: 12 }}>{emp.name}</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }} className="text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Department</span>
-                <span className="text-gray-300" {...testAttr('emp-department')}>{emp.department}</span>
+                <span style={{ color: "rgba(38,38,38,0.35)" }}>Department</span>
+                <span style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('emp-department')}>{emp.department}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Salary</span>
-                <span className="text-gray-300 font-mono" {...testAttr('emp-salary')}>${emp.salary.toLocaleString()}</span>
+                <span style={{ color: "rgba(38,38,38,0.35)" }}>Salary</span>
+                <span className="font-mono" style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('emp-salary')}>${emp.salary.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">City</span>
-                <span className="text-gray-300" {...testAttr('emp-city')}>{emp.city}</span>
+                <span style={{ color: "rgba(38,38,38,0.35)" }}>City</span>
+                <span style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('emp-city')}>{emp.city}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Age</span>
-                <span className="text-gray-300" {...testAttr('emp-age')}>{emp.age}</span>
+                <span style={{ color: "rgba(38,38,38,0.35)" }}>Age</span>
+                <span style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('emp-age')}>{emp.age}</span>
               </div>
             </div>
           </div>
@@ -124,11 +125,12 @@ export default function FilterSearchChallenge({ pageData, answerRef, sessionId, 
 
       {/* Load More button */}
       {!allLoaded && (
-        <div className="mb-6 text-center">
+        <div style={{ marginBottom: 24, textAlign: "center" }}>
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="px-6 py-2 text-sm bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors text-gray-300 disabled:opacity-50"
+            className="btn-ghost text-sm"
+            style={{ padding: "8px 24px", borderRadius: 8 }}
             {...testAttr('load-more')}
           >
             {loadingMore ? "Loading..." : `Load More (${(pageData.totalEmployees ?? 0) - allEmployees.length} remaining)`}
@@ -138,7 +140,7 @@ export default function FilterSearchChallenge({ pageData, answerRef, sessionId, 
 
       {/* Answer input */}
       <div>
-        <label className="block text-sm text-gray-400 mb-2">Your Answer</label>
+        <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Your Answer</label>
         <input
           type="text"
           value={answer}
@@ -150,7 +152,7 @@ export default function FilterSearchChallenge({ pageData, answerRef, sessionId, 
                 ? "Enter the average salary..."
                 : "Enter the total salary..."
           }
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>

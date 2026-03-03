@@ -123,15 +123,16 @@ export default function TableSortChallenge({ pageData, answerRef, sessionId, cha
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-lg border border-gray-800">
+      <div className="card-surface overflow-x-auto" style={{ borderRadius: 12, overflow: "hidden" }}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-900">
+            <tr style={{ background: "#f3f3f3" }}>
               {columns.map((col) => (
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
-                  className="px-4 py-3 text-left text-gray-400 font-medium cursor-pointer hover:text-gray-200 select-none"
+                  className="text-left font-medium select-none"
+                  style={{ padding: "12px 16px", color: "rgba(38,38,38,0.5)", cursor: "pointer" }}
                 >
                   {col.label}{getSortIndicator(col.key)}
                 </th>
@@ -141,8 +142,8 @@ export default function TableSortChallenge({ pageData, answerRef, sessionId, cha
           <tbody>
             {loadingPage ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
-                  <div className="animate-spin inline-block rounded-full h-6 w-6 border-b-2 border-blue-400 mr-2" />
+                <td colSpan={4} style={{ padding: "32px 16px", textAlign: "center", color: "rgba(38,38,38,0.5)" }}>
+                  <div className="animate-spin" style={{ display: "inline-block", width: 24, height: 24, borderRadius: "50%", borderBottom: "2px solid #fa5d19", marginRight: 8 }} />
                   Loading...
                 </td>
               </tr>
@@ -153,14 +154,16 @@ export default function TableSortChallenge({ pageData, answerRef, sessionId, cha
                   <tr
                     key={`${emp.name}-${globalIndex}`}
                     onClick={() => handleRowClick(i)}
-                    className={`border-t border-gray-800 cursor-pointer transition-colors ${
-                      selectedRow === globalIndex ? "bg-blue-500/10" : "hover:bg-gray-900/50"
-                    }`}
+                    style={{
+                      borderTop: "1px solid #e8e8e8",
+                      cursor: "pointer",
+                      background: selectedRow === globalIndex ? "rgba(250,93,25,0.04)" : undefined,
+                    }}
                   >
-                    <td className="px-4 py-3">{emp.name}</td>
-                    <td className="px-4 py-3 text-gray-400">{emp.department}</td>
-                    <td className="px-4 py-3 text-gray-400">{emp.type}</td>
-                    <td className="px-4 py-3 font-mono">
+                    <td style={{ padding: "12px 16px" }}>{emp.name}</td>
+                    <td style={{ padding: "12px 16px", color: "rgba(38,38,38,0.5)" }}>{emp.department}</td>
+                    <td style={{ padding: "12px 16px", color: "rgba(38,38,38,0.5)" }}>{emp.type}</td>
+                    <td className="font-mono" style={{ padding: "12px 16px" }}>
                       {emp.type === "Hourly"
                         ? `$${emp.hourlyRate?.toFixed(2)}/hr \u00d7 ${emp.hoursPerWeek} hrs/wk`
                         : `$${(emp.salary ?? 0).toLocaleString()}`}
@@ -174,15 +177,16 @@ export default function TableSortChallenge({ pageData, answerRef, sessionId, cha
       </div>
 
       {/* Pagination controls */}
-      <div className="flex items-center justify-between mt-3">
-        <p className="text-xs text-gray-500">
+      <div className="flex items-center justify-between" style={{ marginTop: 12 }}>
+        <p className="text-xs" style={{ color: "rgba(38,38,38,0.35)" }}>
           Page {currentPage + 1} of {totalPages} ({totalEmployees} total)
         </p>
-        <div className="flex gap-2">
+        <div className="flex" style={{ gap: 8 }}>
           <button
             onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
             disabled={currentPage === 0}
-            className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
+            className="btn-ghost text-sm"
+            style={{ padding: "4px 12px", borderRadius: 6 }}
             {...testAttr('page-prev')}
           >
             Previous
@@ -190,7 +194,8 @@ export default function TableSortChallenge({ pageData, answerRef, sessionId, cha
           <button
             onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))}
             disabled={currentPage === totalPages - 1}
-            className="px-3 py-1 text-sm bg-gray-800 rounded disabled:opacity-30 hover:bg-gray-700 transition-colors"
+            className="btn-ghost text-sm"
+            style={{ padding: "4px 12px", borderRadius: 6 }}
             {...testAttr('page-next')}
           >
             Next
@@ -198,8 +203,8 @@ export default function TableSortChallenge({ pageData, answerRef, sessionId, cha
         </div>
       </div>
 
-      <div className="mt-6">
-        <label className="block text-sm text-gray-400 mb-2">
+      <div style={{ marginTop: 24 }}>
+        <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Your Answer ({pageData.targetField})
         </label>
         <input
@@ -207,7 +212,7 @@ export default function TableSortChallenge({ pageData, answerRef, sessionId, cha
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder={`Enter the ${pageData.targetField}...`}
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>

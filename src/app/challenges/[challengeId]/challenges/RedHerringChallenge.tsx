@@ -62,34 +62,44 @@ export default function RedHerringChallenge({ pageData, answerRef, sessionId, ch
   return (
     <div>
       {/* Fake result card */}
-      <div className="bg-gradient-to-r from-green-900/40 to-emerald-900/40 rounded-xl border-2 border-green-500/50 p-6 mb-6 text-center">
-        <p className="text-sm text-green-400 mb-1">Pre-computed Result</p>
-        <p className="text-4xl font-bold font-mono text-green-300" {...testAttr('fake-result')}>
+      <div style={{ background: "rgba(26,147,56,0.04)", border: "2px solid rgba(26,147,56,0.3)", borderRadius: 12, padding: 24, marginBottom: 24, textAlign: "center" }}>
+        <p className="text-sm" style={{ color: "#1a9338", marginBottom: 4 }}>Pre-computed Result</p>
+        <p className="text-4xl font-bold font-mono" style={{ color: "#1a9338" }} {...testAttr('fake-result')}>
           {pageData.fakeResult.toLocaleString()}
         </p>
-        <p className="text-sm text-green-400/70 mt-2">{pageData.fakeLabel}</p>
+        <p className="text-sm" style={{ color: "rgba(26,147,56,0.7)", marginTop: 8 }}>{pageData.fakeLabel}</p>
       </div>
 
       {/* Tab bar */}
-      <div className="flex border-b border-gray-800 mb-0">
+      <div className="flex" style={{ borderBottom: "1px solid #e8e8e8" }}>
         <button
           onClick={() => setActiveTab("a")}
-          className={`px-6 py-3 text-sm font-medium transition-colors ${
-            activeTab === "a"
-              ? "text-white border-b-2 border-blue-500 bg-gray-900"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
+          className="text-sm font-medium"
+          style={{
+            padding: "12px 24px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            ...(activeTab === "a"
+              ? { color: "#fa5d19", borderBottom: "2px solid #fa5d19" }
+              : { color: "rgba(38,38,38,0.5)" }),
+          }}
           {...testAttr('report-tab', 'a')}
         >
           Report A
         </button>
         <button
           onClick={handleTabB}
-          className={`px-6 py-3 text-sm font-medium transition-colors ${
-            activeTab === "b"
-              ? "text-white border-b-2 border-blue-500 bg-gray-900"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
+          className="text-sm font-medium"
+          style={{
+            padding: "12px 24px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            ...(activeTab === "b"
+              ? { color: "#fa5d19", borderBottom: "2px solid #fa5d19" }
+              : { color: "rgba(38,38,38,0.5)" }),
+          }}
           {...testAttr('report-tab', 'b')}
         >
           Report B
@@ -97,34 +107,34 @@ export default function RedHerringChallenge({ pageData, answerRef, sessionId, ch
       </div>
 
       {/* Table */}
-      <div className="bg-gray-900 rounded-b-lg border border-t-0 border-gray-800 p-4 mb-6">
+      <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderTop: "none", borderRadius: "0 0 12px 12px", padding: 16, marginBottom: 24 }}>
         {loadingB && activeTab === "b" ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400" />
-            <span className="ml-3 text-sm text-gray-400">Loading Report B...</span>
+          <div className="flex items-center justify-center" style={{ padding: "32px 0" }}>
+            <div className="animate-spin" style={{ width: 24, height: 24, borderRadius: "50%", borderBottom: "2px solid #fa5d19" }} />
+            <span className="text-sm" style={{ marginLeft: 12, color: "rgba(38,38,38,0.5)" }}>Loading Report B...</span>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" {...testAttr('table', activeTab)}>
               <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left text-gray-400 font-medium">Metric</th>
-                  <th className="px-4 py-3 text-right text-gray-400 font-medium">Q1</th>
-                  <th className="px-4 py-3 text-right text-gray-400 font-medium">Q2</th>
-                  <th className="px-4 py-3 text-right text-gray-400 font-medium">Q3</th>
-                  <th className="px-4 py-3 text-right text-gray-400 font-medium">Q4</th>
-                  <th className="px-4 py-3 text-right text-gray-400 font-medium">Annual</th>
+                  <th className="text-left font-medium" style={{ padding: "12px 16px", color: "rgba(38,38,38,0.5)" }}>Metric</th>
+                  <th className="text-right font-medium" style={{ padding: "12px 16px", color: "rgba(38,38,38,0.5)" }}>Q1</th>
+                  <th className="text-right font-medium" style={{ padding: "12px 16px", color: "rgba(38,38,38,0.5)" }}>Q2</th>
+                  <th className="text-right font-medium" style={{ padding: "12px 16px", color: "rgba(38,38,38,0.5)" }}>Q3</th>
+                  <th className="text-right font-medium" style={{ padding: "12px 16px", color: "rgba(38,38,38,0.5)" }}>Q4</th>
+                  <th className="text-right font-medium" style={{ padding: "12px 16px", color: "rgba(38,38,38,0.5)" }}>Annual</th>
                 </tr>
               </thead>
               <tbody>
                 {currentData.map((row) => (
-                  <tr key={row.label} className="border-t border-gray-800" {...testAttr('metric-row', row.label)}>
-                    <td className="px-4 py-3 font-medium">{row.label}</td>
-                    <td className="px-4 py-3 text-right font-mono" {...testAttr('metric-q', 'Q1')}>{row.q1.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-mono" {...testAttr('metric-q', 'Q2')}>{row.q2.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-mono" {...testAttr('metric-q', 'Q3')}>{row.q3.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-mono" {...testAttr('metric-q', 'Q4')}>{row.q4.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-mono" {...testAttr('metric-annual')}>{row.annual.toLocaleString()}</td>
+                  <tr key={row.label} style={{ borderTop: "1px solid #e8e8e8" }} {...testAttr('metric-row', row.label)}>
+                    <td className="font-medium" style={{ padding: "12px 16px" }}>{row.label}</td>
+                    <td className="text-right font-mono" style={{ padding: "12px 16px" }} {...testAttr('metric-q', 'Q1')}>{row.q1.toLocaleString()}</td>
+                    <td className="text-right font-mono" style={{ padding: "12px 16px" }} {...testAttr('metric-q', 'Q2')}>{row.q2.toLocaleString()}</td>
+                    <td className="text-right font-mono" style={{ padding: "12px 16px" }} {...testAttr('metric-q', 'Q3')}>{row.q3.toLocaleString()}</td>
+                    <td className="text-right font-mono" style={{ padding: "12px 16px" }} {...testAttr('metric-q', 'Q4')}>{row.q4.toLocaleString()}</td>
+                    <td className="text-right font-mono" style={{ padding: "12px 16px" }} {...testAttr('metric-annual')}>{row.annual.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -135,13 +145,13 @@ export default function RedHerringChallenge({ pageData, answerRef, sessionId, ch
 
       {/* Answer input */}
       <div>
-        <label className="block text-sm text-gray-400 mb-2">Your Answer</label>
+        <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Your Answer</label>
         <input
           type="text"
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder="Enter the value..."
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>

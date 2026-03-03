@@ -52,6 +52,20 @@ export const create = internalMutation({
 });
 
 /**
+ * Increment the API call counter for a session.
+ */
+export const incrementApiCalls = internalMutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) return;
+    await ctx.db.patch(args.sessionId, {
+      apiCalls: (session.apiCalls ?? 0) + 1,
+    });
+  },
+});
+
+/**
  * Get a session by ID.
  */
 export const get = query({
@@ -96,6 +110,7 @@ export const complete = internalMutation({
     totalPoints: v.number(),
     wrongAttempts: v.number(),
     lastCorrectAt: v.optional(v.number()),
+    apiCalls: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
@@ -124,6 +139,7 @@ export const complete = internalMutation({
       totalPoints: args.totalPoints,
       wrongAttempts: args.wrongAttempts,
       lastCorrectAt: args.lastCorrectAt,
+      apiCalls: args.apiCalls,
       completedAt: Date.now(),
       sessionId: args.sessionId,
     };
@@ -177,6 +193,19 @@ export const createSession = action({
   },
 });
 
+/** Authenticated gateway for incrementing API call counter */
+export const trackApiCall = action({
+  args: { secret: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args): Promise<void> => {
+    if (args.secret !== process.env.CONVEX_MUTATION_SECRET) {
+      throw new Error("unauthorized");
+    }
+    await ctx.runMutation(internal.sessions.incrementApiCalls, {
+      sessionId: args.sessionId,
+    });
+  },
+});
+
 /** Authenticated gateway for completing sessions */
 export const completeSession = action({
   args: {
@@ -187,6 +216,7 @@ export const completeSession = action({
     totalPoints: v.number(),
     wrongAttempts: v.number(),
     lastCorrectAt: v.optional(v.number()),
+    apiCalls: v.optional(v.number()),
   },
   handler: async (
     ctx,

@@ -67,7 +67,7 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
     return <LegacyFormFill pageData={pageData} answerRef={answerRef} />;
   }
 
-  const startYear = startDate ? startDate.split("-")[0] : "—";
+  const startYear = startDate ? startDate.split("-")[0] : "\u2014";
 
   const handleExpand = async () => {
     if (!showExpand && role === null) {
@@ -118,13 +118,13 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
     <div>
       {/* Salary Band Reference Table */}
       {salaryBands && salaryBands.length > 0 && (
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-4" {...testAttr('salary-band-table')}>
-          <h4 className="text-xs font-medium text-amber-400 mb-2">Salary Band Reference</h4>
-          <div className="grid grid-cols-4 gap-2 text-xs">
+        <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 16 }} {...testAttr('salary-band-table')}>
+          <h4 className="text-xs font-medium" style={{ color: "#b45309", marginBottom: 8 }}>Salary Band Reference</h4>
+          <div className="grid" style={{ gridTemplateColumns: `repeat(${salaryBands.length}, 1fr)`, gap: 8, fontSize: 12 }}>
             {salaryBands.map((band) => (
-              <div key={band.label} className="text-center" {...testAttr('salary-band', band.label)}>
-                <p className="text-gray-200 font-medium">{band.label}</p>
-                <p className="text-gray-500 font-mono">
+              <div key={band.label} style={{ textAlign: "center" }} {...testAttr('salary-band', band.label)}>
+                <p className="font-medium" style={{ color: "#262626" }}>{band.label}</p>
+                <p className="font-mono" style={{ color: "rgba(38,38,38,0.35)" }}>
                   {band.max >= 999999
                     ? `$${band.min.toLocaleString()}+`
                     : `$${band.min.toLocaleString()}-$${band.max.toLocaleString()}`}
@@ -135,30 +135,40 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
         </div>
       )}
 
-      <p className="text-xs text-gray-500 mb-4" {...testAttr('dept-code-note')}>
-        Dept codes: first 3 letters, uppercased (e.g., Engineering → ENG)
+      <p className="text-xs" style={{ color: "rgba(38,38,38,0.35)", marginBottom: 16 }} {...testAttr('dept-code-note')}>
+        Dept codes: first 3 letters, uppercased (e.g., Engineering &rarr; ENG)
       </p>
 
       {/* Tab bar */}
-      <div className="flex border-b border-gray-800 mb-0">
+      <div className="flex" style={{ borderBottom: "1px solid #e8e8e8" }}>
         <button
           onClick={() => setActiveTab("profile")}
-          className={`px-6 py-3 text-sm font-medium transition-colors ${
-            activeTab === "profile"
-              ? "text-white border-b-2 border-blue-500 bg-gray-900"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
+          className="text-sm font-medium"
+          style={{
+            padding: "12px 24px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            ...(activeTab === "profile"
+              ? { color: "#fa5d19", borderBottom: "2px solid #fa5d19" }
+              : { color: "rgba(38,38,38,0.5)" }),
+          }}
           {...testAttr('form-tab', 'profile')}
         >
           Profile
         </button>
         <button
           onClick={handleContactTab}
-          className={`px-6 py-3 text-sm font-medium transition-colors ${
-            activeTab === "contact"
-              ? "text-white border-b-2 border-blue-500 bg-gray-900"
-              : "text-gray-400 hover:text-gray-200"
-          }`}
+          className="text-sm font-medium"
+          style={{
+            padding: "12px 24px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            ...(activeTab === "contact"
+              ? { color: "#fa5d19", borderBottom: "2px solid #fa5d19" }
+              : { color: "rgba(38,38,38,0.5)" }),
+          }}
           {...testAttr('form-tab', 'contact')}
         >
           Contact
@@ -167,63 +177,65 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
 
       {/* Profile tab */}
       {activeTab === "profile" && (
-        <div className="bg-gray-900 rounded-b-lg border border-t-0 border-gray-800 p-6 mb-4">
-          <dl className="grid grid-cols-2 gap-4">
+        <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderTop: "none", borderRadius: "0 0 12px 12px", padding: 24, marginBottom: 16 }}>
+          <dl className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div>
-              <dt className="text-sm text-gray-400">Name</dt>
-              <dd className="text-gray-100" {...testAttr('field', 'name')}>{employee.name}</dd>
+              <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Name</dt>
+              <dd style={{ color: "#262626" }} {...testAttr('field', 'name')}>{employee.name}</dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-400">Email</dt>
-              <dd className="text-gray-100" {...testAttr('field', 'email')}>{employee.email}</dd>
+              <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Email</dt>
+              <dd style={{ color: "#262626" }} {...testAttr('field', 'email')}>{employee.email}</dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-400">Department</dt>
-              <dd className="text-gray-100" {...testAttr('field', 'department')}>{employee.department}</dd>
+              <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Department</dt>
+              <dd style={{ color: "#262626" }} {...testAttr('field', 'department')}>{employee.department}</dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-400">Salary</dt>
-              <dd className="text-gray-100" {...testAttr('field', 'salary')}>${employee.salary.toLocaleString()}</dd>
+              <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Salary</dt>
+              <dd style={{ color: "#262626" }} {...testAttr('field', 'salary')}>${employee.salary.toLocaleString()}</dd>
             </div>
           </dl>
 
           {/* Tooltip: Start date */}
-          <div className="mt-4">
+          <div style={{ marginTop: 16 }}>
             <button
               onClick={handleTooltip}
-              className="text-sm text-gray-400 hover:text-gray-200 cursor-pointer transition-colors"
+              className="text-sm"
+              style={{ color: "rgba(38,38,38,0.5)", background: "none", border: "none", padding: 0, cursor: "pointer" }}
               {...testAttr('tooltip-trigger')}
             >
               Joined: {startYear}
-              {!tooltipRevealed && <span className="text-gray-600 ml-1">(click for details)</span>}
+              {!tooltipRevealed && <span style={{ color: "rgba(38,38,38,0.35)", marginLeft: 4 }}>(click for details)</span>}
             </button>
             {loadingTooltip && (
-              <span className="text-xs text-gray-500 ml-2">Loading...</span>
+              <span className="text-xs" style={{ color: "rgba(38,38,38,0.35)", marginLeft: 8 }}>Loading...</span>
             )}
             {tooltipRevealed && startDate && (
-              <p className="text-sm text-gray-100 mt-1" {...testAttr('field', 'startDate')}>
+              <p className="text-sm" style={{ color: "#262626", marginTop: 4 }} {...testAttr('field', 'startDate')}>
                 {startDate}
               </p>
             )}
           </div>
 
           {/* Inline expand for role */}
-          <div className="mt-4">
+          <div style={{ marginTop: 16 }}>
             <button
               onClick={handleExpand}
-              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-sm"
+              style={{ color: "#fa5d19", background: "none", border: "none", padding: 0, cursor: "pointer" }}
               {...testAttr('expand-details')}
             >
               {showExpand ? "[-] Hide full details" : "[+] Show full details"}
             </button>
             {loadingExpand && (
-              <span className="text-xs text-gray-500 ml-2">Loading...</span>
+              <span className="text-xs" style={{ color: "rgba(38,38,38,0.35)", marginLeft: 8 }}>Loading...</span>
             )}
             {showExpand && role && (
-              <div className="mt-2 bg-gray-800/50 rounded p-3" {...testAttr('expand-panel')}>
+              <div style={{ marginTop: 8, background: "rgba(0,0,0,0.04)", borderRadius: 8, padding: 12 }} {...testAttr('expand-panel')}>
                 <dl>
-                  <dt className="text-sm text-gray-400">Role</dt>
-                  <dd className="text-gray-100" {...testAttr('field', 'role')}>{role}</dd>
+                  <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Role</dt>
+                  <dd style={{ color: "#262626" }} {...testAttr('field', 'role')}>{role}</dd>
                 </dl>
               </div>
             )}
@@ -233,21 +245,21 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
 
       {/* Contact tab */}
       {activeTab === "contact" && (
-        <div className="bg-gray-900 rounded-b-lg border border-t-0 border-gray-800 p-6 mb-4" {...testAttr('contact-panel')}>
+        <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderTop: "none", borderRadius: "0 0 12px 12px", padding: 24, marginBottom: 16 }} {...testAttr('contact-panel')}>
           {loadingTab ? (
-            <div className="flex items-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400" />
-              <span className="ml-3 text-sm text-gray-400">Loading...</span>
+            <div className="flex items-center" style={{ padding: "16px 0" }}>
+              <div className="animate-spin" style={{ width: 24, height: 24, borderRadius: "50%", borderBottom: "2px solid #fa5d19" }} />
+              <span className="text-sm" style={{ marginLeft: 12, color: "rgba(38,38,38,0.5)" }}>Loading...</span>
             </div>
           ) : (
-            <dl className="grid grid-cols-2 gap-4">
+            <dl className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
-                <dt className="text-sm text-gray-400">City</dt>
-                <dd className="text-gray-100" {...testAttr('field', 'city')}>{city ?? "—"}</dd>
+                <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>City</dt>
+                <dd style={{ color: "#262626" }} {...testAttr('field', 'city')}>{city ?? "\u2014"}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-400">Email</dt>
-                <dd className="text-gray-100">{employee.email}</dd>
+                <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Email</dt>
+                <dd style={{ color: "#262626" }}>{employee.email}</dd>
               </div>
             </dl>
           )}
@@ -255,8 +267,8 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
       )}
 
       {/* Fields to submit */}
-      <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-        <h3 className="text-sm font-medium text-gray-400 mb-3">
+      <div className="card-surface" style={{ borderRadius: 12, padding: 24 }}>
+        <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 12 }}>
           Submit these fields (comma-separated): {fieldsToFill.map((f) => FIELD_LABELS[f] || f).join(", ")}
         </h3>
         <input
@@ -264,7 +276,7 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder={`e.g. ${fieldsToFill.map((f) => FIELD_LABELS[f] || f).join(", ")}`}
-          className="w-full max-w-lg px-4 py-2 bg-gray-950 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 512, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>
@@ -283,57 +295,58 @@ function LegacyFormFill({ pageData, answerRef }: { pageData: FormFillPageData; a
 
   return (
     <div>
-      <div className="bg-gray-900 rounded-lg border border-gray-800 p-6 mb-4">
-        <h3 className="text-lg font-semibold mb-4">Basic Info</h3>
-        <dl className="grid grid-cols-2 gap-4">
+      <div className="card-surface" style={{ borderRadius: 12, padding: 24, marginBottom: 16 }}>
+        <h3 className="text-lg font-semibold" style={{ marginBottom: 16 }}>Basic Info</h3>
+        <dl className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div>
-            <dt className="text-sm text-gray-400">Name</dt>
-            <dd className="text-gray-100" {...testAttr('field', 'name')}>{employee.name}</dd>
+            <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Name</dt>
+            <dd style={{ color: "#262626" }} {...testAttr('field', 'name')}>{employee.name}</dd>
           </div>
           <div>
-            <dt className="text-sm text-gray-400">Email</dt>
-            <dd className="text-gray-100" {...testAttr('field', 'email')}>{employee.email}</dd>
+            <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Email</dt>
+            <dd style={{ color: "#262626" }} {...testAttr('field', 'email')}>{employee.email}</dd>
           </div>
           <div>
-            <dt className="text-sm text-gray-400">Department</dt>
-            <dd className="text-gray-100" {...testAttr('field', 'department')}>{employee.department}</dd>
+            <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Department</dt>
+            <dd style={{ color: "#262626" }} {...testAttr('field', 'department')}>{employee.department}</dd>
           </div>
           <div>
-            <dt className="text-sm text-gray-400">Salary</dt>
-            <dd className="text-gray-100" {...testAttr('field', 'salary')}>${employee.salary.toLocaleString()}</dd>
+            <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Salary</dt>
+            <dd style={{ color: "#262626" }} {...testAttr('field', 'salary')}>${employee.salary.toLocaleString()}</dd>
           </div>
         </dl>
       </div>
-      <div className="mb-6">
+      <div style={{ marginBottom: 24 }}>
         <button
           onClick={() => setShowDetails(!showDetails)}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors mb-2"
+          className="flex items-center text-sm"
+          style={{ gap: 8, color: "rgba(38,38,38,0.35)", background: "none", border: "none", padding: 0, cursor: "pointer", marginBottom: 8 }}
           {...testAttr('toggle-details')}
         >
           <span className="text-xs">{showDetails ? "\u25BC" : "\u25B6"}</span>
           Details
         </button>
         {showDetails && (
-          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6" {...testAttr('details-panel')}>
-            <dl className="grid grid-cols-2 gap-4">
+          <div className="card-surface" style={{ borderRadius: 12, padding: 24 }} {...testAttr('details-panel')}>
+            <dl className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
-                <dt className="text-sm text-gray-400">Role</dt>
-                <dd className="text-gray-100" {...testAttr('field', 'role')}>{employee.role}</dd>
+                <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Role</dt>
+                <dd style={{ color: "#262626" }} {...testAttr('field', 'role')}>{employee.role}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-400">City</dt>
-                <dd className="text-gray-100" {...testAttr('field', 'city')}>{employee.city}</dd>
+                <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>City</dt>
+                <dd style={{ color: "#262626" }} {...testAttr('field', 'city')}>{employee.city}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-400">Start Date</dt>
-                <dd className="text-gray-100" {...testAttr('field', 'startDate')}>{employee.startDate}</dd>
+                <dt className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Start Date</dt>
+                <dd style={{ color: "#262626" }} {...testAttr('field', 'startDate')}>{employee.startDate}</dd>
               </div>
             </dl>
           </div>
         )}
       </div>
-      <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-        <h3 className="text-sm font-medium text-gray-400 mb-3">
+      <div className="card-surface" style={{ borderRadius: 12, padding: 24 }}>
+        <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 12 }}>
           Submit these fields (comma-separated): {fieldsToFill.map((f) => FIELD_LABELS[f] || f).join(", ")}
         </h3>
         <input
@@ -341,7 +354,7 @@ function LegacyFormFill({ pageData, answerRef }: { pageData: FormFillPageData; a
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder={`e.g. ${fieldsToFill.map((f) => FIELD_LABELS[f] || f).join(", ")}`}
-          className="w-full max-w-lg px-4 py-2 bg-gray-950 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 512, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>

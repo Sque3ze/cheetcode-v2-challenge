@@ -13,6 +13,7 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("expired")
     ),
+    apiCalls: v.optional(v.number()),
   })
     .index("by_github", ["github"])
     .index("by_github_status", ["github", "status"]),
@@ -39,6 +40,7 @@ export default defineSchema({
     totalPoints: v.number(),
     wrongAttempts: v.number(), // total incorrect submissions (tiebreaker 1)
     lastCorrectAt: v.optional(v.number()), // timestamp of last correct answer (tiebreaker 2)
+    apiCalls: v.optional(v.number()), // total API calls made (tiebreaker 3)
     completedAt: v.number(), // when the session ended
     sessionId: v.id("sessions"),
   })

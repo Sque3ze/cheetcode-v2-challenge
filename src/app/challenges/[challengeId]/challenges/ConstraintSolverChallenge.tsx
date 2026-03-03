@@ -86,50 +86,51 @@ export default function ConstraintSolverChallenge({ pageData, answerRef, session
   return (
     <div>
       {/* Inventory */}
-      <div className="mb-6">
-        <h3 className="text-sm font-medium text-gray-400 mb-2">Inventory</h3>
+      <div style={{ marginBottom: 24 }}>
+        <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Inventory</h3>
         <div
-          className="flex gap-4 overflow-x-auto pb-3"
-          style={{ scrollBehavior: "smooth" }}
+          className="flex overflow-x-auto"
+          style={{ gap: 16, paddingBottom: 12, scrollBehavior: "smooth" }}
           {...testAttr('inventory-strip')}
         >
           {pageData.items.map((item) => (
             <div
               key={item.name}
-              className="flex-shrink-0 w-56 bg-gray-900 rounded-lg border border-gray-800 p-4"
+              className="card-surface"
+              style={{ flexShrink: 0, width: 224, borderRadius: 12, padding: 16 }}
               {...testAttr('item-card', item.name)}
             >
-              <h4 className="font-medium text-gray-100 mb-2 text-sm truncate">{item.name}</h4>
-              <dl className="space-y-1.5 text-xs">
+              <h4 className="font-medium text-sm truncate" style={{ color: "#262626", marginBottom: 8 }}>{item.name}</h4>
+              <dl style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12 }}>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Category</dt>
-                  <dd className="text-gray-300" {...testAttr('item-category')}>{item.category}</dd>
+                  <dt style={{ color: "rgba(38,38,38,0.35)" }}>Category</dt>
+                  <dd style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('item-category')}>{item.category}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Price</dt>
-                  <dd className="text-gray-300 font-mono" {...testAttr('item-price')}>${item.price.toFixed(2)}</dd>
+                  <dt style={{ color: "rgba(38,38,38,0.35)" }}>Price</dt>
+                  <dd className="font-mono" style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('item-price')}>${item.price.toFixed(2)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Rating</dt>
-                  <dd className="text-gray-300" {...testAttr('item-rating')}>{item.rating}</dd>
+                  <dt style={{ color: "rgba(38,38,38,0.35)" }}>Rating</dt>
+                  <dd style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('item-rating')}>{item.rating}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Supplier</dt>
-                  <dd className="text-gray-300" {...testAttr('item-supplier')}>{item.supplier}</dd>
+                  <dt style={{ color: "rgba(38,38,38,0.35)" }}>Supplier</dt>
+                  <dd style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('item-supplier')}>{item.supplier}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">In Stock</dt>
+                  <dt style={{ color: "rgba(38,38,38,0.35)" }}>In Stock</dt>
                   <dd {...testAttr('item-stock')}>
                     {item.inStock ? (
-                      <span className="text-green-400">Yes</span>
+                      <span style={{ color: "#1a9338" }}>Yes</span>
                     ) : (
-                      <span className="text-red-400">No</span>
+                      <span style={{ color: "#dc2626" }}>No</span>
                     )}
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Weight</dt>
-                  <dd className="text-gray-300" {...testAttr('item-weight')}>{item.weight} kg</dd>
+                  <dt style={{ color: "rgba(38,38,38,0.35)" }}>Weight</dt>
+                  <dd style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('item-weight')}>{item.weight} kg</dd>
                 </div>
               </dl>
             </div>
@@ -138,37 +139,37 @@ export default function ConstraintSolverChallenge({ pageData, answerRef, session
       </div>
 
       {/* Constraint Panels */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
-          <h3 className="text-sm font-medium text-blue-400 mb-3">Requirements</h3>
-          <ul className="space-y-2" {...testAttr('panel', 'requirements')}>
+      <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 16, marginBottom: 16 }}>
+        <div className="card-surface" style={{ borderRadius: 12, padding: 16 }}>
+          <h3 className="text-sm font-medium" style={{ color: "#fa5d19", marginBottom: 12 }}>Requirements</h3>
+          <ul style={{ display: "flex", flexDirection: "column", gap: 8, listStyle: "none", margin: 0, padding: 0 }} {...testAttr('panel', 'requirements')}>
             {pageData.requirements.map((c, i) => (
-              <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
-                <span className="text-blue-400 mt-0.5">&#x2022;</span>
+              <li key={i} className="text-sm flex items-start" style={{ color: "rgba(38,38,38,0.7)", gap: 8 }} {...testAttr('constraint', String(i))}>
+                <span style={{ color: "#fa5d19", marginTop: 2 }}>&#x2022;</span>
                 <span>{c.label}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
-          <h3 className="text-sm font-medium text-yellow-400 mb-3">Budget &amp; Quality</h3>
-          <ul className="space-y-2" {...testAttr('panel', 'budget')}>
+        <div className="card-surface" style={{ borderRadius: 12, padding: 16 }}>
+          <h3 className="text-sm font-medium" style={{ color: "#b45309", marginBottom: 12 }}>Budget &amp; Quality</h3>
+          <ul style={{ display: "flex", flexDirection: "column", gap: 8, listStyle: "none", margin: 0, padding: 0 }} {...testAttr('panel', 'budget')}>
             {pageData.budgetConstraints.map((c, i) => (
-              <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
-                <span className="text-yellow-400 mt-0.5">&#x2022;</span>
+              <li key={i} className="text-sm flex items-start" style={{ color: "rgba(38,38,38,0.7)", gap: 8 }} {...testAttr('constraint', String(i))}>
+                <span style={{ color: "#b45309", marginTop: 2 }}>&#x2022;</span>
                 <span>{c.label}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4">
-          <h3 className="text-sm font-medium text-red-400 mb-3">Exclusions</h3>
-          <ul className="space-y-2" {...testAttr('panel', 'exclusions')}>
+        <div className="card-surface" style={{ borderRadius: 12, padding: 16 }}>
+          <h3 className="text-sm font-medium" style={{ color: "#dc2626", marginBottom: 12 }}>Exclusions</h3>
+          <ul style={{ display: "flex", flexDirection: "column", gap: 8, listStyle: "none", margin: 0, padding: 0 }} {...testAttr('panel', 'exclusions')}>
             {pageData.exclusions.map((c, i) => (
-              <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
-                <span className="text-red-400 mt-0.5">&#x2022;</span>
+              <li key={i} className="text-sm flex items-start" style={{ color: "rgba(38,38,38,0.7)", gap: 8 }} {...testAttr('constraint', String(i))}>
+                <span style={{ color: "#dc2626", marginTop: 2 }}>&#x2022;</span>
                 <span>{c.label}</span>
               </li>
             ))}
@@ -177,11 +178,12 @@ export default function ConstraintSolverChallenge({ pageData, answerRef, session
       </div>
 
       {/* Advanced Constraints */}
-      <div className="mb-4 relative">
+      <div className="relative" style={{ marginBottom: 16 }}>
         <button
           ref={popoverAnchorRef}
           onClick={handleToggleAdvanced}
-          className="text-sm text-purple-400 hover:text-purple-300 underline transition-colors cursor-pointer"
+          className="text-sm"
+          style={{ color: "#9061ff", textDecoration: "underline", cursor: "pointer", background: "none", border: "none", padding: 0 }}
           {...testAttr('toggle-advanced')}
         >
           Additional Constraints
@@ -190,19 +192,20 @@ export default function ConstraintSolverChallenge({ pageData, answerRef, session
         {showPopover && (
           <div
             id="constraints-popover"
-            className="absolute left-0 top-8 z-30 bg-gray-900 rounded-lg border border-gray-700 p-4 shadow-xl min-w-72"
+            className="absolute"
+            style={{ left: 0, top: 32, zIndex: 30, background: "#fff", borderRadius: 12, border: "1px solid #d1d1d1", padding: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", minWidth: 288 }}
             {...testAttr('panel', 'advanced')}
           >
             {loadingAdvanced ? (
-              <div className="flex items-center py-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-400" />
-                <span className="ml-2 text-sm text-gray-400">Loading...</span>
+              <div className="flex items-center" style={{ padding: "8px 0" }}>
+                <div className="animate-spin" style={{ width: 16, height: 16, borderRadius: "50%", borderBottom: "2px solid #9061ff" }} />
+                <span className="text-sm" style={{ marginLeft: 8, color: "rgba(38,38,38,0.5)" }}>Loading...</span>
               </div>
             ) : (
-              <ul className="space-y-2">
+              <ul style={{ display: "flex", flexDirection: "column", gap: 8, listStyle: "none", margin: 0, padding: 0 }}>
                 {advancedConstraints.map((c, i) => (
-                  <li key={i} className="text-sm text-gray-300 flex items-start gap-2" {...testAttr('constraint', String(i))}>
-                    <span className="text-purple-400 mt-0.5">&#x2022;</span>
+                  <li key={i} className="text-sm flex items-start" style={{ color: "rgba(38,38,38,0.7)", gap: 8 }} {...testAttr('constraint', String(i))}>
+                    <span style={{ color: "#9061ff", marginTop: 2 }}>&#x2022;</span>
                     <span>{c.label}</span>
                   </li>
                 ))}
@@ -213,21 +216,21 @@ export default function ConstraintSolverChallenge({ pageData, answerRef, session
       </div>
 
       {/* Optimization note */}
-      <div className="bg-gray-900/50 rounded-lg border border-gray-800 p-3 mb-6">
-        <p className="text-sm text-gray-400" {...testAttr('optimization')}>
-          <span className="text-amber-400 font-medium">Optimization:</span> {pageData.optimization}
+      <div style={{ background: "rgba(0,0,0,0.02)", borderRadius: 12, border: "1px solid #e8e8e8", padding: 12, marginBottom: 24 }}>
+        <p className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }} {...testAttr('optimization')}>
+          <span className="font-medium" style={{ color: "#b45309" }}>Optimization:</span> {pageData.optimization}
         </p>
       </div>
 
       {/* Answer input */}
       <div>
-        <label className="block text-sm text-gray-400 mb-2">Item Name</label>
+        <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Item Name</label>
         <input
           type="text"
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           placeholder="Enter the item name..."
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         />
       </div>
     </div>

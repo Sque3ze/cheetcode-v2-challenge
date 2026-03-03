@@ -35,30 +35,31 @@ export default function DropdownSelectChallenge({ pageData, answerRef }: Props) 
   return (
     <div>
       {/* Product cards grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 16, marginBottom: 24 }}>
         {pageData.products.map((product, i) => (
           <div
             key={i}
-            className="bg-gray-900 rounded-lg border border-gray-800 p-4"
+            className="card-surface"
+            style={{ borderRadius: 12, padding: 16 }}
             {...testAttr('product-card', product.name)}
           >
-            <h3 className="font-medium mb-2">{product.name}</h3>
-            <dl className="text-sm space-y-1">
+            <h3 className="font-medium" style={{ marginBottom: 8 }}>{product.name}</h3>
+            <dl className="text-sm" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Category</dt>
-                <dd className="text-gray-300" {...testAttr('card-category')}>{product.category}</dd>
+                <dt style={{ color: "rgba(38,38,38,0.35)" }}>Category</dt>
+                <dd style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('card-category')}>{product.category}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Price</dt>
-                <dd className="font-mono text-gray-300" {...testAttr('card-price')}>${product.price.toFixed(2)}</dd>
+                <dt style={{ color: "rgba(38,38,38,0.35)" }}>Price</dt>
+                <dd className="font-mono" style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('card-price')}>${product.price.toFixed(2)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Rating</dt>
-                <dd className="text-gray-300" {...testAttr('card-rating')}>{product.rating}</dd>
+                <dt style={{ color: "rgba(38,38,38,0.35)" }}>Rating</dt>
+                <dd style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('card-rating')}>{product.rating}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Stock</dt>
-                <dd className="text-gray-300" {...testAttr('card-stock')}>{product.stock}</dd>
+                <dt style={{ color: "rgba(38,38,38,0.35)" }}>Stock</dt>
+                <dd style={{ color: "rgba(38,38,38,0.7)" }} {...testAttr('card-stock')}>{product.stock}</dd>
               </div>
             </dl>
           </div>
@@ -67,13 +68,13 @@ export default function DropdownSelectChallenge({ pageData, answerRef }: Props) 
 
       {/* Dropdown */}
       <div>
-        <label className="block text-sm text-gray-400 mb-2">
+        <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Select the product with the {pageData.condition}
         </label>
         <select
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
-          className="w-full max-w-md px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
+          style={{ width: "100%", maxWidth: 448, padding: "8px 16px", background: "#fff", border: "1px solid #d1d1d1", borderRadius: 8, color: "#262626", outline: "none" }}
         >
           <option value="">-- Select a product --</option>
           {pageData.products.map((product, i) => (

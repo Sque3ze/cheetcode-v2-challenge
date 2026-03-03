@@ -70,6 +70,9 @@ export async function GET(
       return sessionExpired();
     }
 
+    // Track API call (fire-and-forget)
+    convex.action(api.sessions.trackApiCall, { secret: mutationSecret, sessionId: session._id }).catch(() => {});
+
     // Prerequisite check
     const statuses = await convex.query(
       api.submissions.getSessionChallengeStatuses,

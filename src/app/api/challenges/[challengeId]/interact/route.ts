@@ -95,6 +95,9 @@ export async function POST(
       return sessionExpired();
     }
 
+    // Track API call (fire-and-forget)
+    convex.action(api.sessions.trackApiCall, { secret: mutationSecret, sessionId: session._id }).catch(() => {});
+
     // 4.5. Prerequisite check
     const allStatuses = await convex.query(
       api.submissions.getSessionChallengeStatuses,

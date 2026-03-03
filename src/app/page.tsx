@@ -346,7 +346,7 @@ export default function Home() {
               >
                 <thead>
                   <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
-                    {["#", "Player", "Score", "Wrong"].map((label, idx) => (
+                    {["#", "Player", "Score", "Wrong", "API Calls"].map((label, idx) => (
                       <th
                         key={label}
                         style={{
@@ -446,6 +446,15 @@ export default function Home() {
                         }}
                       >
                         {entry.wrongAttempts}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 24px",
+                          textAlign: "right",
+                          color: "rgba(38, 38, 38, 0.35)",
+                        }}
+                      >
+                        {entry.apiCalls ?? "—"}
                       </td>
                     </tr>
                   ))}
