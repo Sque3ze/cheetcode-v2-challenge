@@ -22,8 +22,11 @@ import { modalInteractionChallenge } from "./tier1/modal-interaction";
 import { multiStepWizardChallenge } from "./tier2/multi-step-wizard";
 import { linkedDataLookupChallenge } from "./tier2/linked-data-lookup";
 import { sequentialCalculatorChallenge } from "./tier2/sequential-calculator";
+import { resilientCollectorChallenge } from "./tier2/resilient-collector";
 import { dataDashboardChallenge } from "./tier3/data-dashboard";
 import { constraintSolverChallenge } from "./tier3/constraint-solver";
+import { fanOutAggregatorChallenge } from "./tier3/fan-out-aggregator";
+import { priceNegotiatorChallenge } from "./tier3/price-negotiator";
 import { calculationAuditChallenge } from "./tier4/calculation-audit";
 import { redHerringChallenge } from "./tier4/red-herring";
 
@@ -42,10 +45,13 @@ const CHALLENGES: ChallengeDefinition<unknown>[] = [
   multiStepWizardChallenge,
   linkedDataLookupChallenge,
   sequentialCalculatorChallenge,
+  resilientCollectorChallenge,
 
   // Tier 3 — Complex Synthesis
   dataDashboardChallenge,
   constraintSolverChallenge,
+  fanOutAggregatorChallenge,
+  priceNegotiatorChallenge,
 
   // Tier 4 — Advanced Analysis
   calculationAuditChallenge,

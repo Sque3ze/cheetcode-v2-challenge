@@ -12,6 +12,7 @@ import type * as admin from "../admin.js";
 import type * as challengeViews from "../challengeViews.js";
 import type * as debug from "../debug.js";
 import type * as leaderboard from "../leaderboard.js";
+import type * as ranking from "../ranking.js";
 import type * as sessionEvents from "../sessionEvents.js";
 import type * as sessions from "../sessions.js";
 import type * as submissions from "../submissions.js";
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   challengeViews: typeof challengeViews;
   debug: typeof debug;
   leaderboard: typeof leaderboard;
+  ranking: typeof ranking;
   sessionEvents: typeof sessionEvents;
   sessions: typeof sessions;
   submissions: typeof submissions;

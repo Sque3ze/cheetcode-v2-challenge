@@ -20,6 +20,9 @@ import DataDashboardChallenge from "./challenges/DataDashboardChallenge";
 import ConstraintSolverChallenge from "./challenges/ConstraintSolverChallenge";
 import CalculationAuditChallenge from "./challenges/CalculationAuditChallenge";
 import RedHerringChallenge from "./challenges/RedHerringChallenge";
+import ResilientCollectorChallenge from "./challenges/ResilientCollectorChallenge";
+import FanOutAggregatorChallenge from "./challenges/FanOutAggregatorChallenge";
+import PriceNegotiatorChallenge from "./challenges/PriceNegotiatorChallenge";
 
 interface ChallengePageData {
   id: string;
@@ -60,6 +63,9 @@ const CHALLENGE_RENDERERS: Record<string, React.ComponentType<ChallengeRendererP
   "tier3-constraint-solver": ConstraintSolverChallenge,
   "tier4-calculation-audit": CalculationAuditChallenge,
   "tier4-red-herring": RedHerringChallenge,
+  "tier2-resilient-collector": ResilientCollectorChallenge,
+  "tier3-fan-out-aggregator": FanOutAggregatorChallenge,
+  "tier3-price-negotiator": PriceNegotiatorChallenge,
 };
 
 export default function ChallengePage({

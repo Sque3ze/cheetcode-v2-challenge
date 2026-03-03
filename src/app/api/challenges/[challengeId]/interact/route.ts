@@ -160,7 +160,9 @@ export async function POST(
     }
 
     // 8. Call handleInteract
-    const result = challenge.handleInteract(generated.hiddenData, action, interactParams);
+    const result = challenge.handleInteract(generated.hiddenData, action, interactParams, {
+      viewedAt: view.viewedAt,
+    });
 
     // 9. Update lastInteractAt
     await convex.action(api.challengeViews.recordInteractAction, {

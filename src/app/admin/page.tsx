@@ -2,11 +2,32 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "convex/react";
 import Link from "next/link";
-import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { classifyAgent } from "../../lib/agent-detection";
+
+// ─── Authenticated fetch hook (proxies through /api/admin/data) ──
+type AdminQueryType = "overview" | "challenges" | "sessions" | "timeline";
+
+function useAdminQuery<T>(type: AdminQueryType, params?: Record<string, string>): T | undefined {
+  const searchParams = useSearchParams();
+  const key = searchParams.get("key") || "";
+  const [data, setData] = useState<T | undefined>(undefined);
+
+  // Stable serialization of params for the dependency array
+  const paramsKey = params ? JSON.stringify(params) : "";
+
+  useEffect(() => {
+    const extra = paramsKey ? JSON.parse(paramsKey) as Record<string, string> : {};
+    const qs = new URLSearchParams({ type, key, ...extra });
+    fetch(`/api/admin/data?${qs}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setData(d); })
+      .catch(() => {});
+  }, [type, key, paramsKey]);
+
+  return data;
+}
 
 // ─── Color helpers ───────────────────────────────────────────
 const ACCENT = "#fa5d19";
@@ -45,7 +66,13 @@ const EVENT_COLORS: Record<string, string> = {
 
 // ─── Overview Cards ──────────────────────────────────────────
 function OverviewCards() {
-  const stats = useQuery(api.admin.getOverviewStats);
+  const stats = useAdminQuery<{
+    totalSessions: number;
+    completedSessions: number;
+    avgScore: number;
+    uniquePlayers: number;
+    topUserAgent: string;
+  }>("overview");
 
   if (!stats)
     return (
@@ -93,7 +120,15 @@ function OverviewCards() {
 
 // ─── Challenge Analytics Table ───────────────────────────────
 function ChallengeAnalytics() {
-  const aggregates = useQuery(api.admin.getChallengeAggregates);
+  const aggregates = useAdminQuery<Array<{
+    challengeId: string;
+    totalAttempts: number;
+    successRate: number;
+    avgAttempts: number;
+    avgSolveTimeMs: number | null;
+    lockRate: number;
+    topWrongAnswers: Array<{ answer: string; count: number }>;
+  }>>("challenges");
 
   if (!aggregates)
     return (
@@ -204,7 +239,12 @@ function ChallengeAnalytics() {
 
 // ─── Session Timeline ────────────────────────────────────────
 function SessionTimeline({ sessionId, startedAt }: { sessionId: Id<"sessions">; startedAt: number }) {
-  const events = useQuery(api.admin.getSessionTimeline, { sessionId });
+  const events = useAdminQuery<Array<{
+    type: string;
+    challengeId?: string;
+    timestamp: number;
+    metadata?: Record<string, unknown>;
+  }>>("timeline", { sessionId });
 
   if (!events) return <p style={{ color: DIM, fontSize: 12, padding: "8px 14px" }}>Loading timeline...</p>;
   if (events.length === 0) return <p style={{ color: DIM, fontSize: 12, padding: "8px 14px" }}>No events recorded.</p>;
@@ -265,7 +305,26 @@ function SessionTimeline({ sessionId, startedAt }: { sessionId: Id<"sessions">; 
 
 // ─── Recent Sessions ─────────────────────────────────────────
 function RecentSessions() {
-  const sessions = useQuery(api.admin.getRecentSessions, { limit: 20 });
+  const sessions = useAdminQuery<Array<{
+    _id: Id<"sessions">;
+    github: string;
+    startedAt: number;
+    expiresAt: number;
+    status: string;
+    userAgent?: string;
+    apiCalls: number;
+    solvedChallenges: string[];
+    wrongAttempts: number;
+    score: number | null;
+    orchestrationScore: number | null;
+    orchestrationMetrics: {
+      parallelizationScore: number;
+      dagEfficiency: number;
+      criticalPathSpeed: number;
+      submissionConfidence: number;
+      tiersReached: number;
+    } | null;
+  }>>("sessions", { limit: "20" });
   const [expanded, setExpanded] = useState<string | null>(null);
 
   if (!sessions) return <p style={{ color: DIM, fontSize: 14 }}>Loading sessions...</p>;
@@ -294,7 +353,7 @@ function RecentSessions() {
         </thead>
           {sessions.map((s, i) => {
             const isExpanded = expanded === s._id;
-            // eslint-disable-next-line react-hooks/purity -- Date.now() is intentional; Convex useQuery re-renders keep it fresh
+            // eslint-disable-next-line react-hooks/purity -- Date.now() is intentional for active session duration
             const duration = (s.status === "active" ? Date.now() : s.expiresAt) - s.startedAt;
             const agentTool = s.userAgent ? classifyAgent(s.userAgent).tool : "—";
 

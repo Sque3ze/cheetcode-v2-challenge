@@ -73,16 +73,7 @@ export async function GET(
     // Track API call (fire-and-forget)
     convex.action(api.sessions.trackApiCall, { secret: mutationSecret, sessionId: session._id }).catch(() => {});
 
-    // Emit challenge_viewed event (fire-and-forget)
-    convex.action(api.sessionEvents.emitEvent, {
-      secret: mutationSecret,
-      sessionId: session._id,
-      type: "challenge_viewed" as const,
-      challengeId,
-      metadata: { tier: challenge.tier },
-    }).catch(() => {});
-
-    // Prerequisite check
+    // Prerequisite check (before emitting telemetry so locked views aren't recorded)
     const statuses = await convex.query(
       api.submissions.getSessionChallengeStatuses,
       { sessionId: session._id }
@@ -102,6 +93,15 @@ export async function GET(
         { status: 403 }
       );
     }
+
+    // Emit challenge_viewed event (fire-and-forget, after prereq check passes)
+    convex.action(api.sessionEvents.emitEvent, {
+      secret: mutationSecret,
+      sessionId: session._id,
+      type: "challenge_viewed" as const,
+      challengeId,
+      metadata: { tier: challenge.tier },
+    }).catch(() => {});
 
     // Generate challenge data from seed
     const gen = new ChallengeDataGenerator(sessionId, serverSecret);
@@ -143,7 +143,7 @@ export async function GET(
       id: challenge.id,
       title: challenge.title,
       tier: challenge.tier,
-      points: TIER_POINTS[challenge.tier],
+      points: challenge.points ?? TIER_POINTS[challenge.tier],
       description: challenge.description,
       instructions,
       pageData,

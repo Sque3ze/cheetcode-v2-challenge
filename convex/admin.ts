@@ -1,10 +1,11 @@
-import { query } from "./_generated/server";
+import { internalQuery, action } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 /**
  * Overview stats for the admin dashboard.
  */
-export const getOverviewStats = query({
+export const getOverviewStats = internalQuery({
   args: {},
   handler: async (ctx) => {
     const sessions = await ctx.db.query("sessions").collect();
@@ -48,7 +49,7 @@ export const getOverviewStats = query({
 /**
  * Per-challenge aggregate stats.
  */
-export const getChallengeAggregates = query({
+export const getChallengeAggregates = internalQuery({
   args: {},
   handler: async (ctx) => {
     const submissions = await ctx.db.query("submissions").collect();
@@ -179,7 +180,7 @@ export const getChallengeAggregates = query({
 /**
  * Recent sessions with basic stats.
  */
-export const getRecentSessions = query({
+export const getRecentSessions = internalQuery({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 20;
@@ -203,11 +204,21 @@ export const getRecentSessions = query({
         else wrongAttempts++;
       }
 
-      // Get leaderboard entry for this session
-      const lbEntry = await ctx.db
-        .query("leaderboard")
-        .withIndex("by_github", (q) => q.eq("github", session.github))
-        .first();
+      // Prefer session-level fields; fall back to leaderboard for pre-migration sessions
+      let score = session.score ?? null;
+      let orchestrationScore = session.orchestrationScore ?? null;
+      let orchestrationMetrics = session.orchestrationMetrics ?? null;
+      if (score == null && session.status === "completed") {
+        const lbEntry = await ctx.db
+          .query("leaderboard")
+          .withIndex("by_github", (q) => q.eq("github", session.github))
+          .first();
+        if (lbEntry?.sessionId === session._id) {
+          score = lbEntry.score;
+          orchestrationScore = lbEntry.orchestrationScore ?? null;
+          orchestrationMetrics = lbEntry.orchestrationMetrics ?? null;
+        }
+      }
 
       results.push({
         _id: session._id,
@@ -219,15 +230,9 @@ export const getRecentSessions = query({
         apiCalls: session.apiCalls ?? 0,
         solvedChallenges: Array.from(solvedChallenges),
         wrongAttempts,
-        score: lbEntry?.sessionId === session._id ? lbEntry.score : null,
-        orchestrationScore:
-          lbEntry?.sessionId === session._id
-            ? lbEntry.orchestrationScore
-            : null,
-        orchestrationMetrics:
-          lbEntry?.sessionId === session._id
-            ? lbEntry.orchestrationMetrics
-            : null,
+        score,
+        orchestrationScore,
+        orchestrationMetrics,
       });
     }
 
@@ -238,7 +243,7 @@ export const getRecentSessions = query({
 /**
  * Full event timeline for a single session.
  */
-export const getSessionTimeline = query({
+export const getSessionTimeline = internalQuery({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
     const events = await ctx.db
@@ -246,5 +251,48 @@ export const getSessionTimeline = query({
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .collect();
     return events.sort((a, b) => a.timestamp - b.timestamp);
+  },
+});
+
+// ─── Authenticated action gateways ──────────────────────────
+
+function assertAdmin(secret: string) {
+  if (secret !== process.env.CONVEX_MUTATION_SECRET) {
+    throw new Error("unauthorized");
+  }
+}
+
+// Return types are inferred from the internal queries; explicit `any` breaks
+// the circular reference that Convex codegen creates with action return types.
+
+export const fetchOverviewStats = action({
+  args: { secret: v.string() },
+  handler: async (ctx, args): Promise<any> => {
+    assertAdmin(args.secret);
+    return await ctx.runQuery(internal.admin.getOverviewStats, {});
+  },
+});
+
+export const fetchChallengeAggregates = action({
+  args: { secret: v.string() },
+  handler: async (ctx, args): Promise<any> => {
+    assertAdmin(args.secret);
+    return await ctx.runQuery(internal.admin.getChallengeAggregates, {});
+  },
+});
+
+export const fetchRecentSessions = action({
+  args: { secret: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, args): Promise<any> => {
+    assertAdmin(args.secret);
+    return await ctx.runQuery(internal.admin.getRecentSessions, { limit: args.limit });
+  },
+});
+
+export const fetchSessionTimeline = action({
+  args: { secret: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args): Promise<any> => {
+    assertAdmin(args.secret);
+    return await ctx.runQuery(internal.admin.getSessionTimeline, { sessionId: args.sessionId });
   },
 });

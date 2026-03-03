@@ -80,3 +80,27 @@ export function rateLimited(message?: string) {
 export function sessionExpired() {
   return NextResponse.json({ error: "session_expired" }, { status: 410 });
 }
+
+/**
+ * Verify admin auth: resolves GitHub identity, checks ADMIN_GITHUB and ADMIN_KEY.
+ * Returns the github username on success, or a NextResponse error on failure.
+ */
+export async function verifyAdminAuth(
+  request: Request
+): Promise<{ github: string } | NextResponse> {
+  const github = await resolveGitHub(request);
+  if (!github) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+  const adminGithub = process.env.ADMIN_GITHUB;
+  if (adminGithub && github !== adminGithub) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+  const url = new URL(request.url);
+  const key = url.searchParams.get("key");
+  const adminKey = process.env.ADMIN_KEY;
+  if (adminKey && key !== adminKey) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+  return { github };
+}

@@ -32,9 +32,12 @@ interface ChallengeInfo {
 const CRITICAL_PATH_ROOTS = ["tier1-form-fill", "tier1-tab-navigation"];
 const CRITICAL_CHAINS: string[][] = [
   ["tier1-form-fill", "tier2-linked-data-lookup", "tier3-constraint-solver"],
+  ["tier1-form-fill", "tier2-linked-data-lookup", "tier3-fan-out-aggregator"],
   ["tier1-form-fill", "tier2-linked-data-lookup", "tier4-red-herring"],
   ["tier1-tab-navigation", "tier2-sequential-calculator", "tier3-data-dashboard"],
+  ["tier1-tab-navigation", "tier2-sequential-calculator", "tier3-price-negotiator"],
   ["tier1-tab-navigation", "tier2-sequential-calculator", "tier4-calculation-audit"],
+  ["tier1-tab-navigation", "tier2-resilient-collector"],
 ];
 
 /**

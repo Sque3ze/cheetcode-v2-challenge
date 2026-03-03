@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, action, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { compareRank } from "./ranking";
 
 const SESSION_COOLDOWN_MS = 10_000;
 
@@ -128,14 +129,22 @@ export const complete = internalMutation({
     if (!session) throw new Error("session not found");
     if (session.github !== args.github) throw new Error("github mismatch");
 
-    // Mark session completed
-    await ctx.db.patch(args.sessionId, { status: "completed" });
-
     // Compute percentage score
     const score =
       args.totalPoints > 0
         ? Math.round((args.earnedPoints / args.totalPoints) * 10000) / 100
         : 0;
+
+    // Mark session completed and persist metrics on the session record
+    await ctx.db.patch(args.sessionId, {
+      status: "completed",
+      earnedPoints: args.earnedPoints,
+      totalPoints: args.totalPoints,
+      wrongAttempts: args.wrongAttempts,
+      score,
+      orchestrationScore: args.orchestrationScore,
+      orchestrationMetrics: args.orchestrationMetrics,
+    });
 
     // Update leaderboard (only if this is a new best score)
     const existing = await ctx.db
@@ -161,11 +170,7 @@ export const complete = internalMutation({
       if (args.earnedPoints > 0) {
         await ctx.db.insert("leaderboard", entry);
       }
-    } else if (
-      score > existing.score ||
-      (score === existing.score &&
-        args.wrongAttempts < existing.wrongAttempts)
-    ) {
+    } else if (compareRank({ score, ...args }, existing) < 0) {
       await ctx.db.patch(existing._id, entry);
     }
 

@@ -15,6 +15,20 @@ export default defineSchema({
     ),
     apiCalls: v.optional(v.number()),
     userAgent: v.optional(v.string()),
+    earnedPoints: v.optional(v.number()),
+    totalPoints: v.optional(v.number()),
+    wrongAttempts: v.optional(v.number()),
+    score: v.optional(v.number()),
+    orchestrationScore: v.optional(v.number()),
+    orchestrationMetrics: v.optional(
+      v.object({
+        parallelizationScore: v.number(),
+        dagEfficiency: v.number(),
+        criticalPathSpeed: v.number(),
+        submissionConfidence: v.number(),
+        tiersReached: v.number(),
+      })
+    ),
   })
     .index("by_github", ["github"])
     .index("by_github_status", ["github", "status"]),

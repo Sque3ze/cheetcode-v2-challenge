@@ -9,6 +9,12 @@
 import type { Tier } from "./config";
 import type { ChallengeData } from "./seed";
 
+/** Context passed from the interact route to handleInteract. */
+export interface InteractContext {
+  /** Timestamp when the challenge page was loaded (from challengeViews record). */
+  viewedAt: number;
+}
+
 /**
  * A challenge definition. Each challenge module exports one of these.
  * The `generate` function produces all data needed for both rendering
@@ -56,7 +62,8 @@ export interface ChallengeDefinition<TPageData = unknown> {
   handleInteract?: (
     hiddenData: Record<string, unknown>,
     action: string,
-    params: Record<string, unknown>
+    params: Record<string, unknown>,
+    context?: InteractContext
   ) => unknown;
 
   /**
