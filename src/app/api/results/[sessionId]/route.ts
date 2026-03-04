@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchResultsData } from "../../../../lib/results-data";
-import { resolveGitHub, unauthorized } from "../../../../lib/api-helpers";
+import { resolveGitHub, unauthorized, forbidden } from "../../../../lib/api-helpers";
 
 /**
  * GET /api/results/[sessionId]
@@ -22,6 +22,10 @@ export async function GET(
         { error: "Session not found or still in progress" },
         { status: 404 }
       );
+    }
+
+    if (data.session.github !== github) {
+      return forbidden("Session does not belong to this user");
     }
 
     return NextResponse.json(data, {

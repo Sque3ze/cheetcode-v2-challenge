@@ -6,6 +6,8 @@
  * For browser agents: OAuth session is used automatically
  */
 
+import { timingSafeEqual } from "crypto";
+
 // Brief cache to avoid hammering GitHub API on rapid successive calls
 const tokenCache = new Map<string, { username: string; expiresAt: number }>();
 const CACHE_TTL_MS = 60_000; // 1 minute
@@ -37,12 +39,15 @@ export async function verifyGitHubToken(token: string): Promise<string | null> {
   }
 }
 
-/** Validate a "test:<secret>" token against TEST_AUTH_SECRET. */
+/** Validate a "test:<secret>" token against TEST_AUTH_SECRET (constant-time). */
 function validateTestToken(token: string): boolean {
   if (!token.startsWith("test:")) return false;
   const testSecret = process.env.TEST_AUTH_SECRET;
   if (!testSecret) return false;
-  return token.slice(5) === testSecret;
+  const a = Buffer.from(token.slice(5));
+  const b = Buffer.from(testSecret);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 /**
@@ -60,6 +65,7 @@ export async function resolveGitHubFromHeader(
   if (!token) return null;
 
   if (validateTestToken(token)) {
+    if (process.env.NODE_ENV === "production") return null;
     const testUser = request.headers.get("x-test-user")?.trim();
     return testUser || null;
   }

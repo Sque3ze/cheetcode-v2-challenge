@@ -66,8 +66,8 @@ const RAW_NODES: Array<{
   { id: "tier3-trace-analyzer", label: "Trace Analyzer", shortLabel: "Trace", tier: 3, points: 4, dependsOn: ["tier2-resilient-collector"] },
   { id: "tier3-event-sourcing", label: "Event Sourcing", shortLabel: "EvtSrc", tier: 3, points: 4, dependsOn: ["tier2-sequential-calculator"] },
 
-  { id: "tier4-calculation-audit", label: "Calculation Audit", shortLabel: "Audit", tier: 4, points: 2, dependsOn: ["tier3-data-dashboard", "tier2-config-debugger"] },
-  { id: "tier4-red-herring", label: "Quarterly Report", shortLabel: "Report", tier: 4, points: 2, dependsOn: ["tier3-constraint-solver"] },
+  { id: "tier4-calculation-audit", label: "Calculation Audit", shortLabel: "Audit", tier: 4, points: 4, dependsOn: ["tier3-data-dashboard", "tier2-config-debugger"] },
+  { id: "tier4-red-herring", label: "Quarterly Report", shortLabel: "Report", tier: 4, points: 4, dependsOn: ["tier3-constraint-solver"] },
 ];
 
 function computeWave(nodeId: string, lookup: Map<string, typeof RAW_NODES[0]>, cache: Map<string, number>): number {

@@ -125,6 +125,7 @@ export const complete = internalMutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("session not found");
     if (session.github !== args.github) throw new Error("github mismatch");
+    if (session.status !== "active") throw new Error("session already finalized");
 
     const completionScore =
       args.totalPoints > 0

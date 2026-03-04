@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
+import { timingSafeEqual } from "crypto";
 import { resolveGitHubFromHeader } from "./github-auth";
 import { auth } from "../../auth";
 import { IS_TEST_MODE } from "./config";
@@ -150,8 +151,12 @@ export async function verifyAdminAuth(
   }
   const adminKey = process.env.ADMIN_KEY;
   const key = request.headers.get("x-admin-key");
-  if (adminKey && key === adminKey) {
-    return { github };
+  if (adminKey && key) {
+    const a = Buffer.from(key);
+    const b = Buffer.from(adminKey);
+    if (a.length === b.length && timingSafeEqual(a, b)) {
+      return { github };
+    }
   }
   return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 }

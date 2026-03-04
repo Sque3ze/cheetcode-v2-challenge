@@ -230,6 +230,7 @@ function LeaderboardManagement() {
   const key = useAdminKey();
   const entries = useAdminQuery<LeaderboardEntry[]>("leaderboard");
   const [updating, setUpdating] = useState<Set<string>>(new Set());
+  const [visOverrides, setVisOverrides] = useState<Record<string, boolean>>({});
 
   const toggleVisibility = async (entryId: string, visible: boolean) => {
     setUpdating((prev) => new Set(prev).add(entryId));
@@ -240,11 +241,7 @@ function LeaderboardManagement() {
         body: JSON.stringify({ type: "leaderboard-visibility", entryId, visible }),
       });
       if (res.ok) {
-        // Optimistically update local state — flip the flag
-        if (entries) {
-          const entry = entries.find((e) => e._id === entryId);
-          if (entry) entry.isTestSession = !visible;
-        }
+        setVisOverrides((prev) => ({ ...prev, [entryId]: visible }));
       }
     } catch {
       // silent
@@ -284,7 +281,7 @@ function LeaderboardManagement() {
         </thead>
         <tbody>
           {entries.map((entry, i) => {
-            const isTest = !!entry.isTestSession;
+            const isTest = entry._id in visOverrides ? !visOverrides[entry._id] : !!entry.isTestSession;
             const isVisible = !isTest;
             const isLoading = updating.has(entry._id);
 
@@ -480,6 +477,7 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expiring, setExpiring] = useState<Set<string>>(new Set());
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, AdminSession["status"]>>({});
 
   const forceExpire = async (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -491,9 +489,8 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
         headers: { "Content-Type": "application/json", "x-admin-key": key },
         body: JSON.stringify({ type: "force-expire", sessionId }),
       });
-      if (res.ok && sessions) {
-        const s = sessions.find((s) => s._id === sessionId);
-        if (s) s.status = "expired";
+      if (res.ok) {
+        setStatusOverrides((prev) => ({ ...prev, [sessionId]: "expired" }));
       }
     } catch {
       // silent
@@ -570,6 +567,7 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
             </tr>
           </thead>
             {sessions.map((s, i) => {
+              const displayStatus = statusOverrides[s._id] ?? s.status;
               const isExpanded = expanded === s._id;
               const isSelected = selected.has(s._id);
               const duration = s.expiresAt - s.startedAt;
@@ -607,22 +605,22 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
                           borderRadius: 4,
                           fontWeight: 500,
                           background:
-                            s.status === "completed"
+                            displayStatus === "completed"
                               ? "rgba(22, 163, 74, 0.08)"
-                              : s.status === "active"
+                              : displayStatus === "active"
                                 ? "rgba(59, 130, 246, 0.08)"
                                 : "rgba(38, 38, 38, 0.06)",
                           color:
-                            s.status === "completed"
+                            displayStatus === "completed"
                               ? "#16a34a"
-                              : s.status === "active"
+                              : displayStatus === "active"
                                 ? "#3b82f6"
                                 : DIM,
                         }}
                       >
-                        {s.status}
+                        {displayStatus}
                       </span>
-                      {s.status === "active" && (
+                      {displayStatus === "active" && (
                         <button
                           onClick={(e) => forceExpire(s._id, e)}
                           disabled={expiring.has(s._id)}

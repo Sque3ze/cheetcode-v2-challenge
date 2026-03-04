@@ -16,6 +16,16 @@ export const record = internalMutation({
     attemptNumber: v.number(),
   },
   handler: async (ctx, args) => {
+    // Atomic guard: prevent races that bypass attempt limits
+    const existing = await ctx.db
+      .query("submissions")
+      .withIndex("by_session_challenge", (q) =>
+        q.eq("sessionId", args.sessionId).eq("challengeId", args.challengeId)
+      )
+      .collect();
+    if (existing.some((s) => s.correct)) return;
+    if (existing.length >= 3) return;
+
     await ctx.db.insert("submissions", {
       sessionId: args.sessionId,
       challengeId: args.challengeId,
