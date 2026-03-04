@@ -207,9 +207,13 @@ export const getRecentSessions = internalQuery({
 
       const solvedChallenges = new Set<string>();
       let wrongAttempts = 0;
+      let lastActivityAt: number | null = null;
       for (const sub of submissions) {
         if (sub.correct) solvedChallenges.add(sub.challengeId);
         else wrongAttempts++;
+        if (lastActivityAt == null || sub.submittedAt > lastActivityAt) {
+          lastActivityAt = sub.submittedAt;
+        }
       }
 
       // Prefer session-level fields; fall back to leaderboard for pre-migration sessions
@@ -241,6 +245,7 @@ export const getRecentSessions = internalQuery({
         score,
         orchestrationScore,
         orchestrationMetrics,
+        lastActivityAt,
       });
     }
 

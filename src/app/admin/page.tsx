@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { SessionEvent, OrchestrationMetrics } from "../../lib/orchestration-metrics";
-import { classifyAgent } from "../../lib/agent-detection";
 import { SessionGanttChart } from "../../components/spectator/SessionGanttChart";
 import { OverlayGanttChart } from "../../components/spectator/OverlayGanttChart";
 import { OrchestrationRadar } from "../../components/spectator/OrchestrationRadar";
@@ -478,6 +477,7 @@ type AdminSession = {
   score: number | null;
   orchestrationScore: number | null;
   orchestrationMetrics: OrchestrationMetrics | null;
+  lastActivityAt: number | null;
 };
 
 // ─── Recent Sessions ─────────────────────────────────────────
@@ -559,14 +559,14 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
         <table style={{ width: "100%", fontSize: 13, lineHeight: "20px", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-              {["", "Player", "Status", "Score", "Orch.", "Solved", "Wrong", "API", "Tool", "Duration"].map((h) => (
+              {["", "Player", "Status", "Score", "Orch.", "Solved", "Wrong", "API", "Duration"].map((h) => (
                 <th
                   key={h || "check"}
                   style={{
                     padding: h === "" ? "10px 6px 10px 14px" : "10px 14px",
                     fontWeight: 450,
                     color: DIM,
-                    textAlign: h === "Player" || h === "Tool" || h === "" ? "left" : "right",
+                    textAlign: h === "Player" || h === "" ? "left" : "right",
                     whiteSpace: "nowrap",
                     width: h === "" ? 28 : undefined,
                   }}
@@ -579,9 +579,8 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
             {sessions.map((s, i) => {
               const isExpanded = expanded === s._id;
               const isSelected = selected.has(s._id);
-               
-              const duration = (s.status === "active" ? Date.now() : s.expiresAt) - s.startedAt;
-              const agentTool = s.userAgent ? classifyAgent(s.userAgent).tool : "—";
+              const endTime = s.status === "active" ? Date.now() : (s.lastActivityAt ?? s.expiresAt);
+              const duration = endTime - s.startedAt;
 
               return (
                 <tbody key={s._id}>
@@ -701,7 +700,6 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
                     >
                       {s.apiCalls}
                     </td>
-                    <td style={{ padding: "10px 14px", color: DIM, fontSize: 12 }}>{agentTool}</td>
                     <td
                       style={{
                         padding: "10px 14px",
@@ -715,7 +713,7 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
                   </tr>
                   {isExpanded && (
                     <tr>
-                      <td colSpan={10} style={{ padding: 0 }}>
+                      <td colSpan={9} style={{ padding: 0 }}>
                         {s.orchestrationMetrics && (
                           <div
                             style={{
