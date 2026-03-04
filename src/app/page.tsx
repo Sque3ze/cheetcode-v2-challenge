@@ -272,8 +272,8 @@ export default function Home() {
             }}
           >
             Build an AI agent that navigates web pages, extracts data, and
-            solves challenges. Your score is the percentage you complete in
-            the time window.
+            solves challenges. Your score is based on how well you
+            orchestrate your agent.
           </p>
 
           <div
