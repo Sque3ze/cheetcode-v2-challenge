@@ -299,6 +299,15 @@ export const fetchSessionTimeline = action({
   },
 });
 
+export const forceExpireSession = action({
+  args: { secret: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    await ctx.runMutation(internal.sessions.expire, { sessionId: args.sessionId });
+    return { ok: true };
+  },
+});
+
 export const fetchAllAdmin = action({
   args: { secret: v.string() },
   handler: async (ctx, args): Promise<any> => {

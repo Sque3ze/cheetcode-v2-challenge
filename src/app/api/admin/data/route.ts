@@ -98,6 +98,19 @@ export async function POST(request: Request) {
         );
       }
 
+      case "force-expire": {
+        const { sessionId } = body;
+        if (!sessionId) {
+          return NextResponse.json({ error: "sessionId required" }, { status: 400 });
+        }
+        return NextResponse.json(
+          await convex.action(api.admin.forceExpireSession, {
+            secret,
+            sessionId: sessionId as unknown as Id<"sessions">,
+          })
+        );
+      }
+
       default:
         return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 });
     }

@@ -482,9 +482,36 @@ type AdminSession = {
 
 // ─── Recent Sessions ─────────────────────────────────────────
 function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSession) => void }) {
+  const key = useAdminKey();
   const sessions = useAdminQuery<AdminSession[]>("sessions", { limit: "20" });
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expiring, setExpiring] = useState<Set<string>>(new Set());
+
+  const forceExpire = async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Force-expire this session?")) return;
+    setExpiring((prev) => new Set(prev).add(sessionId));
+    try {
+      const res = await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-key": key },
+        body: JSON.stringify({ type: "force-expire", sessionId }),
+      });
+      if (res.ok && sessions) {
+        const s = sessions.find((s) => s._id === sessionId);
+        if (s) s.status = "expired";
+      }
+    } catch {
+      // silent
+    } finally {
+      setExpiring((prev) => {
+        const next = new Set(prev);
+        next.delete(sessionId);
+        return next;
+      });
+    }
+  };
 
   if (!sessions) return <p style={{ color: DIM, fontSize: 14 }}>Loading sessions...</p>;
   if (sessions.length === 0) return <p style={{ color: DIM, fontSize: 14 }}>No sessions yet.</p>;
@@ -552,7 +579,7 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
             {sessions.map((s, i) => {
               const isExpanded = expanded === s._id;
               const isSelected = selected.has(s._id);
-              // eslint-disable-next-line react-hooks/purity -- Date.now() is intentional for active session duration
+               
               const duration = (s.status === "active" ? Date.now() : s.expiresAt) - s.startedAt;
               const agentTool = s.userAgent ? classifyAgent(s.userAgent).tool : "—";
 
@@ -581,7 +608,7 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
                       />
                     </td>
                     <td style={{ padding: "10px 14px", fontWeight: 450 }}>{s.github}</td>
-                    <td style={{ padding: "10px 14px", textAlign: "right" }}>
+                    <td style={{ padding: "10px 14px", textAlign: "right", whiteSpace: "nowrap" }}>
                       <span
                         style={{
                           fontSize: 11,
@@ -604,6 +631,26 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
                       >
                         {s.status}
                       </span>
+                      {s.status === "active" && (
+                        <button
+                          onClick={(e) => forceExpire(s._id, e)}
+                          disabled={expiring.has(s._id)}
+                          style={{
+                            marginLeft: 6,
+                            fontSize: 10,
+                            padding: "2px 7px",
+                            borderRadius: 4,
+                            border: "1px solid rgba(220, 38, 38, 0.2)",
+                            background: "rgba(220, 38, 38, 0.06)",
+                            color: "#dc2626",
+                            cursor: expiring.has(s._id) ? "wait" : "pointer",
+                            fontWeight: 600,
+                            opacity: expiring.has(s._id) ? 0.5 : 1,
+                          }}
+                        >
+                          End
+                        </button>
+                      )}
                     </td>
                     <td
                       style={{
