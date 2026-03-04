@@ -165,6 +165,17 @@ export const fetchBySessionChallenge = action({
   },
 });
 
+/** Authenticated gateway for getBySession */
+export const fetchBySession = action({
+  args: { secret: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runQuery(internal.submissions.getBySession, {
+      sessionId: args.sessionId,
+    });
+  },
+});
+
 /** Authenticated gateway for getSessionChallengeStatuses */
 export const fetchSessionChallengeStatuses = action({
   args: { secret: v.string(), sessionId: v.id("sessions") },

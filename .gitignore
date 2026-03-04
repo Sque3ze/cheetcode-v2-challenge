@@ -14,3 +14,4 @@ package-lock.json
 /eval-results
 .DS_Store
 scripts/view-telemetry.ts
+test-results/

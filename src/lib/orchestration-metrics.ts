@@ -19,12 +19,12 @@ function isCorrectSubmission(e: SessionEvent): boolean {
 }
 
 export interface OrchestrationMetrics {
-  parallelizationScore: number;  // 0-1
-  dagEfficiency: number;         // 0-1
-  criticalPathSpeed: number;     // 0-1
-  submissionConfidence: number;  // 0-1
-  failureRecoveryScore: number;  // 0-1
-  tiersReached: number;          // 1-4
+  parallelizationScore: number;   // 0-1
+  dagEfficiency: number;          // 0-1
+  criticalPathSpeed: number;      // 0-1
+  submissionConfidence: number;   // 0-1
+  failureRecoveryScore?: number;  // 0-1 (optional for pre-migration sessions)
+  tiersReached: number;           // 1-4
 }
 
 export type FailurePattern =

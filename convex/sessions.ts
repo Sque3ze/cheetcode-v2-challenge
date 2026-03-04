@@ -50,6 +50,11 @@ export const create = internalMutation({
       userAgent: args.userAgent,
     });
 
+    // Auto-expire if still active after the time limit
+    await ctx.scheduler.runAfter(args.durationMs, internal.sessions.expire, {
+      sessionId,
+    });
+
     return { sessionId, startedAt, expiresAt };
   },
 });
@@ -121,6 +126,7 @@ export const complete = internalMutation({
         dagEfficiency: v.number(),
         criticalPathSpeed: v.number(),
         submissionConfidence: v.number(),
+        failureRecoveryScore: v.optional(v.number()),
         tiersReached: v.number(),
       })
     ),
@@ -246,6 +252,7 @@ export const completeSession = action({
         dagEfficiency: v.number(),
         criticalPathSpeed: v.number(),
         submissionConfidence: v.number(),
+        failureRecoveryScore: v.optional(v.number()),
         tiersReached: v.number(),
       })
     ),

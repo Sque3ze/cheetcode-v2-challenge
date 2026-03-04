@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { TIER_LABELS } from "../lib/config";
 
 interface ChallengeLayoutProps {
   /** Challenge metadata */
@@ -30,13 +31,6 @@ interface ChallengeLayoutProps {
   /** Called after successful submission */
   onSolved?: () => void;
 }
-
-const TIER_LABELS: Record<number, string> = {
-  1: "Browser Fundamentals",
-  2: "Multi-Step Workflow",
-  3: "Complex Synthesis",
-  4: "Advanced Analysis",
-};
 
 export default function ChallengeLayout({
   id,

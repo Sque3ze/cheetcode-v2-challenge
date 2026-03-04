@@ -226,3 +226,25 @@ body {
   50% { opacity: 0.5; }
 }
 .timer-critical { animation: timer-pulse 0.6s ease-in-out infinite; }
+
+/* ─── DAG node animations (spectator mode) ─── */
+@keyframes dag-pulse-kf {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.dag-pulse { animation: dag-pulse-kf 1.5s ease-in-out infinite; }
+
+@keyframes dag-work-pulse-kf {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.dag-work-pulse { animation: dag-work-pulse-kf 0.8s ease-in-out infinite; }
+
+/* ─── Live badge animation ─── */
+@keyframes live-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.spectate-live-badge span:first-child {
+  animation: live-dot-pulse 1.5s ease-in-out infinite;
+}

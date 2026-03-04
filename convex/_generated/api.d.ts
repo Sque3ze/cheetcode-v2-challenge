@@ -15,6 +15,7 @@ import type * as leaderboard from "../leaderboard.js";
 import type * as ranking from "../ranking.js";
 import type * as sessionEvents from "../sessionEvents.js";
 import type * as sessions from "../sessions.js";
+import type * as spectator from "../spectator.js";
 import type * as submissions from "../submissions.js";
 
 import type {
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   ranking: typeof ranking;
   sessionEvents: typeof sessionEvents;
   sessions: typeof sessions;
+  spectator: typeof spectator;
   submissions: typeof submissions;
 }>;
 

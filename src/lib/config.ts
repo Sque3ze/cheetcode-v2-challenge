@@ -28,3 +28,11 @@ export const MIN_INTERACT_INTERVAL_MS = 500;
 
 /** How long a render token remains valid (ms). */
 export const RENDER_TOKEN_TTL_MS = 60_000;
+
+/** Human-readable tier names. */
+export const TIER_LABELS: Record<number, string> = {
+  1: "Browser Fundamentals",
+  2: "Multi-Step Workflow",
+  3: "Complex Synthesis",
+  4: "Advanced Analysis",
+};

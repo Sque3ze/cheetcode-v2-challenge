@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { TIER_LABELS } from "../../lib/config";
 
 interface ChallengeMeta {
   id: string;
@@ -36,13 +37,6 @@ interface SessionData {
   };
 }
 
-const TIER_LABELS: Record<number, string> = {
-  1: "Browser Fundamentals",
-  2: "Multi-Step Workflow",
-  3: "Complex Synthesis",
-  4: "Advanced Analysis",
-};
-
 const TIER_BADGE_CLASS: Record<number, string> = {
   1: "tier-badge-1",
   2: "tier-badge-2",
@@ -57,6 +51,8 @@ export default function ChallengesPage() {
   const [error, setError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [finishing, setFinishing] = useState(false);
+  const autoFinishFired = useRef(false);
+  const finishingRef = useRef(false);
 
   const DEV_USER = process.env.NEXT_PUBLIC_DEV_USER;
   useEffect(() => {
@@ -94,8 +90,9 @@ export default function ChallengesPage() {
     return () => clearInterval(interval);
   }, [timeRemaining]);
 
-  const handleFinish = async () => {
-    if (!sessionData || finishing) return;
+  const handleFinish = useCallback(async () => {
+    if (!sessionData || finishingRef.current) return;
+    finishingRef.current = true;
     setFinishing(true);
 
     try {
@@ -106,16 +103,24 @@ export default function ChallengesPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        window.location.href = `/`;
+        window.location.href = `/results/${sessionData.sessionId}`;
       } else {
         setError(data.error || "Failed to finish session");
       }
     } catch {
       setError("Failed to finish session");
     } finally {
+      finishingRef.current = false;
       setFinishing(false);
     }
-  };
+  }, [sessionData]);
+
+  // Auto-finish when timer expires
+  useEffect(() => {
+    if (timeRemaining > 0 || !sessionData || autoFinishFired.current) return;
+    autoFinishFired.current = true;
+    handleFinish();
+  }, [timeRemaining, sessionData, handleFinish]);
 
   if (loading) {
     return (

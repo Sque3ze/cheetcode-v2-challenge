@@ -347,7 +347,7 @@ export default function Home() {
               >
                 <thead>
                   <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
-                    {["#", "Player", "Score", "Solved", "Orch.", "Wrong"].map((label, idx) => (
+                    {["#", "Player", "Score", "Solved", "Orch.", "Wrong", ""].map((label, idx) => (
                       <th
                         key={label}
                         style={{
@@ -477,6 +477,27 @@ export default function Home() {
                         }}
                       >
                         {entry.wrongAttempts}
+                      </td>
+                      <td style={{ padding: "12px 24px", textAlign: "right" }}>
+                        <Link
+                          href={`/spectate/${entry.sessionId}`}
+                          style={{
+                            fontSize: 12,
+                            color: "rgba(38, 38, 38, 0.35)",
+                            textDecoration: "none",
+                            transition: "color 0.2s ease",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.color = "#fa5d19")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.color =
+                              "rgba(38, 38, 38, 0.35)")
+                          }
+                          title="View session replay"
+                        >
+                          spectate
+                        </Link>
                       </td>
                     </tr>
                   ))}

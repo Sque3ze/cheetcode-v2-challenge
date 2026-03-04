@@ -10,17 +10,24 @@ export const getOverviewStats = internalQuery({
   args: {},
   handler: async (ctx) => {
     const sessions = await ctx.db.query("sessions").collect();
-    const leaderboard = await ctx.db.query("leaderboard").collect();
 
     const totalSessions = sessions.length;
     const completedSessions = sessions.filter(
       (s) => s.status === "completed"
     ).length;
 
+    // Average score across all completed sessions (not just leaderboard)
+    const completedWithScores = sessions.filter(
+      (s) => s.status === "completed" && s.score != null
+    );
     const avgScore =
-      leaderboard.length > 0
-        ? leaderboard.reduce((sum, e) => sum + e.score, 0) / leaderboard.length
+      completedWithScores.length > 0
+        ? completedWithScores.reduce((sum, s) => sum + (s.score ?? 0), 0) /
+          completedWithScores.length
         : 0;
+
+    // Unique players across all sessions
+    const uniqueGithubs = new Set(sessions.map((s) => s.github));
 
     // Count user agents
     const agentCounts = new Map<string, number>();
@@ -41,7 +48,7 @@ export const getOverviewStats = internalQuery({
       totalSessions,
       completedSessions,
       avgScore: Math.round(avgScore * 10) / 10,
-      uniquePlayers: leaderboard.length,
+      uniquePlayers: uniqueGithubs.size,
       topUserAgent: topAgent,
     };
   },
