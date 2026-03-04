@@ -15,6 +15,7 @@ export default defineSchema({
     ),
     apiCalls: v.optional(v.number()),
     userAgent: v.optional(v.string()),
+    isTestSession: v.optional(v.boolean()),
     earnedPoints: v.optional(v.number()),
     totalPoints: v.optional(v.number()),
     wrongAttempts: v.optional(v.number()),
@@ -61,6 +62,7 @@ export default defineSchema({
     apiCalls: v.optional(v.number()), // total API calls made (tiebreaker 3)
     completedAt: v.number(), // when the session ended
     sessionId: v.id("sessions"),
+    isTestSession: v.optional(v.boolean()),
     orchestrationScore: v.optional(v.number()), // combined 0-100 score shown on public leaderboard
     orchestrationMetrics: v.optional(
       v.object({

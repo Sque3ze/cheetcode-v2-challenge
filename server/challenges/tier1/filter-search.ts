@@ -115,7 +115,7 @@ export const filterSearchChallenge: ChallengeDefinition<FilterSearchPageData> = 
         employees: employees.slice(0, 12),
         filterConditions,
         aggregation,
-        employeesPerPage: 10,
+        employeesPerPage: 12,
         initialVisibleCount: 12,
         totalEmployees: employees.length,
         variantIndex,
@@ -130,7 +130,7 @@ export const filterSearchChallenge: ChallengeDefinition<FilterSearchPageData> = 
   handleInteract(hiddenData, action, params) {
     if (action === "page") {
       const page = (params.page as number) ?? 1;
-      const perPage = 10;
+      const perPage = 12;
       const allEmployees = hiddenData.allEmployees as Array<Record<string, unknown>>;
       const start = page * perPage;
       return { employees: allEmployees.slice(start, start + perPage), page };

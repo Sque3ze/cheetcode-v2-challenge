@@ -9,6 +9,7 @@ import {
   GANTT,
   GANTT_COLORS,
   buildGanttData,
+  buildWrongCounts,
   formatMs,
   formatTime,
   type GanttRow,
@@ -26,6 +27,8 @@ interface SessionGanttChartProps {
   maxDurationMs?: number;
   /** Header label override */
   label?: string;
+  /** Show a pulsing "now" marker for live sessions */
+  live?: boolean;
 }
 
 export function SessionGanttChart({
@@ -36,10 +39,13 @@ export function SessionGanttChart({
   compact,
   maxDurationMs,
   label,
+  live,
 }: SessionGanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; row: GanttRow } | null>(null);
+  // eslint-disable-next-line react-hooks/purity -- Date.now() is intentional for live "now" marker
+  const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
     const el = containerRef.current;
@@ -51,17 +57,15 @@ export function SessionGanttChart({
     return () => obs.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!live) return;
+    const interval = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [live]);
+
   const groups = useMemo(() => buildGanttData(events, startedAt), [events, startedAt]);
 
-  const wrongCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const e of events) {
-      if (e.type === "answer_wrong" && e.challengeId) {
-        counts.set(e.challengeId, (counts.get(e.challengeId) || 0) + 1);
-      }
-    }
-    return counts;
-  }, [events]);
+  const wrongCounts = useMemo(() => buildWrongCounts(events), [events]);
 
   if (groups.length === 0) return null;
 
@@ -267,6 +271,32 @@ export function SessionGanttChart({
                 })}
               </g>
             ))}
+
+            {/* "Now" marker for live sessions */}
+            {live && (() => {
+              const nowOffset = Math.max(0, nowMs - startedAt);
+              if (nowOffset > axisDuration) return null;
+              const nowX = GANTT.LABEL_WIDTH + nowOffset * timeScale;
+              return (
+                <g className="gantt-now-marker">
+                  <line
+                    x1={nowX}
+                    y1={axisHeight - 4}
+                    x2={nowX}
+                    y2={totalHeight}
+                    stroke="#fa5d19"
+                    strokeWidth={1.5}
+                    strokeOpacity={0.6}
+                  />
+                  <circle
+                    cx={nowX}
+                    cy={axisHeight - 4}
+                    r={3}
+                    fill="#fa5d19"
+                  />
+                </g>
+              );
+            })()}
           </svg>
         )}
         {/* Tooltip */}

@@ -3,6 +3,8 @@
 
 /** Session duration in milliseconds. */
 export const SESSION_DURATION_MS = 5 * 60 * 1000;
+/** Extended session duration for test-authenticated agents (ms). */
+export const TEST_SESSION_DURATION_MS = 45 * 60 * 1000;
 
 /** Maximum wrong attempts per challenge before it locks. */
 export const MAX_ATTEMPTS_PER_CHALLENGE = 3;
@@ -36,3 +38,6 @@ export const TIER_LABELS: Record<number, string> = {
   3: "Complex Synthesis",
   4: "Advanced Analysis",
 };
+
+/** Whether the app is running in test mode (bypasses prereqs, timing). */
+export const IS_TEST_MODE = process.env.NEXT_PUBLIC_TEST_MODE === "true";

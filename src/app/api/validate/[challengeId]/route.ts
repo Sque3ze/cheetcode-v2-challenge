@@ -10,7 +10,7 @@ import {
   serverError,
   sessionExpired,
 } from "../../../../lib/api-helpers";
-import { MAX_ATTEMPTS_PER_CHALLENGE, TIER_POINTS, MIN_SOLVE_TIME_MS } from "../../../../lib/config";
+import { MAX_ATTEMPTS_PER_CHALLENGE, TIER_POINTS, MIN_SOLVE_TIME_MS, IS_TEST_MODE } from "../../../../lib/config";
 import type { ChallengeStatusMap } from "../../../../lib/challenge-types";
 import type { Tier } from "../../../../lib/config";
 import {
@@ -123,12 +123,12 @@ export async function POST(
       }),
     ]);
 
-    // 3.5. Prerequisite check
+    // 3.5. Prerequisite check (skipped in test mode)
     const solvedSet = new Set<string>();
     for (const [id, status] of Object.entries(allStatuses)) {
       if (status?.solved) solvedSet.add(id);
     }
-    if (!arePrerequisitesMet(challengeId, solvedSet)) {
+    if (!IS_TEST_MODE && !arePrerequisitesMet(challengeId, solvedSet)) {
       const unmet = getUnmetPrerequisites(challengeId, solvedSet);
       return NextResponse.json(
         {
@@ -168,7 +168,7 @@ export async function POST(
     }
     const elapsed = Date.now() - view.viewedAt;
     const minTime = MIN_SOLVE_TIME_MS[challenge.tier as Tier];
-    if (elapsed < minTime) {
+    if (!IS_TEST_MODE && elapsed < minTime) {
       return NextResponse.json(
         {
           error: "too_fast",

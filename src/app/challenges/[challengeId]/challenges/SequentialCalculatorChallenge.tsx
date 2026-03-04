@@ -119,7 +119,7 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
             {op.type === "normal" && (
               <div className="flex items-center" style={{ gap: 12 }}>
                 <span className="text-sm" style={{ color: "rgba(38,38,38,0.35)", width: 56 }}>{op.label}</span>
-                <span className="text-lg font-mono" style={{ color: "#fa5d19" }}>{OP_SYMBOLS[op.operator]}</span>
+                <span className="text-lg font-mono" style={{ color: "#fa5d19" }} {...testAttr('operator', String(i))}>{OP_SYMBOLS[op.operator]}</span>
                 {op.hidden && !revealedSteps.has(i) ? (
                   loadingReveal === i ? (
                     <span className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Loading...</span>
@@ -154,7 +154,7 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
                       IF current &gt; <span className="font-mono" style={{ color: "#262626" }} {...testAttr('threshold', String(i))}>{op.threshold}</span>:
                     </p>
                     <p style={{ color: "rgba(38,38,38,0.5)", marginLeft: 16 }}>
-                      {OP_SYMBOLS[op.ifAbove.operator]}{" "}
+                      <span {...testAttr('operator-above', String(i))}>{OP_SYMBOLS[op.ifAbove.operator]}</span>{" "}
                       {op.hidden && !revealedSteps.has(i) ? (
                         loadingReveal === i ? (
                           <span className="text-xs" style={{ color: "rgba(38,38,38,0.5)" }}>Loading...</span>
@@ -176,7 +176,7 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
                     </p>
                     <p style={{ color: "rgba(38,38,38,0.7)" }}>OTHERWISE:</p>
                     <p style={{ color: "rgba(38,38,38,0.5)", marginLeft: 16 }}>
-                      {OP_SYMBOLS[op.ifBelow.operator]}{" "}
+                      <span {...testAttr('operator-below', String(i))}>{OP_SYMBOLS[op.ifBelow.operator]}</span>{" "}
                       {op.hidden && !revealedSteps.has(i) ? (
                         <span className="text-xs" style={{ color: "rgba(38,38,38,0.35)" }}>[Reveal above]</span>
                       ) : (
@@ -193,7 +193,7 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
             {op.type === "lookup" && (
               <div className="flex items-center" style={{ gap: 12 }}>
                 <span className="text-sm" style={{ color: "rgba(38,38,38,0.35)", width: 56 }}>{op.label}</span>
-                <span className="text-lg font-mono" style={{ color: "#fa5d19" }}>{OP_SYMBOLS[op.operator]}</span>
+                <span className="text-lg font-mono" style={{ color: "#fa5d19" }} {...testAttr('operator', String(i))}>{OP_SYMBOLS[op.operator]}</span>
                 <span className="text-sm" style={{ color: "#9061ff" }} {...testAttr('lookup-key', String(i))}>
                   value of &quot;{op.lookupKey}&quot; from reference table
                 </span>

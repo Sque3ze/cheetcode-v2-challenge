@@ -86,6 +86,17 @@ export function challengeLabel(id: string): string {
     .join(" ");
 }
 
+/** Count wrong attempts per challenge from an event stream. */
+export function buildWrongCounts(events: SessionEvent[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const e of events) {
+    if (e.type === "answer_wrong" && e.challengeId) {
+      counts.set(e.challengeId, (counts.get(e.challengeId) || 0) + 1);
+    }
+  }
+  return counts;
+}
+
 export function buildGanttData(events: SessionEvent[], startedAt: number): GanttTierGroup[] {
   const challengeMap = new Map<string, {
     firstView: number;

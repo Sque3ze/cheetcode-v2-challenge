@@ -11,7 +11,7 @@ const SESSION_COOLDOWN_MS = 10_000;
  * Server sets the clock — no client-reported timestamps trusted.
  */
 export const create = internalMutation({
-  args: { github: v.string(), durationMs: v.number(), userAgent: v.optional(v.string()) },
+  args: { github: v.string(), durationMs: v.number(), userAgent: v.optional(v.string()), isTestSession: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
     // Rate limit: reject if user has an active or very recent session
     const active = await ctx.db
@@ -48,6 +48,7 @@ export const create = internalMutation({
       expiresAt,
       status: "active",
       userAgent: args.userAgent,
+      isTestSession: args.isTestSession,
     });
 
     // Auto-expire if still active after the time limit
@@ -177,6 +178,7 @@ export const complete = internalMutation({
       sessionId: args.sessionId,
       orchestrationScore: args.orchestrationScore,
       orchestrationMetrics: args.orchestrationMetrics,
+      isTestSession: session.isTestSession,
     };
 
     if (!existing) {
@@ -209,7 +211,7 @@ export const expire = internalMutation({
 
 /** Authenticated gateway for creating sessions */
 export const createSession = action({
-  args: { secret: v.string(), github: v.string(), durationMs: v.number(), userAgent: v.optional(v.string()) },
+  args: { secret: v.string(), github: v.string(), durationMs: v.number(), userAgent: v.optional(v.string()), isTestSession: v.optional(v.boolean()) },
   handler: async (
     ctx,
     args
@@ -219,6 +221,7 @@ export const createSession = action({
       github: args.github,
       durationMs: args.durationMs,
       userAgent: args.userAgent,
+      isTestSession: args.isTestSession,
     });
   },
 });

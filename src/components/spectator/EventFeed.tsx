@@ -58,16 +58,22 @@ export function EventFeed({ events, startedAt, live }: EventFeedProps) {
         background: "rgba(0,0,0,0.015)",
       }}
     >
-      {events.map((event, i) => (
+      {events.map((event, i) => {
+        const isLatest = live && i === events.length - 1;
+        return (
         <div
           key={i}
+          className={isLatest ? "spectate-latest-event" : undefined}
           style={{
             display: "flex",
             alignItems: "baseline",
             gap: 10,
             padding: "3px 0",
+            paddingLeft: isLatest ? 8 : 0,
             fontSize: 12,
             fontFamily: "var(--font-geist-mono), monospace",
+            borderLeft: isLatest ? "2px solid #16a34a" : "2px solid transparent",
+            transition: "all 0.3s ease",
           }}
         >
           <span style={{ color: DIM, width: 40, flexShrink: 0 }}>
@@ -87,7 +93,8 @@ export function EventFeed({ events, startedAt, live }: EventFeedProps) {
             {event.challengeId ? challengeLabel(event.challengeId) : ""}
           </span>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

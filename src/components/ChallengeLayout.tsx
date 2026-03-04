@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { TIER_LABELS } from "../lib/config";
+import { testAttr } from "../lib/test-attrs";
 
 interface ChallengeLayoutProps {
   /** Challenge metadata */
@@ -153,7 +154,7 @@ export default function ChallengeLayout({
           <h2 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
             Instructions
           </h2>
-          <p style={{ color: "#262626" }}>{instructions}</p>
+          <p {...testAttr("instructions")} style={{ color: "#262626" }}>{instructions}</p>
         </div>
 
         {/* Challenge interactive area */}

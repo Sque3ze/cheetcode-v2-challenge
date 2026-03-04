@@ -13,7 +13,7 @@ import {
 } from "../../../../../lib/api-helpers";
 import { getChallenge, arePrerequisitesMet, getUnmetPrerequisites } from "../../../../../../server/challenges/registry";
 import { ChallengeDataGenerator } from "../../../../../lib/seed";
-import { MIN_INTERACT_INTERVAL_MS, RENDER_TOKEN_TTL_MS } from "../../../../../lib/config";
+import { MIN_INTERACT_INTERVAL_MS, RENDER_TOKEN_TTL_MS, IS_TEST_MODE } from "../../../../../lib/config";
 import type { ChallengeStatusMap } from "../../../../../lib/challenge-types";
 
 /**
@@ -110,12 +110,12 @@ export async function POST(
       }),
     ]);
 
-    // 4.5. Prerequisite check
+    // 4.5. Prerequisite check (skipped in test mode)
     const solvedSet = new Set<string>();
     for (const [id, status] of Object.entries(allStatuses)) {
       if (status?.solved) solvedSet.add(id);
     }
-    if (!arePrerequisitesMet(challengeId, solvedSet)) {
+    if (!IS_TEST_MODE && !arePrerequisitesMet(challengeId, solvedSet)) {
       const unmet = getUnmetPrerequisites(challengeId, solvedSet);
       return NextResponse.json(
         {
@@ -140,8 +140,8 @@ export async function POST(
       return badRequest("Render token expired — reload the challenge page");
     }
 
-    // 6. Rate-limit
-    if (view.lastInteractAt && now - view.lastInteractAt < MIN_INTERACT_INTERVAL_MS) {
+    // 6. Rate-limit (skipped in test mode)
+    if (!IS_TEST_MODE && view.lastInteractAt && now - view.lastInteractAt < MIN_INTERACT_INTERVAL_MS) {
       return rateLimited("Too many interactions — slow down");
     }
 

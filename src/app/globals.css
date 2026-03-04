@@ -248,3 +248,29 @@ body {
 .spectate-live-badge span:first-child {
   animation: live-dot-pulse 1.5s ease-in-out infinite;
 }
+
+/* ─── Gantt "now" marker pulse ─── */
+@keyframes gantt-now-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+.gantt-now-marker line {
+  animation: gantt-now-pulse 2s ease-in-out infinite;
+}
+.gantt-now-marker circle {
+  animation: live-dot-pulse 2s ease-in-out infinite;
+}
+
+/* ─── Activity dot (currently working on) ─── */
+.spectate-activity-dot {
+  animation: live-dot-pulse 1.5s ease-in-out infinite;
+}
+
+/* ─── Latest event highlight ─── */
+@keyframes latest-event-fade {
+  0% { background: rgba(22, 163, 74, 0.08); }
+  100% { background: transparent; }
+}
+.spectate-latest-event {
+  animation: latest-event-fade 2s ease-out;
+}

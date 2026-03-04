@@ -5,12 +5,17 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { useMemo } from "react";
 import { ChallengeDAG } from "../../../components/spectator/ChallengeDAG";
 import { SessionGanttChart } from "../../../components/spectator/SessionGanttChart";
 import { EventFeed } from "../../../components/spectator/EventFeed";
 import { ScorePanel } from "../../../components/spectator/ScorePanel";
 import { OrchestrationRadar } from "../../../components/spectator/OrchestrationRadar";
 import { DIM } from "../../../components/spectator/formatters";
+import { DAG_NODES } from "../../../lib/dag-layout";
+
+const POINTS_LOOKUP = new Map(DAG_NODES.map((n) => [n.id, n.points]));
+const TOTAL_POINTS = DAG_NODES.reduce((sum, n) => sum + n.points, 0);
 
 export default function SpectatePage() {
   const params = useParams();
@@ -22,6 +27,50 @@ export default function SpectatePage() {
   const events = useQuery(api.spectator.getSessionEventsPublic, {
     sessionId: sessionId as Id<"sessions">,
   });
+
+  // Derive stats from events when the session record has nulls
+  // (happens for expired sessions where /api/session/finish was never called)
+  // Must be called before early returns to satisfy hook rules.
+  const derivedStats = useMemo(() => {
+    if (!events || events.length === 0) {
+      return { lastEventAt: null, solvedChallenges: new Set<string>(), wrongCount: 0, earnedPoints: 0, totalPoints: TOTAL_POINTS, completionPct: 0, currentChallenge: null as string | null };
+    }
+
+    const lastEventAt = Math.max(...events.map((e) => e.timestamp));
+
+    const solvedChallenges = new Set<string>();
+    let wrongCount = 0;
+    let currentChallenge: string | null = null;
+    for (const e of events) {
+      if (e.type === "answer_correct" && e.challengeId) {
+        solvedChallenges.add(e.challengeId);
+      } else if (e.type === "answer_wrong") {
+        wrongCount++;
+      }
+      if (e.challengeId && e.type !== "session_started" && e.type !== "session_completed") {
+        currentChallenge = e.challengeId;
+      }
+    }
+
+    let earnedPoints = 0;
+    for (const id of solvedChallenges) {
+      earnedPoints += POINTS_LOOKUP.get(id) ?? 0;
+    }
+    const completionPct = TOTAL_POINTS > 0
+      ? Math.round((earnedPoints / TOTAL_POINTS) * 10000) / 100
+      : 0;
+
+    return { lastEventAt, solvedChallenges, wrongCount, earnedPoints, totalPoints: TOTAL_POINTS, completionPct, currentChallenge };
+  }, [events]);
+
+  // Convert events for components that expect SessionEvent format
+  // Must be before early returns to satisfy hook rules.
+  const ganttEvents = useMemo(() => (events ?? []).map((e) => ({
+    type: e.type,
+    timestamp: e.timestamp,
+    challengeId: e.challengeId ?? undefined,
+    metadata: e.metadata ?? undefined,
+  })), [events]);
 
   if (session === undefined || events === undefined) {
     return (
@@ -64,13 +113,14 @@ export default function SpectatePage() {
   const isLive = session.status === "active";
   const durationMs = session.expiresAt - session.startedAt;
 
-  // Convert events for components that expect SessionEvent format
-  const ganttEvents = events.map((e) => ({
-    type: e.type,
-    timestamp: e.timestamp,
-    challengeId: e.challengeId ?? undefined,
-    metadata: e.metadata ?? undefined,
-  }));
+  // Use session record values if available, fall back to event-derived values
+  const displayScore = session.score;
+  const displayCompletion = session.completionScore ?? (derivedStats.solvedChallenges.size > 0 ? derivedStats.completionPct : null);
+  const displayEarned = session.earnedPoints ?? derivedStats.earnedPoints;
+  const displayTotal = session.totalPoints ?? derivedStats.totalPoints;
+  const displayWrong = session.wrongAttempts ?? derivedStats.wrongCount;
+
+  const currentChallenge = isLive ? derivedStats.currentChallenge : null;
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px 120px" }}>
@@ -166,15 +216,17 @@ export default function SpectatePage() {
         {/* Right sidebar */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <ScorePanel
-            score={session.score}
-            completionScore={session.completionScore}
+            score={displayScore}
+            completionScore={displayCompletion}
             orchestrationScore={session.orchestrationScore}
-            earnedPoints={session.earnedPoints}
-            totalPoints={session.totalPoints}
-            wrongAttempts={session.wrongAttempts}
+            earnedPoints={displayEarned}
+            totalPoints={displayTotal}
+            wrongAttempts={displayWrong}
             status={session.status}
             startedAt={session.startedAt}
             expiresAt={session.expiresAt}
+            lastEventAt={derivedStats.lastEventAt ?? undefined}
+            currentChallenge={currentChallenge}
           />
 
           {/* Orchestration Radar (only for completed sessions) */}
@@ -218,6 +270,7 @@ export default function SpectatePage() {
           events={ganttEvents}
           startedAt={session.startedAt}
           durationMs={durationMs}
+          live={isLive}
         />
       </div>
 

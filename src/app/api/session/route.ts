@@ -8,7 +8,8 @@ import {
   serverError,
   rateLimited,
 } from "../../../lib/api-helpers";
-import { SESSION_DURATION_MS } from "../../../lib/config";
+import { SESSION_DURATION_MS, TEST_SESSION_DURATION_MS } from "../../../lib/config";
+import { isTestAuthRequest } from "../../../lib/github-auth";
 import type { ChallengeStatusMap } from "../../../lib/challenge-types";
 import { getAllChallengeMetas, getUnmetPrerequisites } from "../../../../server/challenges/registry";
 
@@ -20,6 +21,9 @@ import { getAllChallengeMetas, getUnmetPrerequisites } from "../../../../server/
 export async function POST(request: Request) {
   const github = await resolveGitHub(request);
   if (!github) return unauthorized();
+
+  const isTest = isTestAuthRequest(request);
+  const durationMs = isTest ? TEST_SESSION_DURATION_MS : SESSION_DURATION_MS;
 
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   const secret = process.env.CONVEX_MUTATION_SECRET;
@@ -33,8 +37,9 @@ export async function POST(request: Request) {
     const result = await convex.action(api.sessions.createSession, {
       secret,
       github,
-      durationMs: SESSION_DURATION_MS,
+      durationMs,
       userAgent,
+      isTestSession: isTest || undefined,
     });
 
     // Emit session_started event (fire-and-forget)

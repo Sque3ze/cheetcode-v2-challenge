@@ -7,6 +7,7 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import type { SessionEvent, OrchestrationMetrics } from "../../lib/orchestration-metrics";
 import { classifyAgent } from "../../lib/agent-detection";
 import { SessionGanttChart } from "../../components/spectator/SessionGanttChart";
+import { OverlayGanttChart } from "../../components/spectator/OverlayGanttChart";
 import { OrchestrationRadar } from "../../components/spectator/OrchestrationRadar";
 import {
   ACCENT,
@@ -641,25 +642,19 @@ function CompareView({ sessionA, sessionB, onBack }: {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 20 }}>
-        {/* Stacked Gantt charts */}
+        {/* Overlaid Gantt chart */}
         <div className="card-surface" style={{ borderRadius: 10, overflow: "hidden" }}>
-          <SessionGanttChart
-            events={eventsA}
-            startedAt={sessionA.startedAt}
-            durationMs={durationA}
-            maxDurationMs={maxDuration}
-            accentColor={COMPARE_BLUE}
-            compact
-            label={`${sessionA.github} (blue)`}
-          />
-          <SessionGanttChart
-            events={eventsB}
-            startedAt={sessionB.startedAt}
-            durationMs={durationB}
-            maxDurationMs={maxDuration}
-            accentColor={COMPARE_ORANGE}
-            compact
-            label={`${sessionB.github} (orange)`}
+          <OverlayGanttChart
+            eventsA={eventsA}
+            eventsB={eventsB}
+            startedAtA={sessionA.startedAt}
+            startedAtB={sessionB.startedAt}
+            durationMsA={durationA}
+            durationMsB={durationB}
+            labelA={sessionA.github}
+            labelB={sessionB.github}
+            colorA={COMPARE_BLUE}
+            colorB={COMPARE_ORANGE}
           />
         </div>
 

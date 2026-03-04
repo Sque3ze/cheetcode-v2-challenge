@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DIM, BORDER, formatMs } from "./formatters";
+import { DIM, BORDER, formatMs, challengeLabel } from "./formatters";
 
 interface ScorePanelProps {
   score: number | null;
@@ -13,6 +13,10 @@ interface ScorePanelProps {
   status: "active" | "completed" | "expired";
   startedAt: number;
   expiresAt: number;
+  /** Timestamp of last event — used to show actual duration instead of full time window */
+  lastEventAt?: number;
+  /** The challenge the agent is currently working on (derived from latest event) */
+  currentChallenge?: string | null;
 }
 
 export function ScorePanel({
@@ -25,6 +29,8 @@ export function ScorePanel({
   status,
   startedAt,
   expiresAt,
+  lastEventAt,
+  currentChallenge,
 }: ScorePanelProps) {
   // eslint-disable-next-line react-hooks/purity -- Date.now() is intentional for live countdown
   const [now, setNow] = useState(Date.now());
@@ -36,7 +42,10 @@ export function ScorePanel({
   }, [status]);
 
   const isLive = status === "active";
-  const elapsed = (isLive ? now : expiresAt) - startedAt;
+  // For finished sessions, show actual duration (up to last event) instead of the full time window
+  const elapsed = isLive
+    ? now - startedAt
+    : (lastEventAt ?? expiresAt) - startedAt;
   const remaining = Math.max(0, expiresAt - now);
 
   return (
@@ -84,7 +93,7 @@ export function ScorePanel({
           marginBottom: 4,
         }}
       >
-        {score != null ? `${score.toFixed(1)}%` : isLive ? "—" : "0%"}
+        {score != null ? `${score.toFixed(1)}%` : "—"}
       </div>
       <div style={{ fontSize: 12, color: DIM, marginBottom: 20 }}>
         Composite Score
@@ -107,6 +116,40 @@ export function ScorePanel({
           {isLive ? formatMs(remaining) : formatMs(elapsed)}
         </div>
       </div>
+
+      {/* Current activity (live only) */}
+      {isLive && currentChallenge && (
+        <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12, marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: DIM, marginBottom: 4 }}>
+            Working on
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span
+              className="spectate-activity-dot"
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "#fa5d19",
+                display: "inline-block",
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: "#262626",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {challengeLabel(currentChallenge)}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>

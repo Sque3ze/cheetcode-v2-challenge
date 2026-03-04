@@ -66,6 +66,16 @@ export const constraintSolverChallenge: ChallengeDefinition<ConstraintSolverPage
     const targetItem = data.pick(items);
     targetItem.inStock = true;
 
+    // Guarantee at least 4 in-stock items so relative constraints (below_avg_price)
+    // are satisfiable. With only 1 in-stock item, price < avg(self) is impossible.
+    const inStockCount = items.filter((it) => it.inStock).length;
+    if (inStockCount < 4) {
+      const outOfStock = items.filter((it) => !it.inStock);
+      for (let i = 0; i < Math.min(4 - inStockCount, outOfStock.length); i++) {
+        outOfStock[i].inStock = true;
+      }
+    }
+
     const otherCategories = [...CATEGORIES].filter((c) => c !== targetItem.category);
     const secondCategory = data.pick(otherCategories);
     const allowedCategories = [targetItem.category, secondCategory];
@@ -112,60 +122,46 @@ export const constraintSolverChallenge: ChallengeDefinition<ConstraintSolverPage
       ? "among qualifying items, submit the one with the lowest price"
       : "among qualifying items, submit the one with the lowest weight";
 
-    // Compute aggregates for relative constraints
-    const inStockItems = items.filter((it) => it.inStock);
-    const avgPrice = inStockItems.length > 0
-      ? Math.round(inStockItems.reduce((s, it) => s + it.price, 0) / inStockItems.length * 100) / 100
-      : 0;
-    const avgRating = items.length > 0
-      ? Math.round(items.reduce((s, it) => s + it.rating, 0) / items.length * 10) / 10
-      : 0;
+    // Ensure target passes all constraints, iterating to handle average shifts
+    // from mutations. Setting price to avg*0.5 or rating to avg+0.5 converges
+    // in 1-2 iterations since the shift can't outrun the aggressive correction.
+    for (let fixIter = 0; fixIter < 5; fixIter++) {
+      const inStockNow = items.filter((it) => it.inStock);
+      const avgPriceNow = inStockNow.length > 0
+        ? Math.round(inStockNow.reduce((s, it) => s + it.price, 0) / inStockNow.length * 100) / 100
+        : 0;
+      const avgRatingNow = items.length > 0
+        ? Math.round(items.reduce((s, it) => s + it.rating, 0) / items.length * 10) / 10
+        : 0;
 
-    const passesAll = (item: Item) => {
-      if (!allowedCategories.includes(item.category)) return false;
-      if (!item.inStock) return false;
-      if (relativeConstraintType === "below_avg_price") {
-        if (item.price >= avgPrice) return false;
-      } else {
-        if (item.price > priceMax) return false;
+      let stable = true;
+      if (relativeConstraintType === "below_avg_price" && targetItem.price >= avgPriceNow) {
+        targetItem.price = Math.round((avgPriceNow * 0.5) * 100) / 100;
+        stable = false;
       }
-      if (relativeConstraintType === "above_avg_rating") {
-        if (item.rating <= avgRating) return false;
-      } else {
-        if (item.rating < ratingMin) return false;
+      if (relativeConstraintType !== "below_avg_price" && targetItem.price > priceMax) {
+        targetItem.price = priceMax - 1;
+        stable = false;
       }
-      if (item.supplier === excludedSupplier) return false;
-      if (item.weight > weightMax) return false;
-      return true;
-    };
-
-    // Fix target item to pass relative constraint if needed
-    if (relativeConstraintType === "below_avg_price" && targetItem.price >= avgPrice) {
-      targetItem.price = Math.round((avgPrice - data.int(1, 20)) * 100) / 100;
-    }
-    if (relativeConstraintType === "above_avg_rating" && targetItem.rating <= avgRating) {
-      targetItem.rating = Math.round((avgRating + data.int(1, 10) / 10) * 10) / 10;
-    }
-
-    let passing = items.filter(passesAll);
-
-    if (!passesAll(targetItem)) {
-      targetItem.weight = weightMax - 1;
-      passing = items.filter(passesAll);
-    }
-
-    if (passing.length > 1) {
-      const others = passing.filter((p) => p.name !== targetItem.name);
-      const bestOther = Math.min(...others.map((p) => p[optimizationField]));
-      if (targetItem[optimizationField] >= bestOther) {
-        targetItem[optimizationField] = bestOther - (optimizationField === "price" ? 0.01 : 1);
+      if (relativeConstraintType === "above_avg_rating" && targetItem.rating <= avgRatingNow) {
+        targetItem.rating = Math.round((avgRatingNow + 0.5) * 10) / 10;
+        stable = false;
       }
+      if (relativeConstraintType !== "above_avg_rating" && targetItem.rating < ratingMin) {
+        targetItem.rating = ratingMin;
+        stable = false;
+      }
+      if (targetItem.weight > weightMax) {
+        targetItem.weight = weightMax - 1;
+        stable = false;
+      }
+      if (stable) break;
     }
 
-    // Recompute aggregates after mutations (prices/ratings may have changed)
-    const inStockItemsFinal = items.filter((it) => it.inStock);
-    const avgPriceFinal = inStockItemsFinal.length > 0
-      ? Math.round(inStockItemsFinal.reduce((s, it) => s + it.price, 0) / inStockItemsFinal.length * 100) / 100
+    // Recompute aggregates from final item state and determine qualifying items
+    const inStockFinal = items.filter((it) => it.inStock);
+    const avgPriceFinal = inStockFinal.length > 0
+      ? Math.round(inStockFinal.reduce((s, it) => s + it.price, 0) / inStockFinal.length * 100) / 100
       : 0;
     const avgRatingFinal = items.length > 0
       ? Math.round(items.reduce((s, it) => s + it.rating, 0) / items.length * 10) / 10
@@ -189,20 +185,18 @@ export const constraintSolverChallenge: ChallengeDefinition<ConstraintSolverPage
       return true;
     };
 
-    // Ensure target item passes final constraints (aggregates may have shifted)
-    if (!passesAllFinal(targetItem)) {
-      if (relativeConstraintType === "below_avg_price") {
-        targetItem.price = Math.round((avgPriceFinal - 1) * 100) / 100;
-      }
-      if (relativeConstraintType === "above_avg_rating") {
-        targetItem.rating = Math.round((avgRatingFinal + 0.1) * 10) / 10;
-      }
-      if (targetItem.weight > weightMax) {
-        targetItem.weight = weightMax - 1;
+    const finalPassing = items.filter(passesAllFinal);
+
+    // Make target win the optimization among qualifying items
+    if (finalPassing.length > 1) {
+      const others = finalPassing.filter((p) => p.name !== targetItem.name);
+      if (others.length > 0) {
+        const bestOther = Math.min(...others.map((p) => p[optimizationField]));
+        if (targetItem[optimizationField] >= bestOther) {
+          targetItem[optimizationField] = bestOther - (optimizationField === "price" ? 0.01 : 1);
+        }
       }
     }
-
-    const finalPassing = items.filter(passesAllFinal);
     const winner = finalPassing.length > 0
       ? finalPassing.reduce((best, item) =>
           item[optimizationField] < best[optimizationField] ? item : best

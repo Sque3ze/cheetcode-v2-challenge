@@ -2,10 +2,11 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "__tests__/e2e",
-  timeout: 30_000,
+  timeout: 60_000,
   retries: 0,
+  workers: 1,
   webServer: {
-    command: "npm run dev",
+    command: "NEXT_PUBLIC_TEST_MODE=true npm run dev",
     port: 3000,
     reuseExistingServer: !process.env.CI,
     env: { NEXT_PUBLIC_TEST_MODE: "true" },

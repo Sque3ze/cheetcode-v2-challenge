@@ -39,6 +39,14 @@ export async function verifyGitHubToken(token: string): Promise<string | null> {
   }
 }
 
+/** Validate a "test:<secret>" token against TEST_AUTH_SECRET. */
+function validateTestToken(token: string): boolean {
+  if (!token.startsWith("test:")) return false;
+  const testSecret = process.env.TEST_AUTH_SECRET;
+  if (!testSecret) return false;
+  return token.slice(5) === testSecret;
+}
+
 /**
  * Extract the GitHub username from a request.
  * Checks Authorization header for:
@@ -54,14 +62,22 @@ export async function resolveGitHubFromHeader(
   if (!token) return null;
 
   // Test auth: "Bearer test:<secret>" with X-Test-User header
-  if (token.startsWith("test:")) {
-    const testSecret = process.env.TEST_AUTH_SECRET;
-    if (!testSecret) return null;
-    const provided = token.slice(5);
-    if (provided !== testSecret) return null;
+  if (validateTestToken(token)) {
     const testUser = request.headers.get("x-test-user")?.trim();
     return testUser || null;
   }
 
   return verifyGitHubToken(token);
+}
+
+/**
+ * Check whether a request is authenticated via test auth.
+ * Validates the secret — safe to use for granting extended sessions.
+ * Call after resolveGitHub() has confirmed identity.
+ */
+export function isTestAuthRequest(request: Request): boolean {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return false;
+  const token = authHeader.slice(7).trim();
+  return validateTestToken(token);
 }

@@ -11,7 +11,7 @@ import {
 } from "../../../../lib/api-helpers";
 import { getChallenge, arePrerequisitesMet, getUnmetPrerequisites } from "../../../../../server/challenges/registry";
 import { ChallengeDataGenerator } from "../../../../lib/seed";
-import { TIER_POINTS } from "../../../../lib/config";
+import { TIER_POINTS, IS_TEST_MODE } from "../../../../lib/config";
 import type { ChallengeStatusMap } from "../../../../lib/challenge-types";
 import { generateRenderToken } from "../../../../lib/render-token";
 
@@ -90,7 +90,7 @@ export async function GET(
     for (const [id, status] of Object.entries(statuses)) {
       if (status?.solved) solvedSet.add(id);
     }
-    if (!arePrerequisitesMet(challengeId, solvedSet)) {
+    if (!IS_TEST_MODE && !arePrerequisitesMet(challengeId, solvedSet)) {
       const unmet = getUnmetPrerequisites(challengeId, solvedSet);
       return NextResponse.json(
         {

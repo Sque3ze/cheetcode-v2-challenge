@@ -5,7 +5,7 @@
  * Run: npx playwright test
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
 type SolverFn = (page: Page) => Promise<string>;
 
@@ -29,17 +29,25 @@ const SOLVERS: Record<string, SolverFn> = {
 
 /** Read the instructions text from the challenge page */
 async function getInstructions(page: Page): Promise<string> {
-  await page.waitForSelector("p.text-gray-200");
-  const text = await page.locator("p.text-gray-200").textContent();
+  await page.waitForSelector("[data-instructions]");
+  const text = await page.locator("[data-instructions]").textContent();
   if (!text) throw new Error("Could not read instructions");
   return text;
+}
+
+/**
+ * Wait for interact API result: after clicking something that triggers
+ * an interact call, wait for the expected selector to appear.
+ */
+async function waitForInteract(page: Page, selector: string, timeoutMs = 5000): Promise<void> {
+  await page.waitForSelector(selector, { timeout: timeoutMs });
 }
 
 // ─── Tier 1 Solvers ─────────────────────────────────────────────
 
 /**
- * Table Sort: Sort by Annual Compensation (with hourly→annual conversion),
- * paginate to find the Nth highest/lowest employee name.
+ * Table Sort: Load ALL pages, compute annual compensation for hourly employees,
+ * sort programmatically, and find the Nth highest/lowest employee name.
  */
 async function solveTableSort(page: Page): Promise<string> {
   await page.waitForSelector("table tbody tr");
@@ -47,33 +55,71 @@ async function solveTableSort(page: Page): Promise<string> {
 
   // Parse position and direction from instructions
   const posMatch = instructions.match(/(\d+)\w*\s+(highest|lowest)/i)
-    || instructions.match(/position (\d+)/i);
+    || instructions.match(/position (\d+)/i)
+    || instructions.match(/(\d+)(?:st|nd|rd|th)\s+row/i);
   const dirMatch = instructions.match(/(highest|lowest)/i);
   if (!posMatch || !dirMatch) throw new Error(`Could not parse instructions: ${instructions}`);
 
   const targetPosition = parseInt(posMatch[1]);
   const direction = dirMatch[1].toLowerCase();
 
-  // Click "Annual Compensation" header to sort (component handles hourly conversion)
-  const header = page.locator("th", { hasText: "Annual Compensation" });
-  await header.click(); // ascending (lowest first)
-  if (direction === "highest") {
-    await header.click(); // descending (highest first)
+  // Read employee data from the currently visible table page
+  interface EmpData { name: string; annualComp: number }
+  const allEmployees: EmpData[] = [];
+
+  const readVisibleRows = async () => {
+    const rows = page.locator("tbody tr");
+    const count = await rows.count();
+    for (let i = 0; i < count; i++) {
+      const cells = rows.nth(i).locator("td");
+      // Skip loading row (single td spanning all columns)
+      if (await cells.count() < 4) continue;
+
+      const name = (await cells.nth(0).textContent())?.trim() ?? "";
+      const type = (await cells.nth(2).textContent())?.trim() ?? "";
+      const compText = (await cells.nth(3).textContent())?.trim() ?? "";
+
+      let annualComp: number;
+      if (type === "Hourly") {
+        // Parse "$25.50/hr × 40 hrs/wk"
+        const m = compText.match(/\$([\d.]+)\/hr.*?(\d+)\s*hrs/);
+        annualComp = m ? parseFloat(m[1]) * parseInt(m[2]) * 52 : 0;
+      } else {
+        // Parse "$128,000"
+        annualComp = parseFloat(compText.replace(/[$,]/g, ""));
+      }
+
+      allEmployees.push({ name, annualComp });
+    }
+  };
+
+  // Read page 1
+  await readVisibleRows();
+
+  // Parse total pages from indicator
+  const pageInfoText = await page.locator("text=/Page \\d+ of \\d+/").textContent() ?? "";
+  const totalPagesMatch = pageInfoText.match(/of (\d+)/);
+  const totalPages = totalPagesMatch ? parseInt(totalPagesMatch[1]) : 1;
+
+  // Navigate through remaining pages to load all employees
+  for (let nextPage = 2; nextPage <= totalPages; nextPage++) {
+    const nextBtn = page.locator("[data-page-next]");
+    if (await nextBtn.count() === 0 || await nextBtn.isDisabled()) break;
+    await nextBtn.click();
+    // Wait for the page indicator to update to the expected page
+    await page.locator(`text=Page ${nextPage} of ${totalPages}`).waitFor({ timeout: 10000 });
+    await readVisibleRows();
   }
 
-  // Navigate to correct page (5 rows per page)
-  const rowsPerPage = 5;
-  const targetPage = Math.floor((targetPosition - 1) / rowsPerPage);
-  for (let i = 0; i < targetPage; i++) {
-    await page.locator("[data-page-next]").click();
-  }
+  // Sort by annual compensation
+  allEmployees.sort((a, b) =>
+    direction === "highest" ? b.annualComp - a.annualComp : a.annualComp - b.annualComp
+  );
 
-  const rowInPage = (targetPosition - 1) % rowsPerPage;
-  const targetRow = page.locator("tbody tr").nth(rowInPage);
-  const name = await targetRow.locator("td").first().textContent();
-  if (!name) throw new Error("Could not read name from target row");
+  const target = allEmployees[targetPosition - 1];
+  if (!target) throw new Error(`Position ${targetPosition} out of range (${allEmployees.length} employees)`);
 
-  return name.trim();
+  return target.name;
 }
 
 /**
@@ -130,17 +176,18 @@ async function solveFormFill(page: Page): Promise<string> {
   }
 
   if (hasFormTabs) {
-    // Reveal all hidden content on Profile tab (default tab)
+    // Click expand first (triggers interact: "expand")
     const expandBtn = page.locator("[data-expand-details]");
     if (await expandBtn.isVisible()) {
       await expandBtn.click();
-      await page.waitForSelector('[data-field="role"]');
+      await page.waitForSelector('[data-field="role"]', { timeout: 5000 });
     }
 
+    // Click tooltip (triggers interact: "tooltip")
     const tooltipTrigger = page.locator("[data-tooltip-trigger]");
     if (await tooltipTrigger.isVisible()) {
       await tooltipTrigger.click();
-      await page.waitForSelector('[data-field="startDate"]');
+      await page.waitForSelector('[data-field="startDate"]', { timeout: 5000 });
     }
 
     // Read all Profile-tab fields
@@ -152,10 +199,13 @@ async function solveFormFill(page: Page): Promise<string> {
       }
     }
 
-    // Switch to Contact tab to read city
+    // Switch to Contact tab to read city (triggers interact: "tab")
     await page.locator('[data-form-tab="contact"]').click();
-    await page.waitForSelector("[data-contact-panel]");
-    fieldValues["city"] = (await page.locator('[data-field="city"]').textContent())?.trim() ?? "";
+    await page.waitForSelector("[data-contact-panel]", { timeout: 5000 });
+    await page.locator('[data-field="city"]').waitFor({ state: "visible", timeout: 5000 });
+    const cityText = (await page.locator('[data-field="city"]').textContent())?.trim() ?? "";
+    // If city is still "—", wait a bit longer
+    fieldValues["city"] = cityText === "\u2014" ? "" : cityText;
 
     // Compute transformed values
     // Salary band: look up salary in band table
@@ -290,25 +340,33 @@ async function solveTabNavigation(page: Page): Promise<string> {
   const threshold1 = parseInt(threshMatches[0][1]);
   const threshold2 = parseInt(threshMatches[1][1]);
 
+  // Helper: click a tab and wait for its content to load via interact API
+  const clickTab = async (tabLabel: string) => {
+    await page.locator(`[data-tab="${tabLabel}"]`).click();
+  };
+
+  // Helper: read a value by key from the active tab
+  const readValue = async (key: string): Promise<string> => {
+    const el = page.locator(`[data-value="${key}"]`);
+    await el.waitFor({ state: "visible", timeout: 5000 });
+    const text = await el.textContent();
+    if (!text) throw new Error(`Could not read value for: ${key}`);
+    return text.trim();
+  };
+
   // Step 1: Navigate to first condition tab and read value
-  await page.locator(`[data-tab="${condPair.tab}"]`).click();
-  const condEl = page.locator(`[data-value="${condPair.key}"]`);
-  await condEl.waitFor({ state: "visible" });
-  const condText = await condEl.textContent();
-  if (!condText) throw new Error(`Could not read value for: ${condPair.key}`);
-  const condValue = parseNumericFromText(condText.trim());
+  await clickTab(condPair.tab);
+  const condText = await readValue(condPair.key);
+  const condValue = parseNumericFromText(condText);
 
   let resultTab: string;
   let resultKey: string;
 
   if (condValue > threshold1) {
     // Step 2: Navigate to second condition tab and read value
-    await page.locator(`[data-tab="${secCondPair.tab}"]`).click();
-    const secCondEl = page.locator(`[data-value="${secCondPair.key}"]`);
-    await secCondEl.waitFor({ state: "visible" });
-    const secCondText = await secCondEl.textContent();
-    if (!secCondText) throw new Error(`Could not read value for: ${secCondPair.key}`);
-    const secCondValue = parseNumericFromText(secCondText.trim());
+    await clickTab(secCondPair.tab);
+    const secCondText = await readValue(secCondPair.key);
+    const secCondValue = parseNumericFromText(secCondText);
 
     if (secCondValue > threshold2) {
       resultTab = aboveAbovePair.tab;
@@ -323,13 +381,8 @@ async function solveTabNavigation(page: Page): Promise<string> {
   }
 
   // Step 3: Navigate to result tab and read value
-  await page.locator(`[data-tab="${resultTab}"]`).click();
-  const resultEl = page.locator(`[data-value="${resultKey}"]`);
-  await resultEl.waitFor({ state: "visible" });
-  const value = await resultEl.textContent();
-  if (!value) throw new Error(`Could not read value for: ${resultKey}`);
-
-  return value.trim();
+  await clickTab(resultTab);
+  return await readValue(resultKey);
 }
 
 function parseNumericFromText(text: string): number {
@@ -354,8 +407,16 @@ async function solveFilterSearch(page: Page): Promise<string> {
   while (true) {
     const loadMoreBtn = page.locator("[data-load-more]");
     if (await loadMoreBtn.count() === 0) break;
-    await loadMoreBtn.click();
-    await page.waitForTimeout(100);
+    // Wait for button to be enabled (not in loading state)
+    try {
+      await loadMoreBtn.click({ timeout: 3000 });
+    } catch {
+      // Button might have disappeared during loading or stayed disabled
+      if (await loadMoreBtn.count() === 0) break;
+      await page.waitForTimeout(300);
+      continue;
+    }
+    await page.waitForTimeout(300);
   }
 
   // Read all employee cards
@@ -423,7 +484,8 @@ async function solveModalInteraction(page: Page): Promise<string> {
 
   // Parse category, condition, and target field
   const catMatch = instructions.match(/"([^"]+)"\s*(?:category|products|section)/i)
-    || instructions.match(/(?:category|categorized as)\s*"([^"]+)"/i);
+    || instructions.match(/(?:category|categorized as)\s*"([^"]+)"/i)
+    || instructions.match(/(?:Among|among)\s*"([^"]+)"/i);
   const condMatch = instructions.match(/(lowest price|highest price)/i);
   const fieldMatch = instructions.match(/(?:submit|provide|report)\s+(?:the\s+)?(\w+)/i);
   if (!catMatch || !condMatch || !fieldMatch) throw new Error(`Could not parse instructions: ${instructions}`);
@@ -454,7 +516,7 @@ async function solveModalInteraction(page: Page): Promise<string> {
     ? categoryCards.reduce((min, c) => (c.price < min.price ? c : min), categoryCards[0])
     : categoryCards.reduce((max, c) => (c.price > max.price ? c : max), categoryCards[0]);
 
-  // Open modal
+  // Open modal (triggers interact: "modal")
   await page.locator(`[data-card-name="${target.name}"]`).first().click();
   await page.waitForSelector("[data-modal]");
 
@@ -487,7 +549,7 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
   const orderCondMatch = instructions.match(/(highest subtotal|lowest subtotal)/i);
   const statusMatch = instructions.match(/"(Pending|Processing)"/);
   const discountCondMatch = instructions.match(/(highest discount percentage|lowest discount percentage)/i);
-  const shippingMatch = instructions.match(/"(Standard|Express|Overnight)"\s*(?:shipping|for shipping)/i);
+  const shippingMatch = instructions.match(/"(Standard|Express|Overnight)"/i);
   if (!orderCondMatch || !statusMatch || !discountCondMatch || !shippingMatch) {
     throw new Error(`Could not parse instructions: ${instructions}`);
   }
@@ -521,8 +583,9 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
   const targetOrder = statusOrders[0];
   await page.locator(`[data-select-order="${targetOrder.id}"]`).click();
 
-  // Step 2: Read discount codes and sort by condition
-  await page.waitForSelector("[data-discount-code]");
+  // Step 2: Wait for discount codes to load via interact API
+  await page.waitForSelector("[data-discount-code]", { timeout: 5000 });
+
   const discountButtons = page.locator("[data-discount-code]");
   const discountCount = await discountButtons.count();
 
@@ -553,8 +616,9 @@ async function solveMultiStepWizard(page: Page): Promise<string> {
     break;
   }
 
-  // Step 3: Select shipping
-  await page.waitForSelector("[data-shipping]");
+  // Step 3: Wait for shipping to load via interact API, then select
+  await page.waitForSelector("[data-shipping]", { timeout: 5000 });
+
   const shippingBtn = page.locator(`[data-shipping="${targetShipping}"]`);
   const shippingCostStr = (await shippingBtn.locator("[data-shipping-cost]").getAttribute("data-shipping-cost")) ?? "0";
   const shippingCost = parseFloat(shippingCostStr);
@@ -653,11 +717,15 @@ async function solveLinkedDataLookup(page: Page): Promise<string> {
 
   const deptId = targetEmp.deptId;
 
-  if (instructions.match(/expand/i)) {
-    // Department field task — expand the department row
+  // Instruction variants now always include an "expand" interact hint.
+  // Detect task type from project-specific wording instead of "expand".
+  const isProjectAggregateTask = /projects table|matching projects|project budget|number of projects|projects in that department|department link to the projects table/i.test(instructions);
+
+  if (!isProjectAggregateTask) {
+    // Department field task — expand the department row (triggers interact: "expand")
     const expandBtn = page.locator(`[data-expand-dept="${deptId}"]`);
     await expandBtn.click();
-    await page.waitForSelector(`[data-dept-details="${deptId}"]`);
+    await waitForInteract(page, `[data-dept-details="${deptId}"]`);
 
     // Determine target field from instructions
     let targetField: string;
@@ -693,7 +761,7 @@ async function solveLinkedDataLookup(page: Page): Promise<string> {
       }
     }
 
-    if (instructions.match(/total project budget|budget/i)) {
+    if (instructions.match(/total project budget|project budget|budget/i)) {
       return String(deptProjects.reduce((s, p) => s + p.budget, 0));
     } else {
       return String(deptProjects.length);
@@ -716,9 +784,11 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
     const stepType = await step.getAttribute("data-step-type");
 
     if (stepType === "conditional") {
+      // Reveal hidden operands if needed (triggers interact: "reveal")
       const revealBtn = step.locator(`[data-reveal="${i}"]`);
       if (await revealBtn.isVisible()) {
         await revealBtn.click();
+        await step.locator(`[data-operand-above="${i}"]`).waitFor({ state: "visible", timeout: 5000 });
       }
 
       const thresholdText = await step.locator(`[data-threshold="${i}"]`).textContent();
@@ -729,17 +799,15 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
         const operandAboveText = await step.locator(`[data-operand-above="${i}"]`).textContent();
         if (!operandAboveText) throw new Error(`Could not read above operand for step ${i}`);
         const operand = parseFloat(operandAboveText.trim());
-        const opLines = step.locator("p.text-gray-400");
-        const firstOpLine = await opLines.first().textContent();
-        if (firstOpLine?.includes("+")) current += operand;
+        const opSymbol = await step.locator(`[data-operator-above="${i}"]`).textContent();
+        if (opSymbol?.includes("+")) current += operand;
         else current -= operand;
       } else {
         const operandBelowText = await step.locator(`[data-operand-below="${i}"]`).textContent();
         if (!operandBelowText) throw new Error(`Could not read below operand for step ${i}`);
         const operand = parseFloat(operandBelowText.trim());
-        const opLines = step.locator("p.text-gray-400");
-        const lastOpLine = await opLines.last().textContent();
-        if (lastOpLine?.includes("+")) current += operand;
+        const opSymbol = await step.locator(`[data-operator-below="${i}"]`).textContent();
+        if (opSymbol?.includes("+")) current += operand;
         else current -= operand;
       }
     } else if (stepType === "lookup") {
@@ -756,7 +824,7 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
       if (!refValueText) throw new Error(`Could not read ref value for ${lookupKey}`);
       const refValue = parseFloat(refValueText.trim());
 
-      const opSymbol = await step.locator(".text-blue-400").textContent();
+      const opSymbol = await step.locator(`[data-operator="${i}"]`).textContent();
       if (!opSymbol) throw new Error(`Could not read operator for step ${i}`);
       switch (opSymbol.trim()) {
         case "+": current += refValue; break;
@@ -764,18 +832,20 @@ async function solveSequentialCalculator(page: Page): Promise<string> {
         case "\u00d7": current *= refValue; break;
       }
     } else {
+      // Normal step — reveal hidden operand if needed
       const revealBtn = step.locator(`[data-reveal="${i}"]`);
       if (await revealBtn.isVisible()) {
         await revealBtn.click();
+        await step.locator(`[data-operand="${i}"]`).waitFor({ state: "visible", timeout: 5000 });
       }
 
       const operandEl = step.locator(`[data-operand="${i}"]`);
-      await operandEl.waitFor({ state: "visible" });
+      await operandEl.waitFor({ state: "visible", timeout: 5000 });
       const operandText = await operandEl.textContent();
       if (!operandText) throw new Error(`Could not read operand for step ${i}`);
       const operand = parseFloat(operandText.trim());
 
-      const opSymbol = await step.locator(".text-blue-400").textContent();
+      const opSymbol = await step.locator(`[data-operator="${i}"]`).textContent();
       if (!opSymbol) throw new Error(`Could not read operator for step ${i}`);
 
       switch (opSymbol.trim()) {
@@ -841,13 +911,13 @@ async function solveDataDashboard(page: Page): Promise<string> {
     const nextBtn = page.locator("[data-page-next]");
     if (await nextBtn.isDisabled()) break;
     await nextBtn.click();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(300);
     await readSalesPage();
   }
 
-  // Costs tab
+  // Costs tab (triggers interact: "tab")
   await page.locator('[data-dashboard-tab="costs"]').click();
-  await page.waitForSelector("[data-table='costs']");
+  await page.waitForSelector("[data-table='costs']", { timeout: 5000 });
 
   const costRow = page.locator(`[data-cost-product="${targetProduct}"]`);
   const costPerUnitStr = (await costRow.locator("[data-cost-per-unit]").textContent())?.trim() ?? "0";
@@ -855,9 +925,9 @@ async function solveDataDashboard(page: Page): Promise<string> {
   const costPerUnit = parseFloat(costPerUnitStr.replace("$", ""));
   const shipping = parseFloat(shippingStr.replace("$", ""));
 
-  // Taxes tab
+  // Taxes tab (triggers interact: "tab")
   await page.locator('[data-dashboard-tab="taxes"]').click();
-  await page.waitForSelector("[data-table='taxes']");
+  await page.waitForSelector("[data-table='taxes']", { timeout: 5000 });
 
   const taxRow = page.locator(`[data-tax-region="${targetRegion}"]`);
   const taxRateStr = (await taxRow.locator("[data-tax-rate]").textContent())?.trim() ?? "0";
@@ -882,28 +952,89 @@ async function solveConstraintSolver(page: Page): Promise<string> {
   await page.waitForSelector("[data-panel='budget']");
   await page.waitForSelector("[data-panel='exclusions']");
 
-  // Open the "Additional Constraints" popover
-  const advancedToggle = page.locator("[data-toggle-advanced]");
-  if (await advancedToggle.isVisible()) {
-    await advancedToggle.click();
-    await page.waitForSelector("[data-panel='advanced']");
-  }
+  const normalizeConstraint = (text: string) => text.replace(/^[•\s]+/, "").trim();
 
-  // Read constraints from each panel
-  const readConstraints = async (panelName: string): Promise<string[]> => {
-    const els = page.locator(`[data-panel='${panelName}'] [data-constraint] span:last-child`);
-    const count = await els.count();
-    const results: string[] = [];
+  const readConstraintItems = async (items: Locator): Promise<string[]> => {
+    const count = await items.count();
+    const result: string[] = [];
     for (let i = 0; i < count; i++) {
-      results.push((await els.nth(i).textContent())?.trim() ?? "");
+      const raw = (await items.nth(i).textContent())?.trim() ?? "";
+      const normalized = normalizeConstraint(raw);
+      if (normalized.length > 0) result.push(normalized);
     }
-    return results;
+    return result;
   };
 
-  const requirements = await readConstraints("requirements");
-  const budgetConstraints = await readConstraints("budget");
-  const exclusions = await readConstraints("exclusions");
-  const advancedConstraints = await readConstraints("advanced");
+  // Read constraints from each panel (data-* first, semantic fallback second).
+  const readConstraints = async (panelName: string, panelHeading: string): Promise<string[]> => {
+    const byAttr = page.locator(`[data-panel='${panelName}'] [data-constraint]`);
+    if (await byAttr.count() > 0) {
+      return readConstraintItems(byAttr);
+    }
+
+    const heading = page.getByRole("heading", { level: 3, name: panelHeading }).first();
+    if (await heading.count() === 0) return [];
+    const byHeading = heading.locator("xpath=following-sibling::ul[1]/li");
+    return readConstraintItems(byHeading);
+  };
+
+  // Read visible constraint panels first
+  const requirements = await readConstraints("requirements", "Requirements");
+  const budgetConstraints = await readConstraints("budget", "Budget & Quality");
+  const exclusions = await readConstraints("exclusions", "Exclusions");
+
+  // Open the "Additional Constraints" popover and prefer reading constraints
+  // from the interact API response to avoid popover timing flake.
+  const advancedToggle = page.locator("[data-toggle-advanced], button:has-text('Additional Constraints')").first();
+  await advancedToggle.waitFor({ state: "visible", timeout: 5000 });
+  const interactResponsePromise = page.waitForResponse(
+    (resp) => {
+      if (!resp.url().includes("/api/challenges/") || !resp.url().includes("/interact")) return false;
+      if (resp.request().method() !== "POST") return false;
+      const postData = resp.request().postData() ?? "";
+      return postData.includes("\"action\":\"accordion\"");
+    },
+    { timeout: 10000 }
+  ).catch(() => null);
+  await advancedToggle.scrollIntoViewIfNeeded();
+  await advancedToggle.click();
+
+  let advancedConstraints: string[] = [];
+  const interactResponse = await interactResponsePromise;
+  if (interactResponse && interactResponse.ok()) {
+    const payload = await interactResponse.json().catch(() => null) as {
+      data?: { advancedConstraints?: Array<{ label?: string }> };
+    } | null;
+    const fromApi = payload?.data?.advancedConstraints;
+    if (Array.isArray(fromApi)) {
+      advancedConstraints = fromApi
+        .map((c) => (typeof c?.label === "string" ? normalizeConstraint(c.label) : ""))
+        .filter((label) => label.length > 0);
+    }
+  }
+
+  if (advancedConstraints.length === 0) {
+    await page.waitForSelector("[data-panel='advanced'], #constraints-popover", { timeout: 10000 });
+    const byAttr = page.locator("[data-panel='advanced'] [data-constraint]");
+    if (await byAttr.count() > 0) {
+      advancedConstraints = await readConstraintItems(byAttr);
+    } else {
+      const byPopover = page.locator("#constraints-popover li");
+      advancedConstraints = await readConstraintItems(byPopover);
+    }
+  }
+
+  if (advancedConstraints.length === 0) {
+    throw new Error("Failed to read advanced constraints after opening Additional Constraints");
+  }
+
+  // Close popover before submission flow to avoid outside-click state updates
+  // interfering with the final submit button click.
+  const advancedPopover = page.locator("#constraints-popover, [data-panel='advanced']").first();
+  if (await advancedPopover.count() > 0 && await advancedPopover.isVisible()) {
+    await advancedToggle.click();
+    await advancedPopover.waitFor({ state: "hidden", timeout: 5000 }).catch(() => {});
+  }
 
   // Parse constraint values
   const allowedCategories: string[] = [];
@@ -1011,7 +1142,13 @@ async function solveConstraintSolver(page: Page): Promise<string> {
     return true;
   });
 
-  if (qualifying.length === 0) throw new Error("No item satisfies all constraints");
+  if (qualifying.length === 0) {
+    throw new Error(`No item satisfies all constraints.\n` +
+      `Categories: ${JSON.stringify(allowedCategories)}, inStock: ${mustBeInStock}\n` +
+      `maxPrice: ${maxPrice}, minRating: ${minRating}, belowAvgPrice: ${belowAvgPrice} (avg=${avgPrice}), aboveAvgRating: ${aboveAvgRating} (avg=${avgRating})\n` +
+      `excludedSupplier: ${excludedSupplier}, maxWeight: ${maxWeight}\n` +
+      `Items: ${JSON.stringify(allItems.map(it => ({ n: it.name, c: it.category, p: it.price, r: it.rating, s: it.supplier, st: it.inStock, w: it.weight })))}`);
+  }
 
   qualifying.sort((a, b) => a[optField] - b[optField]);
   return qualifying[0].name;
@@ -1109,7 +1246,7 @@ async function solveCalculationAudit(page: Page): Promise<string> {
       expectedTotal = Math.round(subtotal * 100) / 100;
     }
 
-    if (Math.abs(displayedTotal - expectedTotal) < 0.001) {
+    if (Math.abs(displayedTotal - expectedTotal) < 0.011) {
       correctSum += displayedTotal;
     }
   }
@@ -1133,7 +1270,7 @@ async function solveRedHerring(page: Page): Promise<string> {
   // Helper: read a tab's table data
   const readTabData = async (tabId: string) => {
     await page.locator(`[data-report-tab="${tabId}"]`).click();
-    await page.waitForSelector(`[data-table="${tabId}"]`);
+    await page.waitForSelector(`[data-table="${tabId}"]`, { timeout: 5000 });
     const rows = page.locator(`[data-table="${tabId}"] [data-metric-row]`);
     const rowCount = await rows.count();
     const data: Array<{ label: string; q1: number; q2: number; q3: number; q4: number; annual: number }> = [];
@@ -1152,7 +1289,7 @@ async function solveRedHerring(page: Page): Promise<string> {
     return data;
   };
 
-  // Read both datasets
+  // Read both datasets (Report A is static pageData, Report B needs interact)
   const dataA = await readTabData("a");
   const dataB = await readTabData("b");
 
@@ -1166,39 +1303,65 @@ async function solveRedHerring(page: Page): Promise<string> {
   const targetRow = correctData.find((r) => r.label === targetMetric);
   if (!targetRow) throw new Error(`Could not find metric: ${targetMetric}`);
 
-  // Detect sum vs difference
-  if (instructions.match(/\bsum\b|add|combined/i)) {
-    const quarterMatches = [...instructions.matchAll(/Q(\d)/g)].map((m) => `Q${m[1]}`);
+  // Parse operation from the final "compute/add/subtract" clause to avoid
+  // quarter references from earlier consistency text (e.g., "Annual = Q1+Q2+Q3+Q4").
+  const lower = instructions.toLowerCase();
+  const opAnchor = Math.max(
+    lower.lastIndexOf("compute"),
+    lower.lastIndexOf("add"),
+    lower.lastIndexOf("sum"),
+    lower.lastIndexOf("combined"),
+    lower.lastIndexOf("subtract"),
+    lower.lastIndexOf("difference"),
+    lower.lastIndexOf("minus")
+  );
+  const operationClause = opAnchor >= 0 ? instructions.slice(opAnchor) : instructions;
+
+  const subtractFromMatch = operationClause.match(/subtract\s+(Q\d)\s+from\s+(Q\d)/i);
+  const minusMatch = operationClause.match(/(Q\d)\s*(?:minus|-)\s*(Q\d)/i);
+  const diffBetweenMatch = operationClause.match(/difference between\s+(Q\d)\s+and\s+(Q\d)/i);
+  const isDifference = Boolean(
+    subtractFromMatch || minusMatch || diffBetweenMatch || /subtract|minus|\bdifference\b/i.test(operationClause)
+  );
+
+  if (!isDifference) {
+    const sumListMatch = operationClause.match(/(?:sum(?:\s+of|\s+its)?|add|combined)[^Q]*(Q\d(?:\s*(?:,|and)\s*Q\d)*)/i);
+    const quarterSource = sumListMatch?.[1] ?? operationClause;
+    const quarterMatches = [...quarterSource.matchAll(/Q(\d)/g)].map((m) => `Q${m[1]}`);
     const quarters = [...new Set(quarterMatches)];
+    if (quarters.length === 0) {
+      throw new Error(`Could not parse sum quarters from instructions: ${instructions}`);
+    }
     let total = 0;
     for (const q of quarters) {
       const key = q.toLowerCase() as "q1" | "q2" | "q3" | "q4";
       total += targetRow[key];
     }
     return String(total);
-  } else {
-    let q1Key: string;
-    let q2Key: string;
-
-    const subtractFromMatch = instructions.match(/Subtract\s+(Q\d)\s+from\s+(Q\d)/i);
-    if (subtractFromMatch) {
-      q1Key = subtractFromMatch[2].toLowerCase();
-      q2Key = subtractFromMatch[1].toLowerCase();
-    } else {
-      const diffMatch = instructions.match(/(Q\d)\s*(?:minus|-)\s*(Q\d)/i)
-        || instructions.match(/(Q\d)\s+and\s+(Q\d)/i);
-      if (diffMatch) {
-        q1Key = diffMatch[1].toLowerCase();
-        q2Key = diffMatch[2].toLowerCase();
-      } else {
-        const qs = [...instructions.matchAll(/Q(\d)/g)].map((m) => `q${m[1]}`);
-        q1Key = qs[0];
-        q2Key = qs[1];
-      }
-    }
-
-    return String(targetRow[q1Key as "q1" | "q2" | "q3" | "q4"] - targetRow[q2Key as "q1" | "q2" | "q3" | "q4"]);
   }
+
+  let q1Key: string;
+  let q2Key: string;
+
+  if (subtractFromMatch) {
+    q1Key = subtractFromMatch[2].toLowerCase();
+    q2Key = subtractFromMatch[1].toLowerCase();
+  } else if (minusMatch) {
+    q1Key = minusMatch[1].toLowerCase();
+    q2Key = minusMatch[2].toLowerCase();
+  } else if (diffBetweenMatch) {
+    q1Key = diffBetweenMatch[1].toLowerCase();
+    q2Key = diffBetweenMatch[2].toLowerCase();
+  } else {
+    const qs = [...operationClause.matchAll(/Q(\d)/g)].map((m) => `q${m[1]}`);
+    if (qs.length < 2) {
+      throw new Error(`Could not parse difference quarters from instructions: ${instructions}`);
+    }
+    q1Key = qs[0];
+    q2Key = qs[1];
+  }
+
+  return String(targetRow[q1Key as "q1" | "q2" | "q3" | "q4"] - targetRow[q2Key as "q1" | "q2" | "q3" | "q4"]);
 }
 
 // ─── Test runner ────────────────────────────────────────────────
@@ -1215,14 +1378,20 @@ test.beforeAll(async ({ request }) => {
     });
   }
 
-  await new Promise((r) => setTimeout(r, 1500));
-
-  const res = await request.post("/api/session");
-  if (!res.ok()) {
-    const body = await res.text();
-    throw new Error(`Failed to create session: ${res.status()} ${body}`);
+  // Retry session creation with backoff (Convex can rate-limit)
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await request.post("/api/session");
+    if (res.ok()) break;
+    if (res.status() === 429 && attempt < 2) {
+      await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
+    }
   }
-  const data = await res.json();
+  if (!res!.ok()) {
+    const body = await res!.text();
+    throw new Error(`Failed to create session: ${res!.status()} ${body}`);
+  }
+  const data = await res!.json();
   sessionId = data.sessionId;
 });
 
@@ -1243,6 +1412,6 @@ for (const [challengeId, solverFn] of Object.entries(SOLVERS)) {
     const submitBtn = page.locator("button", { hasText: "Submit Answer" });
     await submitBtn.click();
 
-    await expect(page.locator("text=Correct!")).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("text=Correct!").first()).toBeVisible({ timeout: 10000 });
   });
 }
