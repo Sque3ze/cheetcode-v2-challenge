@@ -20,7 +20,7 @@ import {
 } from "../../components/spectator/formatters";
 
 // ─── Authenticated fetch hook (proxies through /api/admin/data) ──
-type AdminQueryType = "overview" | "challenges" | "sessions" | "timeline";
+type AdminQueryType = "overview" | "challenges" | "sessions" | "timeline" | "leaderboard";
 
 function useAdminKey(): string {
   const searchParams = useSearchParams();
@@ -211,6 +211,178 @@ function ChallengeAnalytics() {
               </td>
             </tr>
           ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Leaderboard Management ──────────────────────────────────
+type LeaderboardEntry = {
+  _id: string;
+  github: string;
+  score: number;
+  orchestrationScore?: number;
+  earnedPoints: number;
+  totalPoints: number;
+  wrongAttempts: number;
+  completedAt: number;
+  isTestSession?: boolean;
+};
+
+function LeaderboardManagement() {
+  const key = useAdminKey();
+  const entries = useAdminQuery<LeaderboardEntry[]>("leaderboard");
+  const [updating, setUpdating] = useState<Set<string>>(new Set());
+
+  const toggleVisibility = async (entryId: string, visible: boolean) => {
+    setUpdating((prev) => new Set(prev).add(entryId));
+    try {
+      const res = await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-key": key },
+        body: JSON.stringify({ type: "leaderboard-visibility", entryId, visible }),
+      });
+      if (res.ok) {
+        // Optimistically update local state — flip the flag
+        if (entries) {
+          const entry = entries.find((e) => e._id === entryId);
+          if (entry) entry.isTestSession = !visible;
+        }
+      }
+    } catch {
+      // silent
+    } finally {
+      setUpdating((prev) => {
+        const next = new Set(prev);
+        next.delete(entryId);
+        return next;
+      });
+    }
+  };
+
+  if (!entries) return <p style={{ color: DIM, fontSize: 14 }}>Loading leaderboard...</p>;
+  if (entries.length === 0) return <p style={{ color: DIM, fontSize: 14 }}>No leaderboard entries yet.</p>;
+
+  return (
+    <div className="card-surface" style={{ borderRadius: 10, overflow: "hidden" }}>
+      <table style={{ width: "100%", fontSize: 13, lineHeight: "20px", borderCollapse: "collapse" }}>
+        <thead>
+          <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+            {["#", "Player", "Score", "Orch.", "Solved", "Wrong", "Type", "Visible"].map((h) => (
+              <th
+                key={h}
+                style={{
+                  padding: "10px 14px",
+                  fontWeight: 450,
+                  color: DIM,
+                  textAlign: h === "Player" || h === "Type" || h === "Visible" ? "left" : "right",
+                  whiteSpace: "nowrap",
+                  width: h === "#" ? 40 : h === "Visible" ? 80 : undefined,
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry, i) => {
+            const isTest = !!entry.isTestSession;
+            const isVisible = !isTest;
+            const isLoading = updating.has(entry._id);
+
+            return (
+              <tr key={entry._id} style={{ borderTop: i > 0 ? `1px solid ${BORDER}` : undefined }}>
+                <td
+                  style={{
+                    padding: "10px 14px",
+                    textAlign: "right",
+                    fontFamily: "var(--font-geist-mono), monospace",
+                    color: DIM,
+                  }}
+                >
+                  {i + 1}
+                </td>
+                <td style={{ padding: "10px 14px", fontWeight: 450 }}>{entry.github}</td>
+                <td
+                  style={{
+                    padding: "10px 14px",
+                    textAlign: "right",
+                    fontFamily: "var(--font-geist-mono), monospace",
+                    fontWeight: 500,
+                  }}
+                >
+                  {entry.score.toFixed(1)}%
+                </td>
+                <td
+                  style={{
+                    padding: "10px 14px",
+                    textAlign: "right",
+                    fontFamily: "var(--font-geist-mono), monospace",
+                    color: entry.orchestrationScore != null ? rateColor(entry.orchestrationScore) : DIM,
+                  }}
+                >
+                  {entry.orchestrationScore != null ? entry.orchestrationScore : "—"}
+                </td>
+                <td
+                  style={{
+                    padding: "10px 14px",
+                    textAlign: "right",
+                    fontFamily: "var(--font-geist-mono), monospace",
+                  }}
+                >
+                  {entry.earnedPoints}/{entry.totalPoints}
+                </td>
+                <td
+                  style={{
+                    padding: "10px 14px",
+                    textAlign: "right",
+                    fontFamily: "var(--font-geist-mono), monospace",
+                    color: DIM,
+                  }}
+                >
+                  {entry.wrongAttempts}
+                </td>
+                <td style={{ padding: "10px 14px" }}>
+                  {isTest && (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        padding: "2px 7px",
+                        borderRadius: 4,
+                        fontWeight: 600,
+                        background: "rgba(139, 92, 246, 0.10)",
+                        color: "#7c3aed",
+                        letterSpacing: "0.3px",
+                      }}
+                    >
+                      TEST
+                    </span>
+                  )}
+                </td>
+                <td style={{ padding: "10px 14px" }}>
+                  <button
+                    onClick={() => toggleVisibility(entry._id, !isVisible)}
+                    disabled={isLoading}
+                    style={{
+                      fontSize: 11,
+                      padding: "3px 10px",
+                      borderRadius: 6,
+                      border: `1px solid ${BORDER}`,
+                      background: isVisible ? "rgba(22, 163, 74, 0.08)" : "rgba(38, 38, 38, 0.04)",
+                      color: isVisible ? "#16a34a" : DIM,
+                      cursor: isLoading ? "wait" : "pointer",
+                      fontWeight: 500,
+                      opacity: isLoading ? 0.5 : 1,
+                    }}
+                  >
+                    {isVisible ? "Public" : "Hidden"}
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -832,6 +1004,17 @@ function AdminContent() {
               Challenge Analytics
             </h2>
             <ChallengeAnalytics />
+          </section>
+
+          {/* Leaderboard Management */}
+          <section style={{ marginBottom: 40 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 450, color: "#262626", marginBottom: 16 }}>
+              Leaderboard
+              <span style={{ fontSize: 12, color: DIM, fontWeight: 400, marginLeft: 8 }}>
+                toggle visibility on the public board
+              </span>
+            </h2>
+            <LeaderboardManagement />
           </section>
 
           {/* Recent Sessions */}

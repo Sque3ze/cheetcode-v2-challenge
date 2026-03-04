@@ -298,3 +298,23 @@ export const fetchSessionTimeline = action({
     return await ctx.runQuery(internal.admin.getSessionTimeline, { sessionId: args.sessionId });
   },
 });
+
+export const fetchAllAdmin = action({
+  args: { secret: v.string() },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runQuery(internal.leaderboard.getAllAdmin, {});
+  },
+});
+
+export const updateVisibility = action({
+  args: { secret: v.string(), entryId: v.id("leaderboard"), visible: v.boolean() },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    await ctx.runMutation(internal.leaderboard.setPublicVisibility, {
+      entryId: args.entryId,
+      visible: args.visible,
+    });
+    return { ok: true };
+  },
+});

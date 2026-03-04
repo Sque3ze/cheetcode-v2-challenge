@@ -1,4 +1,5 @@
-import { query } from "./_generated/server";
+import { query, internalQuery, internalMutation } from "./_generated/server";
+import { v } from "convex/values";
 import { compareRank } from "./ranking";
 
 /**
@@ -17,5 +18,34 @@ export const getAll = query({
     // Filter out test sessions from public leaderboard
     const realEntries = entries.filter((e) => !e.isTestSession);
     return realEntries.sort(compareRank);
+  },
+});
+
+/**
+ * Admin-only: return ALL leaderboard entries including test sessions.
+ */
+export const getAllAdmin = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const entries = await ctx.db
+      .query("leaderboard")
+      .withIndex("by_score")
+      .order("desc")
+      .collect();
+    return entries.sort(compareRank);
+  },
+});
+
+/**
+ * Admin-only: toggle public visibility of a leaderboard entry.
+ * visible=true → clears isTestSession (appears on public board)
+ * visible=false → sets isTestSession=true (hidden from public board)
+ */
+export const setPublicVisibility = internalMutation({
+  args: { entryId: v.id("leaderboard"), visible: v.boolean() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.entryId, {
+      isTestSession: args.visible ? undefined : true,
+    });
   },
 });

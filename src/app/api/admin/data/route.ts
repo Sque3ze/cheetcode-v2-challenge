@@ -5,7 +5,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { verifyAdminAuth } from "../../../../lib/api-helpers";
 
 /**
- * GET /api/admin/data?type=overview|challenges|sessions|timeline
+ * GET /api/admin/data?type=overview|challenges|sessions|timeline|leaderboard
  *
  * Authenticated proxy to admin Convex queries.
  * Reads admin key from X-Admin-Key header.
@@ -52,11 +52,57 @@ export async function GET(request: Request) {
         );
       }
 
+      case "leaderboard":
+        return NextResponse.json(await convex.action(api.admin.fetchAllAdmin, { secret }));
+
       default:
         return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 });
     }
   } catch (err) {
     console.error("/api/admin/data error:", err);
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/admin/data
+ * Body: { type: "leaderboard-visibility", entryId: string, visible: boolean }
+ */
+export async function POST(request: Request) {
+  const authResult = await verifyAdminAuth(request);
+  if (authResult instanceof NextResponse) return authResult;
+
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+  const secret = process.env.CONVEX_MUTATION_SECRET;
+  if (!convexUrl || !secret) {
+    return NextResponse.json({ error: "Server not configured" }, { status: 500 });
+  }
+
+  const convex = new ConvexHttpClient(convexUrl);
+
+  try {
+    const body = await request.json();
+    const { type, entryId, visible } = body;
+
+    switch (type) {
+      case "leaderboard-visibility": {
+        if (!entryId || typeof visible !== "boolean") {
+          return NextResponse.json({ error: "entryId and visible (boolean) required" }, { status: 400 });
+        }
+        return NextResponse.json(
+          await convex.action(api.admin.updateVisibility, {
+            secret,
+            entryId: entryId as unknown as Id<"leaderboard">,
+            visible,
+          })
+        );
+      }
+
+      default:
+        return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 });
+    }
+  } catch (err) {
+    console.error("/api/admin/data POST error:", err);
+    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }
