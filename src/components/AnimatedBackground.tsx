@@ -14,6 +14,11 @@ export default function AnimatedBackground() {
   const animRef = useRef<number>(0);
 
   useEffect(() => {
+    // Respect reduced motion preferences
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -21,11 +26,23 @@ export default function AnimatedBackground() {
     if (!ctx) return;
 
     let dots: Dot[] = [];
+    let isVisible = true;
     const GRID_SPACING = 24;
     const DOT_RADIUS = 1.2;
     const BASE_ALPHA = 0.22;
     const WAVE_SPEED = 0.0008;
     const WAVE_SCALE = 0.018;
+
+    // Only animate when visible in viewport
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          isVisible = entry.isIntersecting;
+        });
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(canvas);
 
     function resize() {
       const dpr = window.devicePixelRatio || 1;
@@ -46,7 +63,6 @@ export default function AnimatedBackground() {
         for (let col = 0; col < cols; col++) {
           const x = col * GRID_SPACING;
           const y = row * GRID_SPACING;
-          // Fade out toward edges and bottom
           const cx = window.innerWidth / 2;
           const cy = window.innerHeight * 0.35;
           const dx = (x - cx) / (window.innerWidth * 0.6);
@@ -65,10 +81,13 @@ export default function AnimatedBackground() {
     }
 
     let lastDrawTime = 0;
-    const FRAME_INTERVAL = 66; // ~15fps — wave is slow enough that higher fps is imperceptible
+    const FRAME_INTERVAL = 66; // ~15fps
 
     function draw(time: number) {
       animRef.current = requestAnimationFrame(draw);
+
+      // Skip drawing when not visible
+      if (!isVisible) return;
       if (time - lastDrawTime < FRAME_INTERVAL) return;
       lastDrawTime = time;
 
@@ -77,7 +96,6 @@ export default function AnimatedBackground() {
       for (const dot of dots) {
         if (dot.baseAlpha < 0.005) continue;
 
-        // Overlapping wave patterns for organic movement
         const wave1 = Math.sin(
           time * WAVE_SPEED + dot.x * WAVE_SCALE + dot.phase
         );
@@ -93,9 +111,8 @@ export default function AnimatedBackground() {
 
         if (alpha < 0.003) continue;
 
-        // Use heat orange for dots with varying opacity
         const r = 250;
-        const g = 93 + Math.floor(combined * 30); // slight color shift
+        const g = 93 + Math.floor(combined * 30);
         const b = 25;
 
         ctx!.beginPath();
@@ -103,7 +120,6 @@ export default function AnimatedBackground() {
         ctx!.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
         ctx!.fill();
       }
-
     }
 
     resize();
@@ -117,6 +133,7 @@ export default function AnimatedBackground() {
     window.addEventListener("resize", debouncedResize);
 
     return () => {
+      observer.disconnect();
       window.removeEventListener("resize", debouncedResize);
       clearTimeout(resizeTimer);
       cancelAnimationFrame(animRef.current);

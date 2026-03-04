@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { TIER_LABELS } from "../../lib/config";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import BrailleSpinner from "@/components/BrailleSpinner";
 
 interface ChallengeMeta {
   id: string;
@@ -138,9 +139,12 @@ export default function ChallengesPage() {
             color: "rgba(38, 38, 38, 0.4)",
             fontSize: 14,
             lineHeight: "20px",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
           }}
         >
-          Loading session...
+          <BrailleSpinner /> Loading session...
         </p>
       </div>
     );

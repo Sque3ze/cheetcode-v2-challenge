@@ -45,19 +45,22 @@
   --radius-20: 20px;
   --radius-full: 999px;
 
-  /* Firecrawl brand colors */
+  /* Brand heat scale */
   --color-heat-4: rgba(250, 93, 25, 0.04);
   --color-heat-8: rgba(250, 93, 25, 0.08);
   --color-heat-12: rgba(250, 93, 25, 0.12);
+  --color-heat-16: rgba(250, 93, 25, 0.16);
   --color-heat-20: rgba(250, 93, 25, 0.20);
   --color-heat-100: #fa5d19;
 
   --color-accent-black: #262626;
   --color-accent-white: #f5f5f5;
 
-  --color-accent-forest: #1a9338;
-  --color-accent-crimson: #dc2626;
-  --color-accent-honey: #b45309;
+  --color-accent-amethyst: #9061ff;
+  --color-accent-bluetron: #2a6dfb;
+  --color-accent-forest: #42c366;
+  --color-accent-crimson: #eb3424;
+  --color-accent-honey: #ecb730;
 
   --color-surface: #ffffff;
   --color-surface-raised: #f3f3f3;
@@ -71,11 +74,13 @@
   --color-black-alpha-4: rgba(0, 0, 0, 0.04);
   --color-black-alpha-5: rgba(0, 0, 0, 0.05);
   --color-black-alpha-6: rgba(0, 0, 0, 0.06);
+  --color-black-alpha-7: rgba(0, 0, 0, 0.07);
   --color-black-alpha-8: rgba(0, 0, 0, 0.08);
   --color-black-alpha-10: rgba(0, 0, 0, 0.10);
   --color-black-alpha-12: rgba(0, 0, 0, 0.12);
   --color-black-alpha-20: rgba(0, 0, 0, 0.20);
   --color-black-alpha-50: rgba(0, 0, 0, 0.50);
+  --color-black-alpha-80: rgba(0, 0, 0, 0.80);
 
   /* Default transition */
   --default-transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -168,14 +173,18 @@ body::before {
   text-shadow: 0 0 40px rgba(250, 93, 25, 0.2);
 }
 
-/* ─── Firecrawl primary button (from brand spec) ─── */
+/* ─── Primary button ─── */
 .btn-heat {
   background: #ff4c00;
   color: white;
   border: none;
   cursor: pointer;
   font-weight: 450;
-  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  font-size: 14px;
+  line-height: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1), scale 0.1s, box-shadow 0.1s;
   box-shadow:
     inset 0px -6px 12px 0px rgba(255, 0, 0, 0.2),
     0px 0.6px 0.8px 0px rgba(255, 139, 0, 0.22),
@@ -185,6 +194,18 @@ body::before {
     0px 8.3px 10.3px 0px rgba(255, 139, 0, 0.1),
     0px 2px 4px 0px rgba(250, 93, 25, 0.3);
 }
+/* Inner gradient overlay for depth */
+.btn-heat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(white, transparent);
+  opacity: 0.06;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.btn-heat:hover::after { opacity: 0.08; }
+.btn-heat:active::after { opacity: 0; transition: opacity 50ms; }
 .btn-heat:hover {
   box-shadow:
     inset 0px -6px 12px 0px rgba(255, 0, 0, 0.2),
@@ -195,21 +216,46 @@ body::before {
     0px 8.3px 10.3px 0px rgba(255, 139, 0, 0.12),
     0px 4px 8px 0px rgba(250, 93, 25, 0.4);
 }
-.btn-heat:active { transform: scale(0.995); }
+.btn-heat:active {
+  transform: scale(0.995);
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1), scale 50ms, box-shadow 50ms;
+}
 .btn-heat:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-heat:focus-visible { outline: 2px solid #fa5d19; outline-offset: 2px; }
 
-/* ─── Secondary button (light mode) ─── */
+/* Button sizes */
+.btn-sm { height: 32px; padding: 8px 12px; font-size: 13px; line-height: 18px; border-radius: 6px; }
+.btn-md { height: 40px; padding: 8px 16px; font-size: 14px; line-height: 20px; border-radius: 8px; }
+.btn-lg { height: 48px; padding: 12px 24px; font-size: 16px; line-height: 24px; border-radius: 10px; }
+
+/* Tertiary button (transparent) */
+.btn-tertiary {
+  background: transparent;
+  color: #262626;
+  border: none;
+  cursor: pointer;
+  font-weight: 450;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.btn-tertiary:hover { background: rgba(0, 0, 0, 0.04); }
+.btn-tertiary:active { transform: scale(0.98); }
+.btn-tertiary:disabled { color: rgba(0, 0, 0, 0.4); cursor: not-allowed; }
+
+/* ─── Secondary button ─── */
 .btn-ghost {
   background: rgba(0, 0, 0, 0.04);
   color: #262626;
   border: none;
   cursor: pointer;
   font-weight: 450;
-  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: all 0.2s, scale 0.1s;
 }
 .btn-ghost:hover { background: rgba(0, 0, 0, 0.06); }
-.btn-ghost:active { transform: scale(0.99); background: rgba(0, 0, 0, 0.07); }
+.btn-ghost:active { transform: scale(0.99); background: rgba(0, 0, 0, 0.07); transition: all 0.2s, scale 50ms; }
 .btn-ghost:disabled { background: rgba(0, 0, 0, 0.03); color: rgba(0, 0, 0, 0.4); cursor: not-allowed; }
 
 /* ─── Difficulty badges ─── */
@@ -226,6 +272,7 @@ body::before {
 .card-surface {
   background: #ffffff;
   border: 1px solid #e8e8e8;
+  border-radius: 12px;
   position: relative;
   transition: border-color 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
               box-shadow 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -233,11 +280,12 @@ body::before {
     0px 1px 2px rgba(0, 0, 0, 0.04),
     0px 2px 4px rgba(0, 0, 0, 0.02);
 }
+/* Inside border effect */
 .card-surface::after {
   content: '';
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: inherit;
   pointer-events: none;
 }
@@ -248,12 +296,12 @@ body::before {
     0px 4px 8px rgba(0, 0, 0, 0.03);
 }
 
-/* ─── Glassmorphism nav header (light mode) ─── */
+/* ─── Nav header ─── */
 .nav-header {
-  background: rgba(249, 249, 249, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid #f0f0f0;
+  background: rgba(249, 249, 249, 0.88);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border-bottom: 1px solid #ededed;
 }
 
 /* ─── Tier badges (light mode) ─── */
@@ -324,6 +372,12 @@ body::before {
 @keyframes live-dot-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.8); }
+}
+/* Expanding ring behind live dots for extra emphasis */
+@keyframes live-ring-expand {
+  0% { opacity: 0.5; transform: scale(0.5); }
+  60% { opacity: 0; }
+  75%, 100% { opacity: 0; filter: blur(4px); transform: scale(4); }
 }
 .spectate-live-badge span:first-child {
   animation: live-dot-pulse 1.5s ease-in-out infinite;
@@ -451,4 +505,32 @@ body::before {
 }
 .btn-heat-pulse {
   animation: pulse-ring 2.5s ease-in-out infinite;
+}
+
+/* ─── Text shimmer for loading states ─── */
+@keyframes text-shimmer {
+  0% { background-position: 100% 0; }
+  50%, 100% { background-position: -100% 0; }
+}
+.text-shimmer {
+  background: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.56) 25%, transparent 50%, transparent 100%),
+              rgba(0, 0, 0, 0.3);
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  background-position: 100% 0;
+  background-size: 200% 100%;
+  animation: text-shimmer 3.5s linear infinite;
+}
+
+/* ─── Wide-gamut accent color support ─── */
+@supports (color: color(display-p3 1 0 0)) {
+  .hero-accent {
+    color: color(display-p3 0.98 0.36 0.10);
+    text-shadow: 0 0 40px color(display-p3 0.98 0.36 0.10 / 0.2);
+  }
+  .tier-badge-1 { background: color(display-p3 0.10 0.58 0.22 / 0.08); color: color(display-p3 0.10 0.58 0.22); }
+  .tier-badge-2 { background: color(display-p3 0.16 0.43 0.98 / 0.08); color: color(display-p3 0.16 0.43 0.98); }
+  .tier-badge-3 { background: color(display-p3 0.56 0.38 1.0 / 0.08); color: color(display-p3 0.56 0.38 1.0); }
+  .tier-badge-4 { background: color(display-p3 0.92 0.20 0.14 / 0.08); color: color(display-p3 0.92 0.20 0.14); }
 }

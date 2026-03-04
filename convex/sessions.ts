@@ -282,7 +282,7 @@ export const fetchSession = action({
 /** Combined gateway: fetch session + challenge statuses in one action */
 export const fetchSessionWithStatuses = action({
   args: { secret: v.string(), sessionId: v.id("sessions") },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ session: any; statuses: any }> => {
     assertSecret(args.secret);
     const [session, statuses] = await Promise.all([
       ctx.runQuery(internal.sessions.get, { sessionId: args.sessionId }),
@@ -295,10 +295,10 @@ export const fetchSessionWithStatuses = action({
 /** Combined gateway: fetch active session by github + challenge statuses in one action */
 export const fetchActiveSessionWithStatuses = action({
   args: { secret: v.string(), github: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ session: any; statuses: any }> => {
     assertSecret(args.secret);
     const session = await ctx.runQuery(internal.sessions.getActive, { github: args.github });
-    if (!session) return { session: null as null, statuses: {} as Record<string, never> };
+    if (!session) return { session: null, statuses: {} };
     const statuses = await ctx.runQuery(internal.submissions.getSessionChallengeStatuses, { sessionId: session._id });
     return { session, statuses };
   },

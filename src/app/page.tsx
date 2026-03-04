@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import BrailleSpinner from "@/components/BrailleSpinner";
 
 const DEV_USER = process.env.NEXT_PUBLIC_DEV_USER;
 
@@ -137,9 +138,10 @@ export default function Home() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                padding: "5px 14px",
+                padding: "4px 12px",
                 borderRadius: 999,
                 fontSize: 12,
+                lineHeight: "16px",
                 fontWeight: 450,
                 color: "#fa5d19",
                 background: "rgba(250, 93, 25, 0.08)",
@@ -158,10 +160,10 @@ export default function Home() {
           <h1
             className="animate-fade-up hero-glow"
             style={{
-              fontSize: 56,
+              fontSize: 60,
               fontWeight: 500,
-              lineHeight: "60px",
-              letterSpacing: "-1.5px",
+              lineHeight: "64px",
+              letterSpacing: "-0.3px",
               marginBottom: 16,
               color: "#262626",
               animationDelay: "80ms",
@@ -175,10 +177,10 @@ export default function Home() {
           <p
             className="animate-fade-up"
             style={{
-              fontSize: 17,
-              lineHeight: "26px",
-              color: "rgba(38, 38, 38, 0.55)",
-              maxWidth: 480,
+              fontSize: 20,
+              lineHeight: "28px",
+              color: "rgba(38, 38, 38, 0.6)",
+              maxWidth: 600,
               marginBottom: 40,
               animationDelay: "160ms",
             }}
@@ -194,8 +196,8 @@ export default function Home() {
             style={{ animationDelay: "240ms" }}
           >
             {status === "loading" && !DEV_USER ? (
-              <div style={{ color: "rgba(38, 38, 38, 0.4)" }}>
-                Loading...
+              <div style={{ color: "rgba(38, 38, 38, 0.4)", display: "flex", alignItems: "center", gap: 8 }}>
+                <BrailleSpinner /> Loading...
               </div>
             ) : !session && !DEV_USER ? (
               <button
@@ -308,8 +310,7 @@ export default function Home() {
                     width: 40,
                     height: 40,
                     borderRadius: 8,
-                    background: "rgba(250, 93, 25, 0.06)",
-                    border: "1px solid rgba(250, 93, 25, 0.08)",
+                    background: "rgba(250, 93, 25, 0.04)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -325,15 +326,17 @@ export default function Home() {
                     color: "#262626",
                     marginBottom: 8,
                     lineHeight: "20px",
+                    letterSpacing: "0.14px",
                   }}
                 >
                   {step.title}
                 </div>
                 <p
                   style={{
-                    fontSize: 13,
+                    fontSize: 14,
                     lineHeight: "20px",
-                    color: "rgba(38, 38, 38, 0.5)",
+                    letterSpacing: "0.14px",
+                    color: "rgba(38, 38, 38, 0.6)",
                     margin: 0,
                   }}
                 >
@@ -449,9 +452,12 @@ export default function Home() {
                 color: "rgba(38, 38, 38, 0.4)",
                 fontSize: 14,
                 lineHeight: "20px",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              Loading...
+              <BrailleSpinner /> Loading leaderboard...
             </p>
           ) : leaderboard.length === 0 ? (
             <div
