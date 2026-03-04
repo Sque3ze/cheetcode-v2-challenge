@@ -163,19 +163,19 @@ The spectator mode and report cards are features I'm really proud of because the
 
 ### Tier 1 — Browser Fundamentals (6 challenges, 1pt each)
 
-Baseline for what the agent should be able to do.
+Baseline for what the agent should be able to do. Basic page interactions: sorting tables, filling forms, selecting dropdowns, navigating tabs, filtering, modals
 
 ### Tier 2 — Multi-Step Workflows (5 challenges, 2-4pts)
 
-Output of one step feeds the next. Some steps are only revealed after the agent reaches them.
+Output of one step feeds the next. Some steps are only revealed after the agent reaches them. Sequential reasoning where step N+1 depends on step N: wizards, linked lookups, calculators, error recovery
 
 ### Tier 3 — Complex Synthesis (7 challenges, 4-5pts)
 
-These require pulling data from multiple sources and computing derived answers with slight traps in some questions.
+These require pulling data from multiple sources and computing derived answers with slight traps in some questions. Cross-referencing multiple data sources across tabs/pages to compute an answer: dashboards, constraint solvers, aggregators
 
 ### Tier 4 — Advanced Analysis (2 challenges, 4pts each)
 
-Complex synthesis plus deliberate misdirection.
+Complex synthesis plus deliberate misdirection. Judgment and adversarial resilience: auditing calculations, ignoring red herrings and misleading UI
 
 ## 5. What changed vs v1
 

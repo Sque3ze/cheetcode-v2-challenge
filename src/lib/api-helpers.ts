@@ -133,8 +133,8 @@ export function validateSessionOwnership(
 }
 
 /**
- * Verify admin auth: resolves GitHub identity, checks ADMIN_GITHUB and ADMIN_KEY.
- * Returns the github username on success, or a NextResponse error on failure.
+ * Verify admin auth: resolves GitHub identity and checks ADMIN_GITHUB allowlist.
+ * If the user isn't in the allowlist, falls back to ADMIN_KEY header check.
  */
 export async function verifyAdminAuth(
   request: Request
@@ -144,13 +144,14 @@ export async function verifyAdminAuth(
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
   const adminGithub = process.env.ADMIN_GITHUB;
-  if (!adminGithub || github !== adminGithub) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  const admins = adminGithub?.split(",").map((s) => s.trim().toLowerCase()) ?? [];
+  if (admins.includes(github.toLowerCase())) {
+    return { github };
   }
   const adminKey = process.env.ADMIN_KEY;
   const key = request.headers.get("x-admin-key");
-  if (!adminKey || key !== adminKey) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  if (adminKey && key === adminKey) {
+    return { github };
   }
-  return { github };
+  return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 }

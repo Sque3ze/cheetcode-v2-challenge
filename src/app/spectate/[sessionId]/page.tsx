@@ -199,7 +199,7 @@ export default function SpectatePage() {
       >
         <div
           className="card-surface"
-          style={{ borderRadius: 10, padding: 16, overflow: "hidden" }}
+          style={{ borderRadius: 10, padding: 16, overflowX: "auto" }}
         >
           <div
             style={{

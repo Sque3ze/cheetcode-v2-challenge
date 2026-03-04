@@ -75,7 +75,7 @@ export function ChallengeDAG({ events }: ChallengeDAGProps) {
   }, [waves, svgHeight]);
 
   return (
-    <div ref={containerRef} style={{ width: "100%", overflow: "hidden" }}>
+    <div ref={containerRef} style={{ width: "100%", overflowX: "auto" }}>
       {containerWidth > 0 && (
         <svg
           width={svgWidth}

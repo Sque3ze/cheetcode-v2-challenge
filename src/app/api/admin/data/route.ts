@@ -98,6 +98,12 @@ export async function POST(request: Request) {
         );
       }
 
+      case "start-demo": {
+        return NextResponse.json(
+          await convex.action(api.admin.launchDemo, { secret })
+        );
+      }
+
       case "force-expire": {
         const { sessionId } = body;
         if (!sessionId) {

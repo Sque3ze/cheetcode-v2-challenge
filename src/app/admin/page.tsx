@@ -964,6 +964,59 @@ export default function AdminPage() {
   );
 }
 
+function DemoLauncher() {
+  const key = useAdminKey();
+  const [launching, setLaunching] = useState(false);
+  const [result, setResult] = useState<{ sessionId: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const launch = async () => {
+    setLaunching(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-key": key },
+        body: JSON.stringify({ type: "start-demo" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to launch demo");
+      }
+      const data = await res.json();
+      setResult(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to launch demo");
+    } finally {
+      setLaunching(false);
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
+      <button
+        onClick={launch}
+        disabled={launching}
+        className="btn-heat btn-sm"
+        style={{ fontSize: 13 }}
+      >
+        {launching ? "Launching..." : "Start Demo Session"}
+      </button>
+      {result && (
+        <Link
+          href={`/spectate/${result.sessionId}`}
+          target="_blank"
+          style={{ fontSize: 12, color: ACCENT, textDecoration: "none", fontWeight: 500 }}
+        >
+          Watch demo &rarr;
+        </Link>
+      )}
+      {error && <span style={{ fontSize: 12, color: "#dc2626" }}>{error}</span>}
+    </div>
+  );
+}
+
 function AdminContent() {
   const { authorized, loading, reason } = useAdminAuth();
   const searchParams = useSearchParams();
@@ -1013,6 +1066,7 @@ function AdminContent() {
         <p style={{ fontSize: 14, color: DIM, marginTop: 4 }}>
           Session analytics, challenge difficulty, and orchestration telemetry.
         </p>
+        <DemoLauncher />
       </div>
 
       {compareSessions ? (

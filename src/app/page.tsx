@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
@@ -45,10 +45,66 @@ const STEPS = [
   },
 ];
 
+function DemoButton() {
+  const [launching, setLaunching] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const launch = async () => {
+    setLaunching(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/demo", { method: "POST" });
+      if (res.ok) {
+        setDone(true);
+      } else {
+        const data = await res.json().catch(() => null);
+        setError(data?.error || "Failed to launch");
+      }
+    } catch {
+      setError("Failed to launch");
+    } finally {
+      setLaunching(false);
+    }
+  };
+
+  if (done) return null;
+
+  return (
+    <section style={{ paddingBottom: 16, position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
+        <button
+          onClick={launch}
+          disabled={launching}
+          className="btn-ghost btn-sm"
+          style={{ fontSize: 13, color: "rgba(38, 38, 38, 0.5)" }}
+        >
+          {launching ? "Launching demo..." : "Launch demo session"}
+        </button>
+        {error && (
+          <span style={{ fontSize: 12, color: "#dc2626", marginLeft: 10 }}>{error}</span>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const { data: session, status } = useSession();
   const leaderboard = useQuery(api.leaderboard.getAll);
   const activeSessions = useQuery(api.spectator.getActiveSessions);
+
+  // Show at most 5 live sessions, deterministically selected by ID hash
+  const displayedSessions = useMemo(() => {
+    if (!activeSessions || activeSessions.length <= 5) return activeSessions ?? [];
+    const sorted = [...activeSessions].sort((a, b) => {
+      const hashA = a._id.split("").reduce((s, c) => s + c.charCodeAt(0), 0);
+      const hashB = b._id.split("").reduce((s, c) => s + c.charCodeAt(0), 0);
+      return hashA - hashB;
+    });
+    return sorted.slice(0, 5);
+  }, [activeSessions]);
+
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -337,6 +393,8 @@ export default function Home() {
         </div>
       </section>
 
+      <DemoButton />
+
       {activeSessions && activeSessions.length > 0 && (
         <section style={{ paddingBottom: 32, position: "relative", zIndex: 1 }}>
           <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
@@ -380,7 +438,7 @@ export default function Home() {
               </span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {activeSessions.map((s) => (
+              {displayedSessions.map((s) => (
                 <Link
                   key={s._id}
                   href={`/spectate/${s._id}`}
@@ -649,7 +707,7 @@ export default function Home() {
                           }
                           title="View session replay"
                         >
-                          spectate
+                          view run
                         </Link>
                       </td>
                     </tr>
