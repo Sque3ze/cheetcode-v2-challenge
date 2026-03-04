@@ -91,7 +91,6 @@ export const fanOutAggregatorChallenge: ChallengeDefinition<FanOutAggregatorPage
       hiddenOffices[office.id] = { products };
     }
 
-    // Compute answer using the exact formula
     let grandTotal = 0;
     for (const office of offices) {
       const { products } = hiddenOffices[office.id];

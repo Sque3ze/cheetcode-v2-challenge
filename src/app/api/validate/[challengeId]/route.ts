@@ -48,7 +48,6 @@ export async function POST(
   const github = await resolveGitHub(request);
   if (!github) return unauthorized();
 
-  // Parse body
   let body: { sessionId?: string; answer?: string };
   try {
     body = await request.json();
@@ -97,7 +96,6 @@ export async function POST(
       }),
     ]);
 
-    // Session exists, belongs to this user, and is active
     const sessionErr = validateSessionOwnership(session, github);
     if (sessionErr) return sessionErr;
 
@@ -166,7 +164,6 @@ export async function POST(
 
     const newAttemptNumber = attemptCount + 1;
 
-    // Record the submission
     await convex.action(api.submissions.recordSubmission, {
       secret,
       sessionId: session._id,

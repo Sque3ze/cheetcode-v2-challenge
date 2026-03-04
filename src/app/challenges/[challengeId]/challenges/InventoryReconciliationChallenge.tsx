@@ -77,7 +77,6 @@ export default function InventoryReconciliationChallenge({ pageData, answerRef, 
 
   return (
     <div>
-      {/* Rules panel */}
       <div style={{ background: "rgba(144,97,255,0.04)", border: "1px solid rgba(144,97,255,0.2)", borderRadius: 12, padding: 16, marginBottom: 24 }}>
         <p className="text-xs font-medium" style={{ color: "#9061ff", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
           Reconciliation Rules
@@ -92,13 +91,11 @@ export default function InventoryReconciliationChallenge({ pageData, answerRef, 
         </div>
       </div>
 
-      {/* Question */}
       <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 24, border: "1px solid rgba(250,93,25,0.2)", background: "rgba(250,93,25,0.03)" }}>
         <p className="text-xs font-medium" style={{ color: "#fa5d19", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Question</p>
         <p className="text-sm" style={{ color: "#262626" }} {...testAttr("question")}>{pageData.question}</p>
       </div>
 
-      {/* System cards */}
       <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
         <h4 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)" }}>Data Sources</h4>
         <p className="text-xs" style={{ color: "rgba(38,38,38,0.4)" }}>
@@ -195,7 +192,6 @@ export default function InventoryReconciliationChallenge({ pageData, answerRef, 
         })}
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Final Answer

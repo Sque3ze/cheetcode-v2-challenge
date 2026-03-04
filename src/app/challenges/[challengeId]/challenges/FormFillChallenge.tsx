@@ -116,7 +116,6 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
 
   return (
     <div>
-      {/* Salary Band Reference Table */}
       {salaryBands && salaryBands.length > 0 && (
         <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 16 }} {...testAttr('salary-band-table')}>
           <h4 className="text-xs font-medium" style={{ color: "#b45309", marginBottom: 8 }}>Salary Band Reference</h4>
@@ -139,7 +138,6 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
         Dept codes: first 3 letters, uppercased (e.g., Engineering &rarr; ENG)
       </p>
 
-      {/* Tab bar */}
       <div className="flex" style={{ borderBottom: "1px solid #e8e8e8" }}>
         <button
           onClick={() => setActiveTab("profile")}
@@ -175,7 +173,6 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
         </button>
       </div>
 
-      {/* Profile tab */}
       {activeTab === "profile" && (
         <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderTop: "none", borderRadius: "0 0 12px 12px", padding: 24, marginBottom: 16 }}>
           <dl className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -197,7 +194,6 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
             </div>
           </dl>
 
-          {/* Tooltip: Start date */}
           <div style={{ marginTop: 16 }}>
             <button
               onClick={handleTooltip}
@@ -218,7 +214,6 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
             )}
           </div>
 
-          {/* Inline expand for role */}
           <div style={{ marginTop: 16 }}>
             <button
               onClick={handleExpand}
@@ -243,7 +238,6 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
         </div>
       )}
 
-      {/* Contact tab */}
       {activeTab === "contact" && (
         <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderTop: "none", borderRadius: "0 0 12px 12px", padding: 24, marginBottom: 16 }} {...testAttr('contact-panel')}>
           {loadingTab ? (
@@ -266,7 +260,6 @@ export default function FormFillChallenge({ pageData, answerRef, sessionId, chal
         </div>
       )}
 
-      {/* Fields to submit */}
       <div className="card-surface" style={{ borderRadius: 12, padding: 24 }}>
         <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 12 }}>
           Submit these fields (comma-separated): {fieldsToFill.map((f) => FIELD_LABELS[f] || f).join(", ")}

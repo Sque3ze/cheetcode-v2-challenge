@@ -203,7 +203,6 @@ export default function ChallengesPage() {
   return (
     <div className="min-h-screen" style={{ position: "relative" }}>
       <AnimatedBackground />
-      {/* ── Header ── */}
       <header
         className="nav-header"
         style={{ position: "sticky", top: 0, zIndex: 10 }}
@@ -244,7 +243,6 @@ export default function ChallengesPage() {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* Score badge */}
             <span
               style={{
                 display: "inline-flex",
@@ -261,7 +259,6 @@ export default function ChallengesPage() {
             >
               {sessionData.score.percentage.toFixed(1)}%
             </span>
-            {/* Timer badge */}
             <span
               style={{
                 display: "inline-flex",
@@ -286,7 +283,6 @@ export default function ChallengesPage() {
                 ? "Time's up!"
                 : `${mins}:${String(secs).padStart(2, "0")}`}
             </span>
-            {/* Finish */}
             <button
               onClick={handleFinish}
               disabled={finishing}
@@ -306,7 +302,6 @@ export default function ChallengesPage() {
         </div>
       </header>
 
-      {/* ── Challenge list ── */}
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px", position: "relative", zIndex: 1 }}>
         {tiers.map((tier) => {
           const tierChallenges = sessionData.challenges.filter(

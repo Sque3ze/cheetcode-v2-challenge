@@ -88,7 +88,6 @@ export const tableSortChallenge: ChallengeDefinition<TableSortPageData> = {
       };
     });
 
-    // Sort by annual compensation
     const sorted = [...employees].sort((a, b) => {
       return sortDirection === "highest"
         ? b.annualComp - a.annualComp

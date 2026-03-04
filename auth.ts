@@ -1,10 +1,6 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 
-/**
- * Auth.js v5 config — GitHub OAuth only.
- * Requires AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, and AUTH_SECRET env vars.
- */
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     GitHub({

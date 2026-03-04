@@ -63,7 +63,6 @@ export default function CalculationAuditChallenge({ pageData, answerRef, session
 
   return (
     <div>
-      {/* Tiered Tax Rate Schedule */}
       {loading ? (
         <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 24 }} {...testAttr('tax-rate-legend')}>
           <h3 className="text-sm font-medium" style={{ color: "#b45309", marginBottom: 12 }}>Tiered Tax Rate Schedule</h3>
@@ -115,7 +114,6 @@ export default function CalculationAuditChallenge({ pageData, answerRef, session
         </div>
       </div>
 
-      {/* Expense receipt cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 16, marginBottom: 24 }} {...testAttr('expense-grid')}>
         {pageData.lineItems.map((item) => (
           <div
@@ -124,13 +122,11 @@ export default function CalculationAuditChallenge({ pageData, answerRef, session
             style={{ borderRadius: 12, padding: 16 }}
             {...testAttr('expense-card', item.id)}
           >
-            {/* Header: ID + Category */}
             <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
               <span className="font-mono text-xs" style={{ color: "rgba(38,38,38,0.35)" }}>{item.id}</span>
               <span className="text-xs" style={{ color: "rgba(38,38,38,0.35)", background: "rgba(0,0,0,0.04)", padding: "2px 8px", borderRadius: 4 }} {...testAttr('exp-category')}>{item.category}</span>
             </div>
 
-            {/* Description */}
             <p className="text-sm" style={{ color: "#262626", marginBottom: 12 }} {...testAttr('exp-description')}>{item.description}</p>
 
             {/* Qty x Unit Price on left, Total on right */}
@@ -148,7 +144,6 @@ export default function CalculationAuditChallenge({ pageData, answerRef, session
         ))}
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Verified Total</label>
         <input

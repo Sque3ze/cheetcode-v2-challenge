@@ -41,7 +41,7 @@ const STEPS = [
       </svg>
     ),
     title: "Beat the Clock",
-    desc: "Fixed time window. Score is the percentage of points earned. Parallel execution wins.",
+    desc: "Fixed time window. Score is the percentage of points earned. Great orchestration wins.",
   },
 ];
 
@@ -94,17 +94,13 @@ export default function Home() {
     <div className="min-h-screen" style={{ position: "relative" }}>
       <AnimatedBackground />
 
-      {/* ── Hero ── */}
       <section style={{ padding: "140px 0 100px", position: "relative" }}>
-        {/* Grid overlay */}
         <div className="hero-grid-overlay" />
 
-        {/* Glow orbs */}
         <div className="glow-orb glow-orb-1" />
         <div className="glow-orb glow-orb-2" />
         <div className="glow-orb glow-orb-3" />
 
-        {/* Decorative sparkle markers */}
         <svg className="sparkle-marker" style={{ top: 120, left: "20%", width: 16, height: 16 }} viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
         </svg>
@@ -112,7 +108,6 @@ export default function Home() {
           <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
         </svg>
 
-        {/* Edge labels */}
         <span className="edge-label" style={{ top: 80, left: 32 }}>[ AGENT ]</span>
         <span className="edge-label" style={{ top: 80, right: 32 }}>[ SOLVE ]</span>
         <span className="edge-label" style={{ bottom: 20, left: 32 }}>[ SCORE ]</span>
@@ -131,7 +126,6 @@ export default function Home() {
             zIndex: 1,
           }}
         >
-          {/* Badge */}
           <div className="animate-fade-up" style={{ marginBottom: 32 }}>
             <span
               style={{
@@ -152,11 +146,10 @@ export default function Home() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="#fa5d19">
                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
               </svg>
-              Firecrawl Agent Challenge
+              Firecrawl CheetCode V2
             </span>
           </div>
 
-          {/* Headline */}
           <h1
             className="animate-fade-up hero-glow"
             style={{
@@ -173,7 +166,6 @@ export default function Home() {
             <span className="hero-accent">Beat the Clock.</span>
           </h1>
 
-          {/* Description */}
           <p
             className="animate-fade-up"
             style={{
@@ -190,7 +182,6 @@ export default function Home() {
             the time window.
           </p>
 
-          {/* CTA */}
           <div
             className="animate-fade-up"
             style={{ animationDelay: "240ms" }}
@@ -284,7 +275,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── How it works ── */}
       <section style={{ paddingBottom: 96, position: "relative", zIndex: 1 }}>
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
           <div
@@ -304,7 +294,6 @@ export default function Home() {
                   animationDelay: `${320 + i * 80}ms`,
                 }}
               >
-                {/* Icon box */}
                 <div
                   style={{
                     width: 40,
@@ -348,7 +337,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Live Now ── */}
       {activeSessions && activeSessions.length > 0 && (
         <section style={{ paddingBottom: 32, position: "relative", zIndex: 1 }}>
           <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
@@ -430,7 +418,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── Leaderboard ── */}
       <section style={{ paddingBottom: 120, position: "relative", zIndex: 1 }}>
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
           <h2
@@ -493,22 +480,32 @@ export default function Home() {
                   fontSize: 14,
                   lineHeight: "20px",
                   borderCollapse: "collapse",
+                  tableLayout: "fixed",
                 }}
               >
+                <colgroup>
+                  <col style={{ width: 48 }} />
+                  <col />
+                  <col style={{ width: 72 }} />
+                  <col style={{ width: 68 }} />
+                  <col style={{ width: 60 }} />
+                  <col style={{ width: 64 }} />
+                  <col style={{ width: 72 }} />
+                </colgroup>
                 <thead>
                   <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
                     {["#", "Player", "Score", "Solved", "Orch.", "Wrong", ""].map((label, idx) => (
                       <th
                         key={label}
                         style={{
-                          padding: "12px 24px",
+                          padding: "12px 16px",
                           fontSize: 12,
                           fontWeight: 500,
                           color: "rgba(38, 38, 38, 0.35)",
                           textAlign: idx < 2 ? "left" : "right",
                           textTransform: "uppercase",
                           letterSpacing: "0.5px",
-                          ...(idx === 0 ? { width: 56 } : {}),
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {label}
@@ -539,7 +536,7 @@ export default function Home() {
                           e.currentTarget.style.background = "";
                       }}
                     >
-                      <td style={{ padding: "12px 24px" }}>
+                      <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
                         <span
                           className={
                             i === 0
@@ -559,7 +556,7 @@ export default function Home() {
                           {i + 1}
                         </span>
                       </td>
-                      <td style={{ padding: "12px 24px" }}>
+                      <td style={{ padding: "12px 16px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }}>
                         <a
                           href={`https://github.com/${entry.github}`}
                           target="_blank"
@@ -581,23 +578,25 @@ export default function Home() {
                       </td>
                       <td
                         style={{
-                          padding: "12px 24px",
+                          padding: "12px 16px",
                           textAlign: "right",
                           fontFamily:
                             "var(--font-geist-mono), monospace",
                           fontWeight: 500,
                           color: "#262626",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {entry.score.toFixed(1)}
                       </td>
                       <td
                         style={{
-                          padding: "12px 24px",
+                          padding: "12px 16px",
                           textAlign: "right",
                           fontFamily:
                             "var(--font-geist-mono), monospace",
                           color: "rgba(38, 38, 38, 0.5)",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {entry.completionScore != null
@@ -606,10 +605,11 @@ export default function Home() {
                       </td>
                       <td
                         style={{
-                          padding: "12px 24px",
+                          padding: "12px 16px",
                           textAlign: "right",
                           fontFamily:
                             "var(--font-geist-mono), monospace",
+                          whiteSpace: "nowrap",
                           color: entry.orchestrationScore != null
                             ? entry.orchestrationScore >= 70
                               ? "#16a34a"
@@ -623,14 +623,15 @@ export default function Home() {
                       </td>
                       <td
                         style={{
-                          padding: "12px 24px",
+                          padding: "12px 16px",
                           textAlign: "right",
                           color: "rgba(38, 38, 38, 0.35)",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {entry.wrongAttempts}
                       </td>
-                      <td style={{ padding: "12px 24px", textAlign: "right" }}>
+                      <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <Link
                           href={`/spectate/${entry.sessionId}`}
                           style={{
@@ -660,7 +661,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
       <footer
         style={{
           borderTop: "1px solid rgba(0,0,0,0.06)",

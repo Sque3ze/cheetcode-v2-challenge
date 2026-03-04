@@ -12,7 +12,6 @@ const CACHE_TTL_MS = 60_000; // 1 minute
 
 /** Verify a GitHub PAT and return the associated username, or null if invalid */
 export async function verifyGitHubToken(token: string): Promise<string | null> {
-  // Check cache first
   const cached = tokenCache.get(token);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.username;
@@ -31,7 +30,6 @@ export async function verifyGitHubToken(token: string): Promise<string | null> {
     const username = data.login as string | undefined;
     if (!username) return null;
 
-    // Cache the result
     tokenCache.set(token, { username, expiresAt: Date.now() + CACHE_TTL_MS });
     return username;
   } catch {
@@ -61,7 +59,6 @@ export async function resolveGitHubFromHeader(
   const token = authHeader.slice(7).trim();
   if (!token) return null;
 
-  // Test auth: "Bearer test:<secret>" with X-Test-User header
   if (validateTestToken(token)) {
     const testUser = request.headers.get("x-test-user")?.trim();
     return testUser || null;

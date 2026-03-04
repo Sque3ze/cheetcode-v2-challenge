@@ -96,7 +96,6 @@ export default function ConfigDebuggerChallenge({ pageData, answerRef, sessionId
         </div>
       </div>
 
-      {/* Layer panels */}
       <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
         <h4 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)" }}>Config Layers</h4>
         <p className="text-xs" style={{ color: "rgba(38,38,38,0.4)" }}>
@@ -168,7 +167,6 @@ export default function ConfigDebuggerChallenge({ pageData, answerRef, sessionId
         })}
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Answer (format: layer:key:correctValue)

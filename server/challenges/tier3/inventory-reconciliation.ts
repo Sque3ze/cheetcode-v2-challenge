@@ -91,7 +91,6 @@ export const inventoryReconciliationChallenge: ChallengeDefinition<InventoryReco
       name,
     }));
 
-    // Generate data for each system
     const systems: Record<string, SystemProduct[]> = {
       warehouse: [],
       sales: [],
@@ -188,7 +187,6 @@ export const inventoryReconciliationChallenge: ChallengeDefinition<InventoryReco
       return { productId: p.id, name: p.name, quantity, status, location, price };
     });
 
-    // Generate a question based on variant
     const targetLocation = data.pick(selectedLocations);
     const priceThreshold = data.int(30, 100);
 

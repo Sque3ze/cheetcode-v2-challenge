@@ -92,7 +92,6 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef, session
 
   return (
     <div>
-      {/* Table A: Employees */}
       <div style={{ marginBottom: 24 }}>
         <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Employees</h3>
         <div className="card-surface overflow-x-auto" style={{ borderRadius: 12, overflow: "hidden" }}>
@@ -178,7 +177,6 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef, session
         </div>
       </div>
 
-      {/* Table C: Projects */}
       <div style={{ marginBottom: 24 }}>
         <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Projects</h3>
         <div className="card-surface overflow-x-auto" style={{ borderRadius: 12, overflow: "hidden" }}>
@@ -207,7 +205,6 @@ export default function LinkedDataLookupChallenge({ pageData, answerRef, session
         </div>
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Your Answer ({pageData.targetField})

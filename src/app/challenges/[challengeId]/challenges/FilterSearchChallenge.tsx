@@ -76,7 +76,6 @@ export default function FilterSearchChallenge({ pageData, answerRef, sessionId, 
 
   return (
     <div>
-      {/* Search input */}
       <div style={{ marginBottom: 16 }}>
         <input
           type="text"
@@ -91,7 +90,6 @@ export default function FilterSearchChallenge({ pageData, answerRef, sessionId, 
         </p>
       </div>
 
-      {/* Employee cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 16, marginBottom: 16 }} {...testAttr('employee-grid')}>
         {filtered.map((emp, i) => (
           <div
@@ -123,7 +121,6 @@ export default function FilterSearchChallenge({ pageData, answerRef, sessionId, 
         ))}
       </div>
 
-      {/* Load More button */}
       {!allLoaded && (
         <div style={{ marginBottom: 24, textAlign: "center" }}>
           <button
@@ -138,7 +135,6 @@ export default function FilterSearchChallenge({ pageData, answerRef, sessionId, 
         </div>
       )}
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Your Answer</label>
         <input

@@ -5,8 +5,6 @@
 
 import type { SessionEvent } from "../../lib/orchestration-metrics";
 
-// ─── Color helpers ───────────────────────────────────────────
-
 export const ACCENT = "#fa5d19";
 export const DIM = "rgba(38, 38, 38, 0.4)";
 export const BORDER = "#f0f0f0";
@@ -40,8 +38,6 @@ export const EVENT_COLORS: Record<string, string> = {
   challenge_locked: "#991b1b",
   session_completed: "#6366f1",
 };
-
-// ─── Gantt Chart Types & Constants ──────────────────────────
 
 export interface GanttRow {
   challengeId: string;

@@ -99,10 +99,8 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
     const allTransformTypes: TransformationType[] = ["salary_band", "start_quarter", "dept_code"];
     const chosenTransforms = data.pickN(allTransformTypes, 2);
 
-    // Build the set of transformed fields
     const transformedOriginals = new Set(chosenTransforms.map((t) => transformFieldMap[t].originalField));
 
-    // Pick 1 visible field that is NOT being transformed (for variety)
     const availableVisible = ALWAYS_VISIBLE.filter(
       (f) => f !== "name" && !transformedOriginals.has(f),
     );
@@ -110,13 +108,11 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
       ? data.pick(availableVisible)
       : data.pick(ALWAYS_VISIBLE.filter((f) => f !== "name"));
 
-    // Build field list: 1 visible + 3 hidden
     const rawFields = [
       visibleField as string,
       ...HIDEABLE_FIELDS.map((h) => h.field),
     ];
 
-    // Replace transformed fields with their new labels
     const fieldsToFill = rawFields.map((f) => {
       for (const t of chosenTransforms) {
         if (f === transformFieldMap[t].originalField) return transformFieldMap[t].newLabel;
@@ -124,7 +120,6 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
       return f;
     });
 
-    // Shuffle to avoid predictable order
     const shuffled = data.pickN(fieldsToFill, fieldsToFill.length);
 
     const fieldDisclosures = HIDEABLE_FIELDS.map((h) => ({
@@ -137,7 +132,6 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
       type: t,
     }));
 
-    // Build field values, applying transformation where needed
     const fieldValues: Record<string, string> = {
       name: person.fullName,
       department: person.department,
@@ -146,7 +140,6 @@ export const formFillChallenge: ChallengeDefinition<FormFillPageData> = {
       email: person.email,
       startDate: person.startDate,
       salary: `$${person.salary.toLocaleString()}`,
-      // Transformed values
       "salary band": getSalaryBand(person.salary),
       "start quarter": getStartQuarter(person.startDate),
       "dept code": getDeptCode(person.department),

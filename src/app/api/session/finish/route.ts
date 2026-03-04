@@ -49,7 +49,6 @@ export async function POST(request: Request) {
   try {
     const convex = new ConvexHttpClient(convexUrl);
 
-    // Verify session
     const session = await convex.action(api.sessions.fetchSession, {
       secret,
       sessionId: sessionId as unknown as Id<"sessions">,
@@ -77,7 +76,6 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // Compute earned points
     const challenges = getAllChallengeMetas();
     const solvedSet = new Set(stats.solvedChallenges);
     const earnedPoints = challenges.reduce(
@@ -98,7 +96,6 @@ export async function POST(request: Request) {
     );
     const orchScore = computeCombinedScore(orchMetrics);
 
-    // Complete the session
     const result = await convex.action(api.sessions.completeSession, {
       secret,
       sessionId: session._id,

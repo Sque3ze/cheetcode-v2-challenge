@@ -25,11 +25,9 @@ export async function resolveGitHub(
     return process.env.DEV_USER;
   }
 
-  // Try PAT first (API agents)
   const fromHeader = await resolveGitHubFromHeader(request);
   if (fromHeader) return fromHeader;
 
-  // Fall back to OAuth session (browser users)
   const session = await auth();
   return (
     (session?.user as { githubUsername?: string })?.githubUsername ?? null

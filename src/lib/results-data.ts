@@ -12,8 +12,6 @@ import { getAllChallengeMetas } from "../../server/challenges/registry";
 import { letterGrade } from "./letter-grades";
 import type { OrchestrationMetrics } from "./orchestration-metrics";
 
-// ─── Types ─────────────────────────────────────────────────────
-
 export interface ResultsChallenge {
   id: string;
   title: string;
@@ -61,8 +59,6 @@ export interface ResultsData {
   };
 }
 
-// ─── Fetcher ───────────────────────────────────────────────────
-
 export const fetchResultsData = cache(async (sessionId: string): Promise<ResultsData | null> => {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   const secret = process.env.CONVEX_MUTATION_SECRET;
@@ -108,7 +104,6 @@ export const fetchResultsData = cache(async (sessionId: string): Promise<Results
     submissionsByChallengeId.set(sub.challengeId, arr);
   }
 
-  // Build event maps for timing
   const viewEvents = new Map<string, number>(); // challengeId → first view timestamp
   const correctEvents = new Map<string, number>(); // challengeId → correct timestamp
   for (const evt of events as Array<{ type: string; challengeId?: string; timestamp: number }>) {

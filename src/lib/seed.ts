@@ -9,8 +9,6 @@
 
 import { createHash } from "crypto";
 
-// ─── Seed derivation ───────────────────────────────────────────
-
 /**
  * Derive a numeric seed from a sessionId and server secret.
  * Uses SHA-256 to produce a deterministic hash, then extracts
@@ -24,7 +22,6 @@ export function deriveSeed(sessionId: string, serverSecret: string): number {
   return hash.readUInt32BE(0);
 }
 
-// ─── Seeded PRNG (Mulberry32) ──────────────────────────────────
 // Fast, well-distributed 32-bit PRNG. Good enough for data generation.
 
 export class SeededRandom {
@@ -91,8 +88,6 @@ export class SeededRandom {
   }
 }
 
-// ─── Data pools for challenge generation ───────────────────────
-
 const FIRST_NAMES = [
   "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry",
   "Iris", "Jack", "Karen", "Leo", "Maya", "Nathan", "Olivia", "Paul",
@@ -131,8 +126,6 @@ const COLORS = [
   "red", "blue", "green", "yellow", "purple", "orange", "teal",
   "pink", "cyan", "indigo", "amber", "emerald", "rose", "violet",
 ] as const;
-
-// ─── Challenge data generator ──────────────────────────────────
 
 export interface PersonData {
   firstName: string;

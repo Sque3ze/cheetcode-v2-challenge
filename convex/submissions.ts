@@ -67,7 +67,6 @@ export const getSessionChallengeStatuses = internalQuery({
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .collect();
 
-    // Aggregate by challenge
     const statusMap = new Map<
       string,
       { attempts: number; solved: boolean; lastCorrectAt?: number }
@@ -97,8 +96,6 @@ export const getSessionChallengeStatuses = internalQuery({
     return result;
   },
 });
-
-// ─── Action gateways ───────────────────────────────────────────
 
 /** Authenticated gateway for recording submissions */
 export const recordSubmission = action({
@@ -150,8 +147,6 @@ export const getSessionStats = internalQuery({
     };
   },
 });
-
-// ─── Read action gateways ─────────────────────────────────────
 
 /** Authenticated gateway for getBySessionChallenge */
 export const fetchBySessionChallenge = action({

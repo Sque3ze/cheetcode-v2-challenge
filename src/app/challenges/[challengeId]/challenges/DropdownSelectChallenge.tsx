@@ -34,7 +34,6 @@ export default function DropdownSelectChallenge({ pageData, answerRef }: Props) 
 
   return (
     <div>
-      {/* Product cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 16, marginBottom: 24 }}>
         {pageData.products.map((product, i) => (
           <div
@@ -66,7 +65,6 @@ export default function DropdownSelectChallenge({ pageData, answerRef }: Props) 
         ))}
       </div>
 
-      {/* Dropdown */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Select the product with the {pageData.condition}

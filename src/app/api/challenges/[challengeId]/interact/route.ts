@@ -32,11 +32,9 @@ export async function POST(
 ) {
   const { challengeId } = await params;
 
-  // 1. Auth
   const github = await resolveGitHub(request);
   if (!github) return unauthorized();
 
-  // 2. Parse body
   let body: {
     sessionId?: string;
     action?: string;
@@ -62,7 +60,6 @@ export async function POST(
     return badRequest("renderToken is required");
   }
 
-  // 3. Validate challenge exists and supports the action
   const challenge = getChallenge(challengeId);
   if (!challenge) return notFound("Challenge not found");
 
@@ -84,7 +81,6 @@ export async function POST(
     const convex = new ConvexHttpClient(convexUrl);
     const typedSessionId = sessionId as unknown as Id<"sessions">;
 
-    // 4. Fetch session+statuses and view in parallel
     const [{ session, statuses: allStatuses }, view] = await Promise.all([
       convex.action(api.sessions.fetchSessionWithStatuses, {
         secret: mutationSecret,
@@ -95,7 +91,6 @@ export async function POST(
       }),
     ]);
 
-    // Validate session ownership + active status
     const sessionErr = validateSessionOwnership(session, github);
     if (sessionErr) return sessionErr;
 
@@ -107,7 +102,6 @@ export async function POST(
     const prereqErr = checkPrerequisites(challengeId, solvedSet);
     if (prereqErr) return prereqErr;
 
-    // 5. Validate render token
     if (!view) {
       return badRequest("Challenge must be loaded before interacting");
     }
@@ -134,7 +128,6 @@ export async function POST(
       return badRequest("Challenge has no hidden data");
     }
 
-    // 8. Call handleInteract
     const result = challenge.handleInteract(generated.hiddenData, action, interactParams, {
       viewedAt: view.viewedAt,
     });
@@ -152,7 +145,6 @@ export async function POST(
       metadata: { action, params: interactParams, success: !isError },
     }).catch(() => {});
 
-    // 9. Update lastInteractAt
     await convex.action(api.challengeViews.recordInteractAction, {
       secret: mutationSecret,
       sessionId: session._id,
@@ -160,7 +152,6 @@ export async function POST(
       interactAt: now,
     });
 
-    // 10. Return result
     return NextResponse.json({ data: result });
   } catch (err) {
     console.error(`/api/challenges/${challengeId}/interact error:`, err);

@@ -110,7 +110,6 @@ export default function ChallengeLayout({
 
   return (
     <div style={{ minHeight: "100vh" }}>
-      {/* Header */}
       <header className="nav-header" style={{ position: "sticky", top: 0, zIndex: 10 }}>
         <div className="flex items-center justify-between" style={{ maxWidth: 896, margin: "0 auto", padding: "16px 24px" }}>
           <div className="flex items-center" style={{ gap: 16 }}>
@@ -147,9 +146,7 @@ export default function ChallengeLayout({
         </div>
       </header>
 
-      {/* Content */}
       <main style={{ maxWidth: 896, margin: "0 auto", padding: "32px 24px" }}>
-        {/* Instructions */}
         <div className="card-surface" style={{ marginBottom: 32, padding: 16, borderRadius: 12 }}>
           <h2 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
             Instructions
@@ -157,10 +154,8 @@ export default function ChallengeLayout({
           <p {...testAttr("instructions")} style={{ color: "#262626" }}>{instructions}</p>
         </div>
 
-        {/* Challenge interactive area */}
         <div style={{ marginBottom: 32 }}>{children}</div>
 
-        {/* Submission area */}
         <div style={{ borderTop: "1px solid #e8e8e8", paddingTop: 24 }}>
           {feedback && (
             <div
@@ -209,7 +204,6 @@ export default function ChallengeLayout({
   );
 }
 
-/** Countdown timer display */
 function TimeDisplay({ timeRemainingMs }: { timeRemainingMs: number }) {
   // This is cosmetic — server is the time authority
   const totalSecs = Math.max(0, Math.ceil(timeRemainingMs / 1000));

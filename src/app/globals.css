@@ -33,7 +33,6 @@
   --spacing-120: 120px;
   --spacing-160: 160px;
 
-  /* Pixel-based border radius */
   --radius-0: 0px;
   --radius-2: 2px;
   --radius-4: 4px;
@@ -45,7 +44,6 @@
   --radius-20: 20px;
   --radius-full: 999px;
 
-  /* Brand heat scale */
   --color-heat-4: rgba(250, 93, 25, 0.04);
   --color-heat-8: rgba(250, 93, 25, 0.08);
   --color-heat-12: rgba(250, 93, 25, 0.12);
@@ -98,7 +96,6 @@ body {
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* ─── Top accent gradient line ─── */
 body::before {
   content: '';
   position: fixed;
@@ -117,7 +114,6 @@ body::before {
   z-index: 50;
 }
 
-/* ─── Gradient glow orbs ─── */
 .glow-orb {
   position: absolute;
   border-radius: 50%;
@@ -164,7 +160,6 @@ body::before {
   50% { transform: translateY(10px) translateX(15px); }
 }
 
-/* ─── Hero text glow ─── */
 .hero-glow {
   text-shadow: 0 0 80px rgba(250, 93, 25, 0.1);
 }
@@ -173,7 +168,6 @@ body::before {
   text-shadow: 0 0 40px rgba(250, 93, 25, 0.2);
 }
 
-/* ─── Primary button ─── */
 .btn-heat {
   background: #ff4c00;
   color: white;
@@ -223,12 +217,10 @@ body::before {
 .btn-heat:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-heat:focus-visible { outline: 2px solid #fa5d19; outline-offset: 2px; }
 
-/* Button sizes */
 .btn-sm { height: 32px; padding: 8px 12px; font-size: 13px; line-height: 18px; border-radius: 6px; }
 .btn-md { height: 40px; padding: 8px 16px; font-size: 14px; line-height: 20px; border-radius: 8px; }
 .btn-lg { height: 48px; padding: 12px 24px; font-size: 16px; line-height: 24px; border-radius: 10px; }
 
-/* Tertiary button (transparent) */
 .btn-tertiary {
   background: transparent;
   color: #262626;
@@ -245,7 +237,6 @@ body::before {
 .btn-tertiary:active { transform: scale(0.98); }
 .btn-tertiary:disabled { color: rgba(0, 0, 0, 0.4); cursor: not-allowed; }
 
-/* ─── Secondary button ─── */
 .btn-ghost {
   background: rgba(0, 0, 0, 0.04);
   color: #262626;
@@ -258,12 +249,10 @@ body::before {
 .btn-ghost:active { transform: scale(0.99); background: rgba(0, 0, 0, 0.07); transition: all 0.2s, scale 50ms; }
 .btn-ghost:disabled { background: rgba(0, 0, 0, 0.03); color: rgba(0, 0, 0, 0.4); cursor: not-allowed; }
 
-/* ─── Difficulty badges ─── */
 .badge-easy { background: rgba(26, 147, 56, 0.10); color: #1a9338; }
 .badge-medium { background: rgba(180, 83, 9, 0.10); color: #b45309; }
 .badge-hard { background: rgba(220, 38, 38, 0.10); color: #dc2626; }
 
-/* ─── Card surface (Firecrawl light mode) ─── */
 .glass-surface {
   backdrop-filter: blur(12px);
   background: rgba(255, 255, 255, 0.85);
@@ -296,7 +285,6 @@ body::before {
     0px 4px 8px rgba(0, 0, 0, 0.03);
 }
 
-/* ─── Nav header ─── */
 .nav-header {
   background: rgba(249, 249, 249, 0.88);
   backdrop-filter: blur(20px) saturate(1.2);
@@ -304,13 +292,11 @@ body::before {
   border-bottom: 1px solid #ededed;
 }
 
-/* ─── Tier badges (light mode) ─── */
 .tier-badge-1 { background: rgba(26, 147, 56, 0.08); color: #1a9338; }
 .tier-badge-2 { background: rgba(42, 109, 251, 0.08); color: #2a6dfb; }
 .tier-badge-3 { background: rgba(144, 97, 255, 0.08); color: #9061ff; }
 .tier-badge-4 { background: rgba(235, 52, 36, 0.08); color: #eb3424; }
 
-/* ─── Status pills (Firecrawl badge pattern) ─── */
 .pill-solved {
   display: inline-flex;
   align-items: center;
@@ -334,12 +320,10 @@ body::before {
   white-space: nowrap;
 }
 
-/* ─── Leaderboard rank colors ─── */
 .rank-gold { color: #b45309; font-weight: 500; }
 .rank-silver { color: #6b7280; font-weight: 500; }
 .rank-bronze { color: #92400e; font-weight: 500; }
 
-/* ─── Entrance animation ─── */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
@@ -348,14 +332,12 @@ body::before {
   animation: fade-up 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
-/* ─── Timer pulse for last 10 seconds ─── */
 @keyframes timer-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 .timer-critical { animation: timer-pulse 0.6s ease-in-out infinite; }
 
-/* ─── DAG node animations (spectator mode) ─── */
 @keyframes dag-pulse-kf {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
@@ -368,7 +350,6 @@ body::before {
 }
 .dag-work-pulse { animation: dag-work-pulse-kf 0.8s ease-in-out infinite; }
 
-/* ─── Live badge animation ─── */
 @keyframes live-dot-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.8); }
@@ -383,7 +364,6 @@ body::before {
   animation: live-dot-pulse 1.5s ease-in-out infinite;
 }
 
-/* ─── Gantt "now" marker pulse ─── */
 @keyframes gantt-now-pulse {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 0.3; }
@@ -395,12 +375,10 @@ body::before {
   animation: live-dot-pulse 2s ease-in-out infinite;
 }
 
-/* ─── Activity dot (currently working on) ─── */
 .spectate-activity-dot {
   animation: live-dot-pulse 1.5s ease-in-out infinite;
 }
 
-/* ─── Latest event highlight ─── */
 @keyframes latest-event-fade {
   0% { background: rgba(22, 163, 74, 0.08); }
   100% { background: transparent; }
@@ -409,7 +387,6 @@ body::before {
   animation: latest-event-fade 2s ease-out;
 }
 
-/* ─── Enhanced card hover with gradient border ─── */
 .card-glow {
   position: relative;
   transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -442,14 +419,12 @@ body::before {
   100% { background-position: -100% 0%; }
 }
 
-/* ─── Staggered fade-up utilities ─── */
 .delay-1 { animation-delay: 80ms !important; }
 .delay-2 { animation-delay: 160ms !important; }
 .delay-3 { animation-delay: 240ms !important; }
 .delay-4 { animation-delay: 320ms !important; }
 .delay-5 { animation-delay: 400ms !important; }
 
-/* ─── Structural grid lines (Firecrawl-inspired) ─── */
 .hero-grid-overlay {
   position: absolute;
   inset: 0;
@@ -468,7 +443,6 @@ body::before {
   -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, black 20%, transparent 70%);
 }
 
-/* ─── Decorative sparkle markers ─── */
 .sparkle-marker {
   position: absolute;
   pointer-events: none;
@@ -481,7 +455,6 @@ body::before {
   100% { transform: rotate(360deg); }
 }
 
-/* ─── Edge labels (floating decorative text) ─── */
 .edge-label {
   position: absolute;
   font-family: var(--font-geist-mono), monospace;
@@ -492,12 +465,10 @@ body::before {
   white-space: nowrap;
 }
 
-/* ─── Score counter glow ─── */
 .score-glow {
   box-shadow: 0 0 20px rgba(250, 93, 25, 0.15);
 }
 
-/* ─── Pulse ring for CTA button ─── */
 @keyframes pulse-ring {
   0% { box-shadow: 0 0 0 0 rgba(250, 93, 25, 0.3); }
   70% { box-shadow: 0 0 0 12px rgba(250, 93, 25, 0); }
@@ -507,7 +478,6 @@ body::before {
   animation: pulse-ring 2.5s ease-in-out infinite;
 }
 
-/* ─── Text shimmer for loading states ─── */
 @keyframes text-shimmer {
   0% { background-position: 100% 0; }
   50%, 100% { background-position: -100% 0; }

@@ -79,7 +79,6 @@ export default function ResilientCollectorChallenge({ pageData, answerRef, sessi
 
   return (
     <div>
-      {/* Status summary */}
       <div style={{ background: "rgba(26,147,56,0.04)", border: "1px solid rgba(26,147,56,0.2)", borderRadius: 12, padding: 16, marginBottom: 24 }}>
         <div className="flex items-center justify-between">
           <div>
@@ -95,7 +94,6 @@ export default function ResilientCollectorChallenge({ pageData, answerRef, sessi
         </div>
       </div>
 
-      {/* Source cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16, marginBottom: 24 }}>
         {pageData.sources.map((source) => {
           const result = sourceResults[source.id];
@@ -133,7 +131,6 @@ export default function ResilientCollectorChallenge({ pageData, answerRef, sessi
                 </span>
               </div>
 
-              {/* Result display */}
               {isOk && (
                 <div style={{ background: "rgba(26,147,56,0.04)", borderRadius: 8, padding: 12, marginBottom: 12 }} {...testAttr("source-value", source.id)}>
                   <p className="text-xs" style={{ color: "rgba(38,38,38,0.5)" }}>{result.label}</p>
@@ -152,7 +149,6 @@ export default function ResilientCollectorChallenge({ pageData, answerRef, sessi
                 </div>
               )}
 
-              {/* Action button */}
               {!isOk && (
                 <button
                   onClick={() => fetchSource(source.id)}
@@ -188,7 +184,6 @@ export default function ResilientCollectorChallenge({ pageData, answerRef, sessi
         })}
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           {pageData.aggregationMethod === "sum" ? "Sum of All Values" : "Average of All Values"}

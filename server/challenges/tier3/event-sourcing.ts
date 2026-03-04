@@ -252,7 +252,6 @@ export const eventSourcingChallenge: ChallengeDefinition<EventSourcingPageData> 
       payload: { discountId: finalDiscount.id, label: finalDiscount.label, amount: finalDiscount.amount },
     });
 
-    // Compute current state
     const subtotal = currentItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const totalDiscounts = currentDiscounts.reduce((sum, d) => sum + d.amount, 0);
     const total = subtotal - totalDiscounts;
@@ -266,7 +265,6 @@ export const eventSourcingChallenge: ChallengeDefinition<EventSourcingPageData> 
       total: Math.round(total * 100) / 100,
     };
 
-    // Generate question based on variant
     let question: string;
     let answer: string;
 

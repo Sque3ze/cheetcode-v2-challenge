@@ -13,7 +13,6 @@ import "server-only";
 import type { ChallengeDefinition, ChallengeMeta } from "../../src/lib/challenge-types";
 import { TIER_POINTS } from "../../src/lib/config";
 
-// ─── Challenge imports ─────────────────────────────────────────
 import { tableSortChallenge } from "./tier1/table-sort";
 import { formFillChallenge } from "./tier1/form-fill";
 import { dropdownSelectChallenge } from "./tier1/dropdown-select";
@@ -34,8 +33,6 @@ import { eventSourcingChallenge } from "./tier3/event-sourcing";
 import { configDebuggerChallenge } from "./tier2/config-debugger";
 import { calculationAuditChallenge } from "./tier4/calculation-audit";
 import { redHerringChallenge } from "./tier4/red-herring";
-
-// ─── Registry ──────────────────────────────────────────────────
 
 const CHALLENGES: ChallengeDefinition<unknown>[] = [
   // Tier 1 — Browser Fundamentals
@@ -66,8 +63,6 @@ const CHALLENGES: ChallengeDefinition<unknown>[] = [
   calculationAuditChallenge,
   redHerringChallenge,
 ];
-
-// ─── Lookup helpers ────────────────────────────────────────────
 
 const challengeMap = new Map<string, ChallengeDefinition>(
   CHALLENGES.map((c) => [c.id, c])
@@ -121,8 +116,6 @@ export function validateAnswer(
   return submitted.trim().toLowerCase() === correct.trim().toLowerCase();
 }
 
-// ─── DAG prerequisite helpers ──────────────────────────────────
-
 /** Get the list of prerequisite challenge IDs that are NOT yet solved. */
 export function getUnmetPrerequisites(
   challengeId: string,
@@ -140,8 +133,6 @@ export function arePrerequisitesMet(
 ): boolean {
   return getUnmetPrerequisites(challengeId, solvedSet).length === 0;
 }
-
-// ─── Startup DAG validation ────────────────────────────────────
 
 (function validateDAG() {
   const ids = new Set(CHALLENGES.map((c) => c.id));

@@ -48,7 +48,6 @@ function useAdminQuery<T>(type: AdminQueryType, params?: Record<string, string>)
   return data;
 }
 
-// ─── Overview Cards ──────────────────────────────────────────
 function OverviewCards() {
   const stats = useAdminQuery<{
     totalSessions: number;
@@ -97,7 +96,6 @@ function OverviewCards() {
   );
 }
 
-// ─── Challenge Analytics Table ───────────────────────────────
 function ChallengeAnalytics() {
   const aggregates = useAdminQuery<Array<{
     challengeId: string;
@@ -216,7 +214,6 @@ function ChallengeAnalytics() {
   );
 }
 
-// ─── Leaderboard Management ──────────────────────────────────
 type LeaderboardEntry = {
   _id: string;
   github: string;
@@ -388,7 +385,6 @@ function LeaderboardManagement() {
   );
 }
 
-// ─── Session Timeline ────────────────────────────────────────
 function SessionTimeline({ events, startedAt }: { events: SessionEvent[]; startedAt: number }) {
   if (events.length === 0) return <p style={{ color: DIM, fontSize: 12, padding: "8px 14px" }}>No events recorded.</p>;
 
@@ -463,7 +459,6 @@ function SessionExpandedContent({ sessionId, startedAt, durationMs }: {
   );
 }
 
-// ─── Admin Session type ──────────────────────────────────────
 type AdminSession = {
   _id: Id<"sessions">;
   github: string;
@@ -477,10 +472,8 @@ type AdminSession = {
   score: number | null;
   orchestrationScore: number | null;
   orchestrationMetrics: OrchestrationMetrics | null;
-  lastActivityAt: number | null;
 };
 
-// ─── Recent Sessions ─────────────────────────────────────────
 function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSession) => void }) {
   const key = useAdminKey();
   const sessions = useAdminQuery<AdminSession[]>("sessions", { limit: "20" });
@@ -559,7 +552,7 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
         <table style={{ width: "100%", fontSize: 13, lineHeight: "20px", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${BORDER}` }}>
-              {["", "Player", "Status", "Score", "Orch.", "Solved", "Wrong", "API", "Duration"].map((h) => (
+              {["", "Player", "Status", "Score", "Orch.", "Solved", "Wrong", "API", "Time Limit"].map((h) => (
                 <th
                   key={h || "check"}
                   style={{
@@ -579,8 +572,7 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
             {sessions.map((s, i) => {
               const isExpanded = expanded === s._id;
               const isSelected = selected.has(s._id);
-              const endTime = s.status === "active" ? Date.now() : (s.lastActivityAt ?? s.expiresAt);
-              const duration = endTime - s.startedAt;
+              const duration = s.expiresAt - s.startedAt;
 
               return (
                 <tbody key={s._id}>
@@ -777,7 +769,6 @@ function RecentSessions({ onCompare }: { onCompare: (a: AdminSession, b: AdminSe
   );
 }
 
-// ─── Head-to-Head Comparison View ────────────────────────────
 const COMPARE_BLUE = "#3b82f6";
 const COMPARE_ORANGE = "#f59e0b";
 
@@ -842,7 +833,6 @@ function CompareView({ sessionA, sessionB, onBack }: {
 
   return (
     <div>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <h2 style={{ fontSize: 18, fontWeight: 500, color: "#262626", margin: 0 }}>
           <span style={{ color: COMPARE_BLUE }}>{sessionA.github}</span>
@@ -875,7 +865,6 @@ function CompareView({ sessionA, sessionB, onBack }: {
           />
         </div>
 
-        {/* Comparison sidebar */}
         <div className="card-surface" style={{ borderRadius: 10, padding: 20 }}>
           <div style={{ fontSize: 12, fontWeight: 500, color: DIM, marginBottom: 12 }}>
             Comparison
@@ -916,7 +905,6 @@ function CompareView({ sessionA, sessionB, onBack }: {
                 b={(metricsB.submissionConfidence * 100)}
               />
 
-              {/* Overlaid radar */}
               <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
                 <OrchestrationRadar
                   metrics={metricsA}
@@ -934,7 +922,6 @@ function CompareView({ sessionA, sessionB, onBack }: {
   );
 }
 
-// ─── Auth Gate (server-side check) ───────────────────────────
 function useAdminAuth(): { authorized: boolean; loading: boolean; reason?: string } {
   const key = useAdminKey();
   const [state, setState] = useState<{ authorized: boolean; loading: boolean; reason?: string }>({
@@ -1000,7 +987,6 @@ function AdminContent() {
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px 120px" }}>
-      {/* Header */}
       <div style={{ marginBottom: 40 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
           <Link
@@ -1037,13 +1023,11 @@ function AdminContent() {
         />
       ) : (
         <>
-          {/* Overview */}
           <section style={{ marginBottom: 40 }}>
             <h2 style={{ fontSize: 16, fontWeight: 450, color: "#262626", marginBottom: 16 }}>Overview</h2>
             <OverviewCards />
           </section>
 
-          {/* Challenge Analytics */}
           <section style={{ marginBottom: 40 }}>
             <h2 style={{ fontSize: 16, fontWeight: 450, color: "#262626", marginBottom: 16 }}>
               Challenge Analytics
@@ -1051,7 +1035,6 @@ function AdminContent() {
             <ChallengeAnalytics />
           </section>
 
-          {/* Leaderboard Management */}
           <section style={{ marginBottom: 40 }}>
             <h2 style={{ fontSize: 16, fontWeight: 450, color: "#262626", marginBottom: 16 }}>
               Leaderboard
@@ -1062,7 +1045,6 @@ function AdminContent() {
             <LeaderboardManagement />
           </section>
 
-          {/* Recent Sessions */}
           <section>
             <h2 style={{ fontSize: 16, fontWeight: 450, color: "#262626", marginBottom: 16 }}>
               Recent Sessions

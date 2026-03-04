@@ -100,13 +100,11 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
 
   return (
     <div>
-      {/* Starting value */}
       <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 24 }}>
         <p className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>Starting Value</p>
         <p className="text-2xl font-mono font-bold" {...testAttr('start-value')}>{pageData.startValue}</p>
       </div>
 
-      {/* Operations */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
         {pageData.operations.map((op, i) => (
           <div
@@ -203,7 +201,6 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
         ))}
       </div>
 
-      {/* Reference Table */}
       <div style={{ marginBottom: 24 }}>
         <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Reference Table</h3>
         <div className="card-surface overflow-x-auto" style={{ borderRadius: 12, overflow: "hidden" }}>
@@ -226,7 +223,6 @@ export default function SequentialCalculatorChallenge({ pageData, answerRef, ses
         </div>
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Final Result</label>
         <input

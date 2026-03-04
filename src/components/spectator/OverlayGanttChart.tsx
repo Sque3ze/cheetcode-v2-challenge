@@ -44,7 +44,6 @@ function mergeGroups(
     rowB: GanttRow | null;
   }>;
 }> {
-  // Collect all challenges by tier
   const tierChallenges = new Map<number, Map<string, { label: string; rowA: GanttRow | null; rowB: GanttRow | null; firstStart: number }>>();
 
   const ensure = (tier: number) => {
@@ -149,7 +148,6 @@ export function OverlayGanttChart({
     8;
   const chartWidth = Math.max(0, containerWidth - GANTT.LABEL_WIDTH);
 
-  // Shared time axis
   const maxDuration = Math.max(durationMsA, durationMsB);
   const lastEventMsA = eventsA.reduce((max, e) => Math.max(max, Math.max(0, e.timestamp - startedAtA)), 0);
   const lastEventMsB = eventsB.reduce((max, e) => Math.max(max, Math.max(0, e.timestamp - startedAtB)), 0);
@@ -161,7 +159,6 @@ export function OverlayGanttChart({
   const ticks: number[] = [];
   for (let t = 0; t <= axisDuration; t += tickIntervalMs) ticks.push(t);
 
-  // Layout
   let currentY = AXIS_HEIGHT;
   const tierPositions: Array<{
     tier: number;

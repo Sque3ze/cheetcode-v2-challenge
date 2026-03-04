@@ -2,7 +2,6 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // ─── Sessions ────────────────────────────────────────────
   // One per timed challenge attempt. Server is the time authority.
   sessions: defineTable({
     github: v.string(),
@@ -37,7 +36,6 @@ export default defineSchema({
     .index("by_github_status", ["github", "status"])
     .index("by_status", ["status"]),
 
-  // ─── Submissions ─────────────────────────────────────────
   // One per attempt at a challenge (including wrong attempts).
   submissions: defineTable({
     sessionId: v.id("sessions"),
@@ -50,7 +48,6 @@ export default defineSchema({
     .index("by_session", ["sessionId"])
     .index("by_session_challenge", ["sessionId", "challengeId"]),
 
-  // ─── Leaderboard ─────────────────────────────────────────
   // Best score per user. Updated when a session completes with a better score.
   leaderboard: defineTable({
     github: v.string(),
@@ -79,7 +76,6 @@ export default defineSchema({
     .index("by_score", ["score"])
     .index("by_github", ["github"]),
 
-  // ─── Challenge Views ───────────────────────────────────────
   // Tracks when a challenge was loaded (for timing constraints + render tokens).
   challengeViews: defineTable({
     sessionId: v.id("sessions"),
@@ -89,7 +85,6 @@ export default defineSchema({
     lastInteractAt: v.optional(v.number()),
   }).index("by_session_challenge", ["sessionId", "challengeId"]),
 
-  // ─── Session Events ───────────────────────────────────────
   // Timestamped event log for observability and session replay.
   sessionEvents: defineTable({
     sessionId: v.id("sessions"),

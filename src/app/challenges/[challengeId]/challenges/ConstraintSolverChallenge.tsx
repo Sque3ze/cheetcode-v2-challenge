@@ -85,7 +85,6 @@ export default function ConstraintSolverChallenge({ pageData, answerRef, session
 
   return (
     <div>
-      {/* Inventory */}
       <div style={{ marginBottom: 24 }}>
         <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Inventory</h3>
         <div
@@ -138,7 +137,6 @@ export default function ConstraintSolverChallenge({ pageData, answerRef, session
         </div>
       </div>
 
-      {/* Constraint Panels */}
       <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 16, marginBottom: 16 }}>
         <div className="card-surface" style={{ borderRadius: 12, padding: 16 }}>
           <h3 className="text-sm font-medium" style={{ color: "#fa5d19", marginBottom: 12 }}>Requirements</h3>
@@ -177,7 +175,6 @@ export default function ConstraintSolverChallenge({ pageData, answerRef, session
         </div>
       </div>
 
-      {/* Advanced Constraints */}
       <div className="relative" style={{ marginBottom: 16 }}>
         <button
           ref={popoverAnchorRef}
@@ -215,14 +212,12 @@ export default function ConstraintSolverChallenge({ pageData, answerRef, session
         )}
       </div>
 
-      {/* Optimization note */}
       <div style={{ background: "rgba(0,0,0,0.02)", borderRadius: 12, border: "1px solid #e8e8e8", padding: 12, marginBottom: 24 }}>
         <p className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }} {...testAttr('optimization')}>
           <span className="font-medium" style={{ color: "#b45309" }}>Optimization:</span> {pageData.optimization}
         </p>
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Item Name</label>
         <input

@@ -30,11 +30,9 @@ export async function GET(
 ) {
   const { challengeId } = await params;
 
-  // Auth
   const github = await resolveGitHub(request);
   if (!github) return unauthorized();
 
-  // Get sessionId from query params
   const url = new URL(request.url);
   const sessionId = url.searchParams.get("sessionId");
   if (!sessionId) {
@@ -44,7 +42,6 @@ export async function GET(
     );
   }
 
-  // Check challenge exists
   const challenge = getChallenge(challengeId);
   if (!challenge) return notFound("Challenge not found");
 
@@ -59,7 +56,6 @@ export async function GET(
     const convex = new ConvexHttpClient(convexUrl);
     const typedSessionId = sessionId as unknown as Id<"sessions">;
 
-    // Fetch session+statuses and submissions in parallel
     const [{ session, statuses }, submissions] = await Promise.all([
       convex.action(api.sessions.fetchSessionWithStatuses, {
         secret: mutationSecret,
@@ -70,7 +66,6 @@ export async function GET(
       }),
     ]);
 
-    // Verify session belongs to user and is active
     const sessionErr = validateSessionOwnership(session, github);
     if (sessionErr) return sessionErr;
 
@@ -91,7 +86,6 @@ export async function GET(
       metadata: { tier: challenge.tier },
     }).catch(() => {});
 
-    // Generate challenge data from seed
     const gen = new ChallengeDataGenerator(sessionId, serverSecret);
     const challengeData = gen.forChallenge(challengeId);
     const generated = challenge.generate(challengeData);
@@ -108,7 +102,6 @@ export async function GET(
     const pageData = { ...(generated.pageData as Record<string, unknown>) };
     delete pageData.variantIndex;
 
-    // Generate render token and record the view
     const viewedAt = Date.now();
     const renderToken = generateRenderToken(sessionId, challengeId, viewedAt, serverSecret);
 

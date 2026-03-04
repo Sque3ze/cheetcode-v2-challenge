@@ -146,11 +146,9 @@ export const configDebuggerChallenge: ChallengeDefinition<ConfigDebuggerPageData
   generate(data: ChallengeData) {
     const variantIndex = data.int(0, 3);
 
-    // Pick 13-15 config keys
     const keyCount = data.int(13, 15);
     const selectedKeys = data.pickN(CONFIG_POOL, keyCount);
 
-    // Build defaults layer — all keys get default values
     const defaults: Record<string, string | number | boolean> = {};
     for (const entry of selectedKeys) {
       defaults[entry.key] = entry.defaultVal()(data);
@@ -181,7 +179,6 @@ export const configDebuggerChallenge: ChallengeDefinition<ConfigDebuggerPageData
       production[entry.key] = prodV;
     }
 
-    // Pick which keys overrides layer touches (2-3 keys)
     const overrideCount = data.int(2, 3);
     const overrideIndices = new Set<number>();
     while (overrideIndices.size < overrideCount) {

@@ -66,7 +66,6 @@ export default function TraceAnalyzerChallenge({ pageData, answerRef, sessionId,
 
   return (
     <div>
-      {/* Request summary */}
       <div style={{ background: "rgba(220,38,38,0.04)", border: "1px solid rgba(220,38,38,0.2)", borderRadius: 12, padding: 16, marginBottom: 24 }}>
         <div className="flex items-center" style={{ gap: 8, marginBottom: 12 }}>
           <p className="text-xs font-medium" style={{ color: "#dc2626", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -97,7 +96,6 @@ export default function TraceAnalyzerChallenge({ pageData, answerRef, sessionId,
         </div>
       </div>
 
-      {/* Service cards */}
       <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
         <h4 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)" }}>Service Logs</h4>
         <p className="text-xs" style={{ color: "rgba(38,38,38,0.4)" }}>
@@ -221,7 +219,6 @@ export default function TraceAnalyzerChallenge({ pageData, answerRef, sessionId,
         })}
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Answer (format: ServiceName:ERROR_CODE)

@@ -176,7 +176,6 @@ export default function TableSortChallenge({ pageData, answerRef, sessionId, cha
         </table>
       </div>
 
-      {/* Pagination controls */}
       <div className="flex items-center justify-between" style={{ marginTop: 12 }}>
         <p className="text-xs" style={{ color: "rgba(38,38,38,0.35)" }}>
           Page {currentPage + 1} of {totalPages} ({totalEmployees} total)

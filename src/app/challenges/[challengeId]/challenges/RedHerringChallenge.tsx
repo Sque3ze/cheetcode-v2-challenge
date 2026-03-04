@@ -70,7 +70,6 @@ export default function RedHerringChallenge({ pageData, answerRef, sessionId, ch
         <p className="text-sm" style={{ color: "rgba(26,147,56,0.7)", marginTop: 8 }}>{pageData.fakeLabel}</p>
       </div>
 
-      {/* Tab bar */}
       <div className="flex" style={{ borderBottom: "1px solid #e8e8e8" }}>
         <button
           onClick={() => setActiveTab("a")}
@@ -106,7 +105,6 @@ export default function RedHerringChallenge({ pageData, answerRef, sessionId, ch
         </button>
       </div>
 
-      {/* Table */}
       <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderTop: "none", borderRadius: "0 0 12px 12px", padding: 16, marginBottom: 24 }}>
         {loadingB && activeTab === "b" ? (
           <div className="flex items-center justify-center" style={{ padding: "32px 0" }}>
@@ -143,7 +141,6 @@ export default function RedHerringChallenge({ pageData, answerRef, sessionId, ch
         )}
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Your Answer</label>
         <input

@@ -3,7 +3,6 @@
  * and server-side to enforce constraints.
  */
 
-// ── GitHub handle ──────────────────────────────────────────
 const GITHUB_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
 const GITHUB_MAX = 39;
 
@@ -15,7 +14,6 @@ export function validateGithub(raw: string): { ok: true; value: string } | { ok:
   return { ok: true, value: v };
 }
 
-// ── Email ──────────────────────────────────────────────────
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX = 254;
 
@@ -27,7 +25,6 @@ export function validateEmail(raw: string): { ok: true; value: string } | { ok: 
   return { ok: true, value: v };
 }
 
-// ── X / Twitter handle (optional) ──────────────────────────
 const X_HANDLE_RE = /^@?[a-zA-Z0-9_]{1,15}$/;
 
 export function validateXHandle(raw: string): { ok: true; value: string } | { ok: false; error: string } {
@@ -38,7 +35,6 @@ export function validateXHandle(raw: string): { ok: true; value: string } | { ok
   return { ok: true, value: v.startsWith("@") ? v.slice(1) : v };
 }
 
-// ── Code submission ────────────────────────────────────────
 const CODE_MAX_BYTES = 10_000; // 10 KB per problem — generous but prevents abuse
 
 export function validateCode(raw: string): { ok: true; value: string } | { ok: false; error: string } {

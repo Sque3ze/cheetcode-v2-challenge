@@ -86,7 +86,6 @@ export default function AnimatedBackground() {
     function draw(time: number) {
       animRef.current = requestAnimationFrame(draw);
 
-      // Skip drawing when not visible
       if (!isVisible) return;
       if (time - lastDrawTime < FRAME_INTERVAL) return;
       lastDrawTime = time;

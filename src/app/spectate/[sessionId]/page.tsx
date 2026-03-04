@@ -189,7 +189,6 @@ export default function SpectatePage() {
         </div>
       </div>
 
-      {/* Main layout: DAG + Score Panel */}
       <div
         style={{
           display: "grid",
@@ -198,7 +197,6 @@ export default function SpectatePage() {
           marginBottom: 20,
         }}
       >
-        {/* Challenge DAG */}
         <div
           className="card-surface"
           style={{ borderRadius: 10, padding: 16, overflow: "hidden" }}
@@ -216,7 +214,6 @@ export default function SpectatePage() {
           <ChallengeDAG events={events} />
         </div>
 
-        {/* Right sidebar */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <ScorePanel
             score={displayScore}
@@ -264,7 +261,6 @@ export default function SpectatePage() {
         </div>
       </div>
 
-      {/* Gantt Chart */}
       <div
         className="card-surface"
         style={{ borderRadius: 10, overflow: "hidden", marginBottom: 20 }}
@@ -277,7 +273,6 @@ export default function SpectatePage() {
         />
       </div>
 
-      {/* Event Feed */}
       <div
         className="card-surface"
         style={{ borderRadius: 10, overflow: "hidden" }}

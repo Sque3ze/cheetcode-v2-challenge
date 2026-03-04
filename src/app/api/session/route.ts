@@ -92,7 +92,6 @@ export async function GET(request: Request) {
   try {
     const convex = new ConvexHttpClient(convexUrl);
 
-    // Get active session + challenge statuses in one action
     const { session, statuses } = await convex.action(
       api.sessions.fetchActiveSessionWithStatuses,
       { secret, github }
@@ -107,7 +106,6 @@ export async function GET(request: Request) {
     // Build solved set for prerequisite checking
     const solvedSet = extractSolvedSet(statuses);
 
-    // Build challenge status list
     const challengeStatuses = challenges.map((c) => {
       const status = statuses[c.id];
       return {
@@ -119,7 +117,6 @@ export async function GET(request: Request) {
       };
     });
 
-    // Compute current score
     const earned = challenges.reduce((sum, c) => {
       const status = statuses[c.id];
       return sum + (status?.solved ? c.points : 0);

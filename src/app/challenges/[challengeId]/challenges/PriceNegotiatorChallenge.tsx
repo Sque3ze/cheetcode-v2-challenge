@@ -89,7 +89,6 @@ export default function PriceNegotiatorChallenge({ pageData, answerRef, sessionI
 
   return (
     <div>
-      {/* Product card */}
       <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 24 }}>
         <div className="flex items-start justify-between" style={{ marginBottom: 12 }}>
           <div>
@@ -125,7 +124,6 @@ export default function PriceNegotiatorChallenge({ pageData, answerRef, sessionI
         </p>
       </div>
 
-      {/* Market Intelligence section */}
       <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 24 }}>
         <div className="flex items-center justify-between" style={{ marginBottom: marketData ? 12 : 0 }}>
           <h4 className="text-sm font-medium" style={{ color: "#9061ff" }}>Market Intelligence</h4>
@@ -166,7 +164,6 @@ export default function PriceNegotiatorChallenge({ pageData, answerRef, sessionI
         )}
       </div>
 
-      {/* Bid input */}
       <div style={{ marginBottom: 24 }}>
         <h4 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Submit Bid</h4>
         <div className="flex" style={{ gap: 8, maxWidth: 448 }}>
@@ -202,7 +199,6 @@ export default function PriceNegotiatorChallenge({ pageData, answerRef, sessionI
         </div>
       </div>
 
-      {/* Bid history */}
       {bidHistory.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <h4 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Bid History ({bidHistory.length} bids)</h4>
@@ -245,7 +241,6 @@ export default function PriceNegotiatorChallenge({ pageData, answerRef, sessionI
         </div>
       )}
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Vendor&apos;s Floor Price (exact minimum)</label>
         <input

@@ -1,6 +1,3 @@
-// CheetCode v2 — Central configuration
-// All tunable values in one place for easy calibration.
-
 /** Session duration in milliseconds. */
 export const SESSION_DURATION_MS = 5 * 60 * 1000;
 /** Extended session duration for test-authenticated agents (ms). */

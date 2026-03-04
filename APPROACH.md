@@ -2,9 +2,9 @@
 
 ## 1. Problem framing - What went wrong with v1
 
-Cheetcode v1 was a cool test, but I wouldn't say that it neccesarily accomplished the goal of evaluating the agent orchestration abilities of challengers. I understand that the intended solution the challenge promoted was the use of parallel agents to solve each of the 10 questions in rapid succession, but this ends up measuring how quickly you could automate LeetCode questions, the orchestration just extract + parallel calls once you understood the challenge.
+Cheetcode v1 was a cool test, but I wouldn't say that it necessarily accomplished the goal of evaluating the agent orchestration abilities of challengers. I understand that the intended solution the challenge promoted was the use of parallel agents to solve each of the 10 questions in rapid succession, but this ends up measuring how quickly you could automate LeetCode questions, the orchestration just extract + parallel calls once you understood the challenge.
 
-Some of the exploits also made it possible to solve everything with one agent being slow and still get a max score which shouldn't be possible in a challenge trying to evaluate a persons ability to orchestrate agents. Expoiting site weaknesses became a better route than building a good agent.
+Some of the exploits also made it possible to solve everything with one agent being slow and still get a max score which shouldn't be possible in a challenge trying to evaluate a person's ability to orchestrate agents. Exploiting site weaknesses became a better route than building a good agent.
 
 To break down specific failures:
 
@@ -16,9 +16,9 @@ The agent that topped the leaderboard demonstrated source code analysis and requ
 
 **What is agent-orchestration? - first thoughts I had about framing the problem**
 
-To fully frame the problem its key to understand what is agent-orchestration at its core. Theres a million ways to describe what an agent orchestrator is, but at its most basic it just describes a system that conducts multiple agents to solve a goal. Uses of orchestrators span from speeding up workflows, breaking up complex tasks, and enabling long running autonomous tasks. Agent orchestrator also refers to someone how builds agents which is the case here, we are trying to find good agent orchestrators (like me)
+To fully frame the problem it's key to understand what is agent-orchestration at its core. There's a million ways to describe what an agent orchestrator is, but at its most basic it just describes a system that conducts multiple agents to solve a goal. Uses of orchestrators span from speeding up workflows, breaking up complex tasks, and enabling long running autonomous tasks. Agent orchestrator also refers to someone who builds agents which is the case here, we are trying to find good agent orchestrators (like me)
 
-The backbone of a well orchestrated agent is it's harness, I believe its the most important design piece and it influences the overall quality of an agent by magnitudes. The harness enables autonomous work through containing a set of capabilities that work together curate agent behavior and I chose to focus on the following capabilities that I deem most important inside a harness:
+The backbone of a well orchestrated agent is its harness, I believe it's the most important design piece and it influences the overall quality of an agent by magnitudes. The harness enables autonomous work through containing a set of capabilities that work together to curate agent behavior and I chose to focus on the following capabilities that I deem most important inside a harness:
 
 **Multi-step Reasoning** — Can the agent chain together operations where steps rely on each other?
 
@@ -36,17 +36,17 @@ There are many other things that go into creating a great agent, for example **m
 
 ## 2. Design goals - how to effectively evaluate the capabilities
 
-When thinking about designing a better challenge compared to v1 a simple approach would be to just create more code challenges that have to be solved while still having a strict time limit. The issue with that is that llm's are incredibly good at solving code problems so it doesn't end up providing a good signal for a well orchistrated agent. It just leaves us relying on speed as the only thing that matters for scoring after the challenges are complete.
+When thinking about designing a better challenge compared to v1 a simple approach would be to just create more code challenges that have to be solved while still having a strict time limit. The issue with that is that llm's are incredibly good at solving code problems so it doesn't end up providing a good signal for a well orchestrated agent. It just leaves us relying on speed as the only thing that matters for scoring after the challenges are complete.
 
-The correct approach would be creating challenges that can test the capabilities I described, which is exactly what I aimed for while designing my own challenges. I've had experience with plenty of evaluation methods that aim to score how well agents do things and the one I most inspiration from was WebGames by Convergence AI. It consists of isolated tasks that appear on a page and the model attempts to solve them while they vary in difficulty and tools needed to solve them such as interacting with the live browser instead of with a headless one.
+The correct approach would be creating challenges that can test the capabilities I described, which is exactly what I aimed for while designing my own challenges. I've had experience with plenty of evaluation methods that aim to score how well agents do things and the one I drew most inspiration from was WebGames by Convergence AI. It consists of isolated tasks that appear on a page and the model attempts to solve them while they vary in difficulty and tools needed to solve them such as interacting with the live browser instead of with a headless one.
 
 I chose to go with a web browser challenge format as it felt natural given the challenge is for Firecrawl which scrapes the web and you guys just released the browser sandbox that allows agents to navigate the web.
 
-Still there were issues with how are the capabilities would be evaluated without knowing the method/code used by participants, WebGames evaluates on task success alone, but I don't have the time to create a large dataset of tasks to make that evaluation method give out a good signal. On top of that I had to create the design so it had a strong anti-gaming strategy and also a way to calculate contestant scores other than correct answers and time.
+Still there were issues with how the capabilities would be evaluated without knowing the method/code used by participants, WebGames evaluates on task success alone, but I don't have the time to create a large dataset of tasks to make that evaluation method give out a good signal. On top of that I had to create the design so it had a strong anti-gaming strategy and also a way to calculate contestant scores other than correct answers and time.
 
 ## 3. The solution — anti-gaming, architecture, and scoring tied together
 
-I discovered that I could manipulate the browser navigation challenges to actually solve all my problems with what I believe to be quite an elegant solution that touched on architecture, anti-gaming, and scoring/evaluation strategy. They all are conneted with each other closely so I'm going to walk through them as one thing and point out each piece.
+I discovered that I could manipulate the browser navigation challenges to actually solve all my problems with what I believe to be quite an elegant solution that touched on architecture, anti-gaming, and scoring/evaluation strategy. They all are connected with each other closely so I'm going to walk through them as one thing and point out each piece.
 
 ### Anti-gaming strategy
 
@@ -84,7 +84,7 @@ But I went further than just keeping answers server-side. I added several more l
 
 **Rate limiting on interactions.** 500ms minimum between consecutive interact calls. Can't machine-gun the API to dump all hidden data at once.
 
-**3 attempts per challenge.** Wrong answers don't subtract points but instead consume attempts. Three wrong and the challenge locks for the rest of the session. This leads to one of the pillars on how im able to spot good agent orchestration, the dependency graph.
+**3 attempts per challenge.** Wrong answers don't subtract points but instead consume attempts. Three wrong and the challenge locks for the rest of the session. This leads to one of the pillars on how I'm able to spot good agent orchestration, the dependency graph.
 
 ### The dependency graph (DAG)
 
@@ -111,7 +111,7 @@ Wave 0 (all start immediately):
                                                              (requires both)
 ```
 
-This forces real orchestration decisions. Not all Tier 1 challenges are equal — `form-fill` gates 19+ points downstream while `table-sort` gates nothing. An agent that doesn't read the DAG and just starts solving challenges randomly wastes time on dead-end branches. A good agent builds a sorts them out immediately and hits the critical path roots first.
+This forces real orchestration decisions. Not all Tier 1 challenges are equal — `form-fill` gates 19+ points downstream while `table-sort` gates nothing. An agent that doesn't read the DAG and just starts solving challenges randomly wastes time on dead-end branches. A good agent sorts them out immediately and hits the critical path roots first.
 
 The 3-attempt lockout can be devastating here since if you fail `tier1-form-fill` you permanently lose access to linked-data-lookup, constraint-solver, red-herring, fan-out-aggregator, and inventory-reconciliation. That's 5 challenges wiped out from failing a 1-point challenge. A careful agent double-checks answers on high-fan-out nodes instead of being reckless and killing entire branches.
 
@@ -177,7 +177,7 @@ These require pulling data from multiple sources and computing derived answers w
 
 Complex synthesis plus deliberate misdirection.
 
-## 6. What changed vs v1
+## 5. What changed vs v1
 
 Keeping it short since I've covered most of this already:
 
@@ -189,9 +189,9 @@ Keeping it short since I've covered most of this already:
 
 The biggest philosophical shift is that v2 trusts the client for nothing and the security relies on the fact that there's nothing useful to hide. The source code is public. The answers are still impossible to precompute without the server secret.
 
-## 7. Challenge hardening
+## 6. Challenge hardening
 
-I ran dozens of rounds (probably close to 50) of testing with Playwright-based test agents to calibrate difficulty. The goal during this process was to harden my initial challenges to a point where the challenge set couldn't be one shot and took so long to solve without a proper harness that it made one a necessity. For some insight on how the performance of the agents evolved overtime, during versions 1-4 of the questions Opus and Sonnet were completing the solution set in 12-20 minutes. This is still slow for the challenge but they weren't using any special harness, eventually it got to the point where neither of these models could finish the problems without heavy guidence or a large amount of time 45min-2hrs, by then I would just label that as a fail and test with an agent I actually orchestrated. If my agent was able to pass the same challenges the heavy models would fail in a fraction of the time I settled believing the site and challenges were sufficiently hardend.
+I ran dozens of rounds (probably close to 50) of testing with Playwright-based test agents to calibrate difficulty. The goal during this process was to harden my initial challenges to a point where the challenge set couldn't be one shot and took so long to solve without a proper harness that it made one a necessity. For some insight on how the performance of the agents evolved over time, during versions 1-4 of the questions Opus and Sonnet were completing the solution set in 12-20 minutes. This is still slow for the challenge but they weren't using any special harness, eventually it got to the point where neither of these models could finish the problems without heavy guidance or a large amount of time 45min-2hrs, by then I would just label that as a fail and test with an agent I actually orchestrated. If my agent was able to pass the same challenges the heavy models would fail in a fraction of the time I settled believing the site and challenges were sufficiently hardened.
 
 - **Constraint solver** went from 100% → 75% after adding relative constraints ("below average price"). The threshold depends on the dataset itself so items can't be evaluated independently.
 - **Data dashboard** went from 88% → 71% by tuning the misleading Quick Stats card to be more consistently wrong.
@@ -199,9 +199,9 @@ I ran dozens of rounds (probably close to 50) of testing with Playwright-based t
 - **Form fill** went from 86% → 71% by adding field transformations. Raw values no longer work as answers.
 - **Calculation audit** stayed at 93% — the formula is too mechanical. I'd need multi-variable formulas or interpolation to make this harder. Didn't have time, but didn't affect the overall goal much.
 
-Even the best sessions I had with 100% completion didn't maximize the orchistration side of things. This is great as it leads to different scores across people that manage to solve every question which just leave them to focus on improving the harness while keeping their high completion rate. It leads to a better gradient of scores than relying on correctness alone.
+Even the best sessions I had with 100% completion didn't maximize the orchestration side of things. This is great as it leads to different scores across people that manage to solve every question which just leave them to focus on improving the harness while keeping their high completion rate. It leads to a better gradient of scores than relying on correctness alone.
 
-## 8. Firecrawl alignment
+## 7. Firecrawl alignment
 
 Every challenge maps to a real-world web interaction pattern that Firecrawl might encounter:
 
@@ -214,7 +214,7 @@ Adversarial content (red-herring, calculation-audit)
 
 If CheetCode v2 were a public benchmark, it would simultaneously measure agent quality and demonstrate ability in the problem space Firecrawl solves. The agent that scores highest would correlate to navigating sites well.
 
-## 9. Tradeoffs and limitations
+## 8. Tradeoffs and limitations
 
 I do have things that I would change with more time:
 
@@ -226,12 +226,14 @@ I do have things that I would change with more time:
 
 **Half of Tier 4 is too easy.** Calculation-audit at 93% is too high. I'd need more complex formulas. Red-herring at 67% is better but I'd like to target around 40% for tier 4. Adversarial challenges take long to design well, they need to be unsolvable by shortcutting but solvable by thorough reasoning.
 
-**The orchestration metrics are proxies.** I'm inferring quality from behavioral telemetry. An agent that gets lucky looks confident. An agent that pauses to think looks idle. Best I can do without instrumenting the agent, but in the end they're still proxies and I want to aknowledge that. I think a lot of the tuning could be improved massively with more data from people trying overtime so it continously gets better.
+**The orchestration metrics are proxies.** I'm inferring quality from behavioral telemetry. An agent that gets lucky looks confident. An agent that pauses to think looks idle. Best I can do without instrumenting the agent, but in the end they're still proxies and I want to acknowledge that. I think a lot of the tuning could be improved massively with more data from people trying over time so it continuously gets better.
+
+Small note I only did full end2end tests on the original 13 challenges since I was able to verify the ability of the other ones passing with my actual agent and challenge verification with the seed system was really heavy
 
 What I'd do next: expand the challenge set (I have plenty of potential ideas documented `local-dev/challenge-ideas.md`), add auto-calibration of difficulty based on population success rates, and track how agents improve across retries. The foundation supports all of this: the seed system, interact-gating, orchestration metrics, and spectator infrastructure all generalize beyond the current challenge set.
 
-I also many ideas I just couldn't explore well due to the limited amount of time I had to work on the project, for example other than my agent I orchestrated to use llm calls + interactions with the site, I wanted to create one that solved the challenge set using the Firecrawl Browser tool as a parallel navigation + scraping tool that the agent could use instead of navigating through the api or playwright. I actually might still make it because I started it, I just knew I had to place more attention on the approach document before doing more extra building.
+I also had many ideas I just couldn't explore well due to the limited amount of time I had to work on the project, for example other than my agent I orchestrated to use llm calls + interactions with the site, I wanted to create one that solved the challenge set using the Firecrawl Browser tool as a parallel navigation + scraping tool that the agent could use instead of navigating through the api or playwright. I actually might still make it because I started it, I just knew I had to place more attention on the approach document before doing more extra building.
 
-Another one was the whole player tracking system, having the best session for each user be saved to their profile and having the ability to look their sessions up and see how they have improved overtime
+Another one was the whole player tracking system, having the best session for each user be saved to their profile and having the ability to look their sessions up and see how they have improved over time
 
-I do think there would be limitations of running the infrastructure on the free plans I have now if there was a lot of traffic all starting testings at the same time which is something important to consider.
+I do think there would be limitations of running the infrastructure on the free plans I have now if there was a lot of traffic all starting tests at the same time which is something important to consider.

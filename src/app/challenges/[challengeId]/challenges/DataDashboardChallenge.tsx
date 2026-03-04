@@ -126,7 +126,6 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
 
   return (
     <div>
-      {/* Quick Stats card */}
       <div style={{ background: "rgba(26,147,56,0.04)", border: "1px solid rgba(26,147,56,0.2)", borderRadius: 12, padding: 16, marginBottom: 24 }}>
         <div className="flex items-center justify-between">
           <div>
@@ -141,7 +140,6 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
         </div>
       </div>
 
-      {/* Tab buttons */}
       <div className="flex" style={{ gap: 4, marginBottom: 16, borderBottom: "1px solid #e8e8e8" }}>
         {tabs.map(({ key, label }) => (
           <button
@@ -164,7 +162,6 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
         ))}
       </div>
 
-      {/* Sales Tab */}
       {activeTab === "sales" && (
         <div style={{ marginBottom: 24 }}>
           <div className="card-surface overflow-x-auto" style={{ borderRadius: 12, overflow: "hidden" }}>
@@ -231,7 +228,6 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
         </div>
       )}
 
-      {/* Costs Tab */}
       {activeTab === "costs" && (
         <div style={{ marginBottom: 24 }}>
           {loadingTab ? (
@@ -264,7 +260,6 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
         </div>
       )}
 
-      {/* Taxes Tab */}
       {activeTab === "taxes" && (
         <div style={{ marginBottom: 24 }}>
           {loadingTab ? (
@@ -295,7 +290,6 @@ export default function DataDashboardChallenge({ pageData, answerRef, sessionId,
         </div>
       )}
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Total Profit</label>
         <input

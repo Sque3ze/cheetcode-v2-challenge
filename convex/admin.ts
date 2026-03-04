@@ -26,10 +26,8 @@ export const getOverviewStats = internalQuery({
           completedWithScores.length
         : 0;
 
-    // Unique players across all sessions
     const uniqueGithubs = new Set(sessions.map((s) => s.github));
 
-    // Count user agents
     const agentCounts = new Map<string, number>();
     for (const s of sessions) {
       const ua = s.userAgent || "Unknown";
@@ -63,7 +61,6 @@ export const getChallengeAggregates = internalQuery({
     const submissions = await ctx.db.query("submissions").collect();
     const views = await ctx.db.query("challengeViews").collect();
 
-    // Group by challenge
     const challengeStats = new Map<
       string,
       {
@@ -92,8 +89,7 @@ export const getChallengeAggregates = internalQuery({
       return challengeStats.get(id)!;
     };
 
-    // Build view time lookup
-    const viewTimes = new Map<string, number>(); // "sessionId:challengeId" -> viewedAt
+    const viewTimes = new Map<string, number>();
     for (const v of views) {
       viewTimes.set(`${v.sessionId}:${v.challengeId}`, v.viewedAt);
     }
@@ -114,13 +110,11 @@ export const getChallengeAggregates = internalQuery({
         stats.correctAttempts++;
         stats.sessionsSolved.add(sub.sessionId);
 
-        // Compute solve time
         const viewedAt = viewTimes.get(key);
         if (viewedAt) {
           stats.solveTimes.push(sub.submittedAt - viewedAt);
         }
       } else {
-        // Track wrong answer
         const trimmed = sub.answer.slice(0, 50);
         stats.wrongAnswers.set(
           trimmed,
@@ -137,7 +131,6 @@ export const getChallengeAggregates = internalQuery({
       }
     }
 
-    // Convert to serializable array
     const result: Array<{
       challengeId: string;
       totalAttempts: number;
@@ -162,7 +155,6 @@ export const getChallengeAggregates = internalQuery({
       const lockRate =
         sessionsCount > 0 ? stats.sessionsLocked.size / sessionsCount : 0;
 
-      // Top 3 wrong answers
       const topWrongAnswers = Array.from(stats.wrongAnswers.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
@@ -199,7 +191,6 @@ export const getRecentSessions = internalQuery({
 
     const results = [];
     for (const session of sessions) {
-      // Get submission stats
       const submissions = await ctx.db
         .query("submissions")
         .withIndex("by_session", (q) => q.eq("sessionId", session._id))
@@ -207,13 +198,9 @@ export const getRecentSessions = internalQuery({
 
       const solvedChallenges = new Set<string>();
       let wrongAttempts = 0;
-      let lastActivityAt: number | null = null;
       for (const sub of submissions) {
         if (sub.correct) solvedChallenges.add(sub.challengeId);
         else wrongAttempts++;
-        if (lastActivityAt == null || sub.submittedAt > lastActivityAt) {
-          lastActivityAt = sub.submittedAt;
-        }
       }
 
       // Prefer session-level fields; fall back to leaderboard for pre-migration sessions
@@ -245,7 +232,6 @@ export const getRecentSessions = internalQuery({
         score,
         orchestrationScore,
         orchestrationMetrics,
-        lastActivityAt,
       });
     }
 

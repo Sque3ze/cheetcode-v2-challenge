@@ -110,14 +110,11 @@ export const traceAnalyzerChallenge: ChallengeDefinition<TraceAnalyzerPageData> 
   generate(data: ChallengeData) {
     const variantIndex = data.int(0, 3);
 
-    // Pick 5 services
     const selectedServices = data.pickN(SERVICE_POOL, 5);
     const services = [...selectedServices];
 
-    // Generate target trace ID
     const targetTraceId = makeTraceId(data);
 
-    // Generate 10-12 noise trace IDs
     const noiseTraceCount = data.int(10, 12);
     const noiseTraces: string[] = [];
     for (let i = 0; i < noiseTraceCount; i++) {
@@ -133,11 +130,9 @@ export const traceAnalyzerChallenge: ChallengeDefinition<TraceAnalyzerPageData> 
     const requestPath = services.slice(0, failingIdx + 1);
     const requestPathSet = new Set(requestPath);
 
-    // Pick request metadata
     const requestPath_ = data.pick(REQUEST_PATHS);
     const method = data.pick(["POST", "PUT", "GET", "PATCH"] as const);
 
-    // Generate logs per service
     const logs: Record<string, LogEntry[]> = {};
     const baseMinute = data.int(10, 40);
 
@@ -146,7 +141,6 @@ export const traceAnalyzerChallenge: ChallengeDefinition<TraceAnalyzerPageData> 
       const entries: LogEntry[] = [];
       const entryCount = data.int(15, 25);
 
-      // Generate noise entries
       for (let e = 0; e < entryCount; e++) {
         const noiseTrace = data.pick(noiseTraces);
         const level = data.int(0, 9) < 8 ? "INFO" as const : "WARN" as const;
@@ -162,7 +156,6 @@ export const traceAnalyzerChallenge: ChallengeDefinition<TraceAnalyzerPageData> 
         });
       }
 
-      // Add target trace entries
       if (requestPathSet.has(service)) {
         if (service === failingService) {
           // This service has the error for the target trace
@@ -182,7 +175,6 @@ export const traceAnalyzerChallenge: ChallengeDefinition<TraceAnalyzerPageData> 
             errorCode,
           });
         } else {
-          // This service processed the target trace successfully
           entries.push({
             traceId: targetTraceId,
             timestamp: makeTimestamp(data, baseMinute + sIdx),

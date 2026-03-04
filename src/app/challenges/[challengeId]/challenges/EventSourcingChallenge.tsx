@@ -106,7 +106,6 @@ export default function EventSourcingChallenge({ pageData, answerRef, sessionId,
           </span>
         </div>
 
-        {/* Order info */}
         <div className="flex" style={{ gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
           <div>
             <p className="text-xs" style={{ color: "rgba(38,38,38,0.5)" }}>Order ID</p>
@@ -122,7 +121,6 @@ export default function EventSourcingChallenge({ pageData, answerRef, sessionId,
           </div>
         </div>
 
-        {/* Items table */}
         <p className="text-xs font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 6 }}>Items ({snapshot.items.length})</p>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, marginBottom: 12 }}>
           <thead>
@@ -147,7 +145,6 @@ export default function EventSourcingChallenge({ pageData, answerRef, sessionId,
           </tbody>
         </table>
 
-        {/* Discounts */}
         {snapshot.discounts.length > 0 && (
           <>
             <p className="text-xs font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 6 }}>Discounts ({snapshot.discounts.length})</p>
@@ -161,7 +158,6 @@ export default function EventSourcingChallenge({ pageData, answerRef, sessionId,
           </>
         )}
 
-        {/* Snapshot totals */}
         <div className="flex" style={{ gap: 16 }}>
           <div>
             <p className="text-xs" style={{ color: "rgba(38,38,38,0.5)" }}>Snapshot Subtotal</p>
@@ -178,13 +174,11 @@ export default function EventSourcingChallenge({ pageData, answerRef, sessionId,
         </div>
       </div>
 
-      {/* Question */}
       <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 24, border: "1px solid rgba(250,93,25,0.2)", background: "rgba(250,93,25,0.03)" }}>
         <p className="text-xs font-medium" style={{ color: "#fa5d19", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Question</p>
         <p className="text-sm" style={{ color: "#262626" }} {...testAttr("question")}>{pageData.question}</p>
       </div>
 
-      {/* Event log loader */}
       <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
         <h4 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)" }}>Event Log</h4>
         <p className="text-xs" style={{ color: "rgba(38,38,38,0.4)" }}>
@@ -193,7 +187,6 @@ export default function EventSourcingChallenge({ pageData, answerRef, sessionId,
         </p>
       </div>
 
-      {/* Page load buttons */}
       <div className="flex" style={{ gap: 8, marginBottom: 16 }}>
         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
           const isLoaded = !!eventPages[page];
@@ -220,7 +213,6 @@ export default function EventSourcingChallenge({ pageData, answerRef, sessionId,
         })}
       </div>
 
-      {/* Event list */}
       {allEvents.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
           {allEvents.map((event) => {
@@ -252,7 +244,6 @@ export default function EventSourcingChallenge({ pageData, answerRef, sessionId,
         </div>
       )}
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Final Answer

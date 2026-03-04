@@ -13,7 +13,6 @@ const SESSION_COOLDOWN_MS = 10_000;
 export const create = internalMutation({
   args: { github: v.string(), durationMs: v.number(), userAgent: v.optional(v.string()), isTestSession: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
-    // Rate limit: reject if user has an active or very recent session
     const active = await ctx.db
       .query("sessions")
       .withIndex("by_github_status", (q) =>
@@ -60,9 +59,6 @@ export const create = internalMutation({
   },
 });
 
-/**
- * Increment the API call counter for a session.
- */
 export const incrementApiCalls = internalMutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
@@ -74,9 +70,6 @@ export const incrementApiCalls = internalMutation({
   },
 });
 
-/**
- * Get a session by ID.
- */
 export const get = internalQuery({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
@@ -84,9 +77,6 @@ export const get = internalQuery({
   },
 });
 
-/**
- * Get the active session for a user (if any).
- */
 export const getActive = internalQuery({
   args: { github: v.string() },
   handler: async (ctx, args) => {
@@ -99,7 +89,6 @@ export const getActive = internalQuery({
 
     if (!session) return null;
 
-    // Check if expired
     if (Date.now() > session.expiresAt) {
       return null; // Will be marked expired by the complete mutation
     }
@@ -137,17 +126,14 @@ export const complete = internalMutation({
     if (!session) throw new Error("session not found");
     if (session.github !== args.github) throw new Error("github mismatch");
 
-    // Compute completion percentage (raw)
     const completionScore =
       args.totalPoints > 0
         ? Math.round((args.earnedPoints / args.totalPoints) * 10000) / 100
         : 0;
 
-    // Compute composite score
     const orchPct = args.orchestrationScore ?? 0;
     const score = Math.round((completionScore * COMPLETION_WEIGHT + orchPct * ORCHESTRATION_WEIGHT) * 100) / 100;
 
-    // Mark session completed and persist metrics on the session record
     await ctx.db.patch(args.sessionId, {
       status: "completed",
       earnedPoints: args.earnedPoints,

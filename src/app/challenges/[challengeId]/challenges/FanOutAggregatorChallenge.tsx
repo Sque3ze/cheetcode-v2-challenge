@@ -85,7 +85,6 @@ export default function FanOutAggregatorChallenge({ pageData, answerRef, session
 
   return (
     <div>
-      {/* HQ Info Panel */}
       <div style={{ background: "rgba(144,97,255,0.04)", border: "1px solid rgba(144,97,255,0.2)", borderRadius: 12, padding: 16, marginBottom: 24 }}>
         <p className="text-xs" style={{ color: "#9061ff", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Headquarters Parameters</p>
         <div className="flex" style={{ gap: 24, flexWrap: "wrap" }}>
@@ -104,7 +103,6 @@ export default function FanOutAggregatorChallenge({ pageData, answerRef, session
         </div>
       </div>
 
-      {/* Progress */}
       <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
         <p className="text-sm" style={{ color: "rgba(38,38,38,0.5)" }}>
           {loadedCount} of {pageData.offices.length} offices loaded
@@ -116,7 +114,6 @@ export default function FanOutAggregatorChallenge({ pageData, answerRef, session
         )}
       </div>
 
-      {/* Office cards */}
       <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16, marginBottom: 24 }}>
         {pageData.offices.map((office) => {
           const data = officeData[office.id];
@@ -198,7 +195,6 @@ export default function FanOutAggregatorChallenge({ pageData, answerRef, session
         })}
       </div>
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Total Net Revenue (after tax)</label>
         <input

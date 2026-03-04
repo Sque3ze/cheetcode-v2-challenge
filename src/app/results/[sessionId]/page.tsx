@@ -115,7 +115,6 @@ export default async function ResultsPage({ params }: PageProps) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f4", padding: "48px 24px 64px" }}>
-      {/* ── Paper ── */}
       <div
         style={{
           maxWidth: 720,
@@ -126,7 +125,6 @@ export default async function ResultsPage({ params }: PageProps) {
           overflow: "hidden",
         }}
       >
-        {/* ── Header ── */}
         <header
           style={{
             padding: "40px 40px 32px",
@@ -202,7 +200,6 @@ export default async function ResultsPage({ params }: PageProps) {
         </header>
 
         <main style={{ padding: "32px 40px 40px" }}>
-          {/* ── Report Card ── */}
           <section style={{ marginBottom: 32 }}>
           <h2
             style={{
@@ -256,7 +253,6 @@ export default async function ResultsPage({ params }: PageProps) {
                 </span>
               </div>
             ))}
-            {/* Tiers Reached row */}
             <div
               style={{
                 display: "flex",
@@ -288,7 +284,6 @@ export default async function ResultsPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* ── Timeline Summary ── */}
         <section style={{ marginBottom: 32 }}>
           <h2
             style={{
@@ -337,7 +332,6 @@ export default async function ResultsPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* ── Challenge Breakdown ── */}
         <section style={{ marginBottom: 32 }}>
           <h2
             style={{

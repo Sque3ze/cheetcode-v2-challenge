@@ -52,14 +52,12 @@ const RAW_NODES: Array<{
   { id: "tier1-filter-search", label: "Filter & Count", shortLabel: "Filter", tier: 1, points: 1, dependsOn: [] },
   { id: "tier1-modal-interaction", label: "Modal Interaction", shortLabel: "Modal", tier: 1, points: 1, dependsOn: [] },
 
-  // Tier 2
   { id: "tier2-multi-step-wizard", label: "Multi-Step Wizard", shortLabel: "Wizard", tier: 2, points: 2, dependsOn: ["tier1-dropdown-select"] },
   { id: "tier2-linked-data-lookup", label: "Linked Data Lookup", shortLabel: "Linked", tier: 2, points: 2, dependsOn: ["tier1-form-fill"] },
   { id: "tier2-sequential-calculator", label: "Sequential Calculator", shortLabel: "SeqCalc", tier: 2, points: 2, dependsOn: ["tier1-tab-navigation"] },
   { id: "tier2-resilient-collector", label: "Resilient Collector", shortLabel: "Resil", tier: 2, points: 4, dependsOn: ["tier1-tab-navigation"] },
   { id: "tier2-config-debugger", label: "Config Debugger", shortLabel: "Config", tier: 2, points: 2, dependsOn: ["tier1-filter-search"] },
 
-  // Tier 3
   { id: "tier3-data-dashboard", label: "Data Dashboard", shortLabel: "Dash", tier: 3, points: 4, dependsOn: ["tier2-sequential-calculator"] },
   { id: "tier3-constraint-solver", label: "Constraint Solver", shortLabel: "Constr", tier: 3, points: 5, dependsOn: ["tier2-linked-data-lookup"] },
   { id: "tier3-fan-out-aggregator", label: "Fan-Out Aggregator", shortLabel: "FanOut", tier: 3, points: 4, dependsOn: ["tier2-linked-data-lookup"] },
@@ -68,12 +66,10 @@ const RAW_NODES: Array<{
   { id: "tier3-trace-analyzer", label: "Trace Analyzer", shortLabel: "Trace", tier: 3, points: 4, dependsOn: ["tier2-resilient-collector"] },
   { id: "tier3-event-sourcing", label: "Event Sourcing", shortLabel: "EvtSrc", tier: 3, points: 4, dependsOn: ["tier2-sequential-calculator"] },
 
-  // Tier 4
   { id: "tier4-calculation-audit", label: "Calculation Audit", shortLabel: "Audit", tier: 4, points: 2, dependsOn: ["tier3-data-dashboard", "tier2-config-debugger"] },
   { id: "tier4-red-herring", label: "Quarterly Report", shortLabel: "Report", tier: 4, points: 2, dependsOn: ["tier3-constraint-solver"] },
 ];
 
-// Compute wave (depth) from dependency structure
 function computeWave(nodeId: string, lookup: Map<string, typeof RAW_NODES[0]>, cache: Map<string, number>): number {
   if (cache.has(nodeId)) return cache.get(nodeId)!;
   const node = lookup.get(nodeId);
@@ -107,12 +103,10 @@ export function deriveNodeStates(
 ): Map<string, NodeState> {
   const states = new Map<string, NodeState>();
 
-  // Initialize all nodes as idle
   for (const node of DAG_NODES) {
     states.set(node.id, "idle");
   }
 
-  // Track which challenges have been solved to determine locked status
   const solvedSet = new Set<string>();
   const wrongCounts = new Map<string, number>();
 

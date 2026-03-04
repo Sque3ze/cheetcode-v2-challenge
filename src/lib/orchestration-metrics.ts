@@ -143,7 +143,6 @@ export function computeDagEfficiency(
   events: SessionEvent[],
   challenges: ChallengeInfo[]
 ): number {
-  // Order of first views
   const viewOrder: string[] = [];
   const seen = new Set<string>();
   for (const e of events) {
@@ -155,7 +154,6 @@ export function computeDagEfficiency(
 
   if (viewOrder.length === 0) return 0;
 
-  // Factor 1: Were critical path roots viewed early?
   // Best case: both roots are in the first 3 views
   let rootScore = 0;
   const totalRoots = CRITICAL_PATH_ROOTS.length;

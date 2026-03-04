@@ -161,7 +161,6 @@ export const multiStepWizardChallenge: ChallengeDefinition<MultiStepWizardPageDa
       budgetLimit = Math.round((discountedSubtotal + data.int(10, 50)) * 100) / 100;
     }
 
-    // Ensure target passes
     if (budgetLimit < discountedSubtotal) {
       budgetLimit = Math.round((discountedSubtotal + data.int(5, 20)) * 100) / 100;
     }

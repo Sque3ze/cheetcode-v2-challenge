@@ -70,7 +70,6 @@ export default function TabNavigationChallenge({ pageData, answerRef, sessionId,
 
   return (
     <div>
-      {/* Tab bar */}
       <div className="flex" style={{ borderBottom: "1px solid #e8e8e8" }}>
         {tabs.map((tab, i) => (
           <button
@@ -93,7 +92,6 @@ export default function TabNavigationChallenge({ pageData, answerRef, sessionId,
         ))}
       </div>
 
-      {/* Tab content */}
       <div style={{ background: "#fff", border: "1px solid #e8e8e8", borderTop: "none", borderRadius: "0 0 12px 12px", padding: 24 }}>
         {loadingTab ? (
           <div className="flex items-center justify-center" style={{ padding: "16px 0" }}>
@@ -119,7 +117,6 @@ export default function TabNavigationChallenge({ pageData, answerRef, sessionId,
         )}
       </div>
 
-      {/* Answer input */}
       <div style={{ marginTop: 24 }}>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>Your Answer</label>
         <input

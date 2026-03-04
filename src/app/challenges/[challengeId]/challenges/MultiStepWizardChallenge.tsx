@@ -118,7 +118,6 @@ export default function MultiStepWizardChallenge({ pageData, answerRef, sessionI
 
   return (
     <div>
-      {/* Step indicator */}
       <div className="flex items-center" style={{ gap: 8, marginBottom: 24 }}>
         {[1, 2, 3, 4].map((s) => (
           <div key={s} className="flex items-center" style={{ gap: 8 }}>
@@ -143,7 +142,6 @@ export default function MultiStepWizardChallenge({ pageData, answerRef, sessionI
         ))}
       </div>
 
-      {/* Step 1: Find the order */}
       {step === 1 && (
         <div>
           <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 12 }}>
@@ -190,7 +188,6 @@ export default function MultiStepWizardChallenge({ pageData, answerRef, sessionI
         </div>
       )}
 
-      {/* Step 2: Apply discount */}
       {step === 2 && selectedOrder && (
         <div>
           <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 12 }}>
@@ -230,7 +227,6 @@ export default function MultiStepWizardChallenge({ pageData, answerRef, sessionI
         </div>
       )}
 
-      {/* Step 3: Select shipping */}
       {step === 3 && selectedOrder && selectedDiscount && (
         <div>
           <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 12 }}>
@@ -300,7 +296,6 @@ export default function MultiStepWizardChallenge({ pageData, answerRef, sessionI
         </div>
       )}
 
-      {/* Step 4: Confirm and submit */}
       {step === 4 && selectedOrder && selectedDiscount && selectedShipping && (
         <div>
           <h3 className="text-sm font-medium" style={{ color: "rgba(38,38,38,0.5)", marginBottom: 12 }}>

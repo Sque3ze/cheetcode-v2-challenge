@@ -81,7 +81,6 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
       })),
     }));
 
-    // Collect all numeric fields for condition checks
     const numericKeys: { tab: TabData; key: string; value: number }[] = [];
     for (const tab of tabs) {
       for (const item of tab.content) {
@@ -127,7 +126,6 @@ export const tabNavigationChallenge: ChallengeDefinition<TabNavigationPageData> 
     const leafAboveBelow = pickLeaf([conditionTab, secondConditionTab, leafAboveAbove.tab]);
     const leafBelow = pickLeaf([conditionTab]);
 
-    // Compute answer by following the decision tree
     let answer: string;
     if (conditionEntry.value > conditionThreshold) {
       if (secondConditionEntry.value > secondConditionThreshold) {

@@ -45,7 +45,6 @@ export function ChallengeDAG({ events }: ChallengeDAGProps) {
 
   const nodeStates = useMemo(() => deriveNodeStates(events), [events]);
 
-  // Group nodes by wave
   const waves = useMemo(() => {
     const waveMap = new Map<number, typeof DAG_NODES>();
     for (const node of DAG_NODES) {
@@ -60,7 +59,6 @@ export function ChallengeDAG({ events }: ChallengeDAGProps) {
   const svgWidth = Math.max(containerWidth, PAD_X * 2 + waves.length * (NODE_W + WAVE_GAP) - WAVE_GAP);
   const svgHeight = PAD_Y * 2 + maxRows * (NODE_H + ROW_GAP) - ROW_GAP;
 
-  // Compute node positions
   const nodePositions = useMemo(() => {
     const positions = new Map<string, { x: number; y: number }>();
     for (const [waveIdx, [, nodes]] of waves.entries()) {

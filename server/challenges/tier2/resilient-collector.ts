@@ -82,7 +82,6 @@ export const resilientCollectorChallenge: ChallengeDefinition<ResilientCollector
     const names = data.pickN(SOURCE_NAMES, sourceCount);
     const labels = data.pickN(SOURCE_LABELS, sourceCount);
 
-    // Pick which indices are flaky
     const flakyIndices = new Set<number>();
     while (flakyIndices.size < flakyCount) {
       flakyIndices.add(data.int(0, sourceCount - 1));
@@ -112,7 +111,6 @@ export const resilientCollectorChallenge: ChallengeDefinition<ResilientCollector
       };
     }
 
-    // Compute answer
     const allValues = Object.values(hiddenSources).map((s) => s.value);
     const total = allValues.reduce((sum, v) => sum + v, 0);
     const answer = aggregationMethod === "sum"

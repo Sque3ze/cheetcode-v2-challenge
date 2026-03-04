@@ -103,7 +103,6 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
         (e) => e.name !== targetEmployee.name && e.name.startsWith(targetFirstName + " ")
       );
       if (!dupeExists) {
-        // Add a duplicate first-name employee in a different department
         const dupePerson = data.person();
         const dupeDept = data.pick(otherDepts);
         employees.push({
@@ -115,7 +114,6 @@ export const linkedDataLookupChallenge: ChallengeDefinition<LinkedDataLookupPage
       }
     }
 
-    // Generate disambiguation hint
     const targetDeptName = targetDept.name;
     const hintType = data.pick(["department", "salary"] as const);
     let disambiguationHint: string;

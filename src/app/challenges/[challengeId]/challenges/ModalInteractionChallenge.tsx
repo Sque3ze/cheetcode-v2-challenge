@@ -81,7 +81,6 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
 
   return (
     <div>
-      {/* Card grid */}
       <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 16, marginBottom: 24 }}>
         {pageData.cards.map((card) => (
           <div
@@ -105,7 +104,6 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
         ))}
       </div>
 
-      {/* Modal with async loading + tabs */}
       {openCard && (
         <div
           className="fixed inset-0 flex items-center justify-center z-50"
@@ -128,7 +126,6 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
               </button>
             </div>
 
-            {/* Loading spinner */}
             {!modalLoaded && (
               <div className="flex items-center justify-center" style={{ padding: "32px 0" }} {...testAttr('modal-loading')}>
                 <div className="animate-spin" style={{ width: 32, height: 32, borderRadius: "50%", borderBottom: "2px solid #fa5d19" }} />
@@ -136,10 +133,8 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
               </div>
             )}
 
-            {/* Modal content with tabs */}
             {modalLoaded && (
               <div>
-                {/* Tab bar inside modal */}
                 <div className="flex" style={{ borderBottom: "1px solid #e8e8e8", marginBottom: 16 }}>
                   <button
                     onClick={() => setModalTab("overview")}
@@ -175,7 +170,6 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
                   </button>
                 </div>
 
-                {/* Overview tab: category + price */}
                 {modalTab === "overview" && (
                   <dl style={{ display: "flex", flexDirection: "column", gap: 12 }} {...testAttr('modal-panel', 'overview')}>
                     <div>
@@ -208,7 +202,6 @@ export default function ModalInteractionChallenge({ pageData, answerRef, session
         </div>
       )}
 
-      {/* Answer input */}
       <div>
         <label className="text-sm" style={{ display: "block", color: "rgba(38,38,38,0.5)", marginBottom: 8 }}>
           Your Answer ({pageData.targetField})
