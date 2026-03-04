@@ -2,6 +2,7 @@
 
 import { useState, useEffect, MutableRefObject } from "react";
 import { testAttr } from "../../../../lib/test-attrs";
+import { useInteract } from "../../../../lib/use-interact";
 
 interface LineItem {
   id: string;
@@ -20,10 +21,8 @@ interface TierBracket {
 
 interface CalculationAuditPageData {
   lineItems: LineItem[];
-  tieredTaxRates: Record<string, Record<string, number>>;
-  brackets: TierBracket[];
   summaryTotal: number;
-  variantIndex: number;
+  categories: string[];
 }
 
 interface Props {
@@ -34,20 +33,43 @@ interface Props {
   renderToken?: string;
 }
 
-export default function CalculationAuditChallenge({ pageData, answerRef }: Props) {
+export default function CalculationAuditChallenge({ pageData, answerRef, sessionId, challengeId, renderToken }: Props) {
   const [answer, setAnswer] = useState("");
+  const [tieredTaxRates, setTieredTaxRates] = useState<Record<string, Record<string, number>> | null>(null);
+  const [brackets, setBrackets] = useState<TierBracket[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const interact = useInteract(challengeId ?? "", sessionId ?? "", renderToken ?? "");
 
   useEffect(() => {
     answerRef.current = answer;
   }, [answer, answerRef]);
 
-  const categories = Object.keys(pageData.tieredTaxRates || {});
-  const brackets = pageData.brackets || [];
+  // Fetch tax schedule via interact on mount
+  useEffect(() => {
+    if (!sessionId || !challengeId || !renderToken) return;
+
+    interact("tax_schedule").then((data) => {
+      const result = data as { tieredTaxRates: Record<string, Record<string, number>>; brackets: TierBracket[] };
+      setTieredTaxRates(result.tieredTaxRates);
+      setBrackets(result.brackets);
+      setLoading(false);
+    }).catch(() => {
+      setLoading(false);
+    });
+  }, [sessionId, challengeId, renderToken, interact]);
+
+  const categories = tieredTaxRates ? Object.keys(tieredTaxRates) : pageData.categories;
 
   return (
     <div>
       {/* Tiered Tax Rate Schedule */}
-      {categories.length > 0 && brackets.length > 0 && (
+      {loading ? (
+        <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 24 }} {...testAttr('tax-rate-legend')}>
+          <h3 className="text-sm font-medium" style={{ color: "#b45309", marginBottom: 12 }}>Tiered Tax Rate Schedule</h3>
+          <p className="text-xs" style={{ color: "rgba(38,38,38,0.35)" }}>Loading tax rate schedule...</p>
+        </div>
+      ) : tieredTaxRates && brackets && brackets.length > 0 && (
         <div className="card-surface" style={{ borderRadius: 12, padding: 16, marginBottom: 24 }} {...testAttr('tax-rate-legend')}>
           <h3 className="text-sm font-medium" style={{ color: "#b45309", marginBottom: 12 }}>Tiered Tax Rate Schedule</h3>
           <p className="text-xs" style={{ color: "rgba(38,38,38,0.35)", marginBottom: 12 }}>Rate depends on category AND subtotal bracket (qty &times; unit price)</p>
@@ -69,7 +91,7 @@ export default function CalculationAuditChallenge({ pageData, answerRef }: Props
                     <td className="font-medium text-xs" style={{ padding: "8px 12px", color: "rgba(38,38,38,0.7)" }}>{cat}</td>
                     {brackets.map((b) => (
                       <td key={b.label} className="text-right font-mono text-xs" style={{ padding: "8px 12px", color: "#262626" }} {...testAttr('tax-rate-cell', `${cat}|${b.label}`)}>
-                        {pageData.tieredTaxRates[cat][b.label]}%
+                        {tieredTaxRates[cat][b.label]}%
                       </td>
                     ))}
                   </tr>

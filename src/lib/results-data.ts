@@ -3,6 +3,7 @@
  * Used by both the page render and generateMetadata (deduped via React.cache).
  */
 
+import "server-only";
 import { cache } from "react";
 import { ConvexHttpClient } from "convex/browser";
 import type { Id } from "../../convex/_generated/dataModel";

@@ -34,6 +34,27 @@ export const getSessionPublic = query({
   },
 });
 
+/**
+ * Get all currently active sessions for the "Live Now" section.
+ * Returns github handle, session ID, and start time.
+ */
+export const getActiveSessions = query({
+  args: {},
+  handler: async (ctx) => {
+    const sessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .take(50);
+
+    return sessions.map((s) => ({
+      _id: s._id,
+      github: s.github,
+      startedAt: s.startedAt,
+      expiresAt: s.expiresAt,
+    }));
+  },
+});
+
 const ANSWER_EVENT_TYPES = new Set(["answer_submitted", "answer_correct", "answer_wrong"]);
 
 /**
@@ -47,9 +68,13 @@ export const getSessionEventsPublic = query({
     const events = await ctx.db
       .query("sessionEvents")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .collect();
+      .take(500);
 
     if (events.length === 0) return null;
+
+    // Compute relative offsets from session start (not absolute timestamps)
+    const session = await ctx.db.get(args.sessionId);
+    const sessionStart = session?.startedAt ?? 0;
 
     return events
       .sort((a, b) => a.timestamp - b.timestamp)
@@ -73,9 +98,14 @@ export const getSessionEventsPublic = query({
           safeMetadata = undefined;
         }
 
+        // Return sequencing info only — bucket into 30s windows
+        // so spectators see order-of-events without precise timing
+        const elapsed = e.timestamp - sessionStart;
+        const bucket = Math.floor(elapsed / 30000); // 30-second buckets
+
         return {
           type: e.type,
-          timestamp: e.timestamp,
+          bucket,
           challengeId: e.challengeId ?? null,
           metadata: safeMetadata ?? null,
         };

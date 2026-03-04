@@ -22,10 +22,10 @@ export const record = internalMutation({
       .first();
 
     if (existing) {
+      // Only update renderToken on re-view — preserve original viewedAt
+      // and lastInteractAt to prevent timing/rate-limit resets
       await ctx.db.patch(existing._id, {
-        viewedAt: args.viewedAt,
         renderToken: args.renderToken,
-        lastInteractAt: undefined,
       });
     } else {
       await ctx.db.insert("challengeViews", {

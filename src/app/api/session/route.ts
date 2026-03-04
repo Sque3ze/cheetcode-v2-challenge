@@ -7,10 +7,11 @@ import {
   unauthorized,
   serverError,
   rateLimited,
+  extractSolvedSet,
 } from "../../../lib/api-helpers";
 import { SESSION_DURATION_MS, TEST_SESSION_DURATION_MS } from "../../../lib/config";
 import { isTestAuthRequest } from "../../../lib/github-auth";
-import type { ChallengeStatusMap } from "../../../lib/challenge-types";
+
 import { getAllChallengeMetas, getUnmetPrerequisites } from "../../../../server/challenges/registry";
 
 /**
@@ -23,7 +24,8 @@ export async function POST(request: Request) {
   if (!github) return unauthorized();
 
   const isTest = isTestAuthRequest(request);
-  const durationMs = isTest ? TEST_SESSION_DURATION_MS : SESSION_DURATION_MS;
+  const extendedSession = isTest && request.headers.get("x-extended-session") === "true";
+  const durationMs = extendedSession ? TEST_SESSION_DURATION_MS : SESSION_DURATION_MS;
 
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   const secret = process.env.CONVEX_MUTATION_SECRET;
@@ -90,26 +92,20 @@ export async function GET(request: Request) {
   try {
     const convex = new ConvexHttpClient(convexUrl);
 
-    // Get active session
-    const session = await convex.action(api.sessions.fetchActiveSession, { secret, github });
+    // Get active session + challenge statuses in one action
+    const { session, statuses } = await convex.action(
+      api.sessions.fetchActiveSessionWithStatuses,
+      { secret, github }
+    );
     if (!session) {
       return NextResponse.json({ session: null });
     }
-
-    // Get challenge statuses
-    const statuses = await convex.action(
-      api.submissions.fetchSessionChallengeStatuses,
-      { secret, sessionId: session._id }
-    ) as ChallengeStatusMap;
 
     const challenges = getAllChallengeMetas();
     const maxAttempts = 3;
 
     // Build solved set for prerequisite checking
-    const solvedSet = new Set<string>();
-    for (const [id, status] of Object.entries(statuses)) {
-      if (status?.solved) solvedSet.add(id);
-    }
+    const solvedSet = extractSolvedSet(statuses);
 
     // Build challenge status list
     const challengeStatuses = challenges.map((c) => {

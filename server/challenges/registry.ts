@@ -9,6 +9,7 @@
  * 2. Import and register it in the CHALLENGES array below
  */
 
+import "server-only";
 import type { ChallengeDefinition, ChallengeMeta } from "../../src/lib/challenge-types";
 import { TIER_POINTS } from "../../src/lib/config";
 

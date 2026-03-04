@@ -8,16 +8,16 @@ import {
   badRequest,
   notFound,
   serverError,
-  sessionExpired,
+  extractSolvedSet,
+  checkPrerequisites,
+  validateSessionOwnership,
 } from "../../../../lib/api-helpers";
 import { MAX_ATTEMPTS_PER_CHALLENGE, TIER_POINTS, MIN_SOLVE_TIME_MS, IS_TEST_MODE } from "../../../../lib/config";
-import type { ChallengeStatusMap } from "../../../../lib/challenge-types";
+
 import type { Tier } from "../../../../lib/config";
 import {
   getChallenge,
   validateAnswer,
-  arePrerequisitesMet,
-  getUnmetPrerequisites,
 } from "../../../../../server/challenges/registry";
 import { ChallengeDataGenerator } from "../../../../lib/seed";
 
@@ -81,21 +81,25 @@ export async function POST(
 
   try {
     const convex = new ConvexHttpClient(convexUrl);
+    const typedSessionId = sessionId as unknown as Id<"sessions">;
 
-    // 2. Session exists and belongs to this user
-    const session = await convex.action(api.sessions.fetchSession, {
-      secret,
-      sessionId: sessionId as unknown as Id<"sessions">,
-    });
-    if (!session) return badRequest("Session not found");
-    if (session.github !== github) {
-      return badRequest("Session does not belong to this user");
-    }
+    // 2. Fetch session+statuses, submissions, and view in parallel
+    const [{ session, statuses: allStatuses }, existingSubmissions, view] = await Promise.all([
+      convex.action(api.sessions.fetchSessionWithStatuses, {
+        secret,
+        sessionId: typedSessionId,
+      }),
+      convex.action(api.submissions.fetchBySessionChallenge, {
+        secret, sessionId: typedSessionId, challengeId,
+      }),
+      convex.action(api.challengeViews.fetchView, {
+        secret, sessionId: typedSessionId, challengeId,
+      }),
+    ]);
 
-    // 3. Session is still active (SERVER-SIDE TIME CHECK)
-    if (session.status !== "active" || Date.now() > session.expiresAt) {
-      return sessionExpired();
-    }
+    // Session exists, belongs to this user, and is active
+    const sessionErr = validateSessionOwnership(session, github);
+    if (sessionErr) return sessionErr;
 
     // Track API call (fire-and-forget)
     convex.action(api.sessions.trackApiCall, { secret, sessionId: session._id }).catch(() => {});
@@ -110,35 +114,10 @@ export async function POST(
         metadata,
       }).catch(() => {});
 
-    // Fetch statuses, submissions, and view in parallel (all depend only on session._id)
-    const [allStatuses, existingSubmissions, view] = await Promise.all([
-      convex.action(api.submissions.fetchSessionChallengeStatuses, {
-        secret, sessionId: session._id,
-      }) as Promise<ChallengeStatusMap>,
-      convex.action(api.submissions.fetchBySessionChallenge, {
-        secret, sessionId: session._id, challengeId,
-      }),
-      convex.action(api.challengeViews.fetchView, {
-        secret, sessionId: session._id, challengeId,
-      }),
-    ]);
-
     // 3.5. Prerequisite check (skipped in test mode)
-    const solvedSet = new Set<string>();
-    for (const [id, status] of Object.entries(allStatuses)) {
-      if (status?.solved) solvedSet.add(id);
-    }
-    if (!IS_TEST_MODE && !arePrerequisitesMet(challengeId, solvedSet)) {
-      const unmet = getUnmetPrerequisites(challengeId, solvedSet);
-      return NextResponse.json(
-        {
-          error: "prerequisites_not_met",
-          message: `Solve these challenges first: ${unmet.join(", ")}`,
-          unmetPrerequisites: unmet,
-        },
-        { status: 403 }
-      );
-    }
+    const solvedSet = extractSolvedSet(allStatuses);
+    const prereqErr = checkPrerequisites(challengeId, solvedSet);
+    if (prereqErr) return prereqErr;
 
     // 5 & 6. Check existing submissions for this challenge
     const alreadySolved = existingSubmissions.some((s: any) => s.correct);

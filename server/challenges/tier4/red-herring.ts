@@ -31,7 +31,7 @@ export const redHerringChallenge: ChallengeDefinition<RedHerringPageData> = {
   title: "Quarterly Report",
   tier: 4,
   points: 4,
-  dependsOn: ["tier2-linked-data-lookup"],
+  dependsOn: ["tier3-constraint-solver"],
   description: "Analyze quarterly metrics — find the internally consistent dataset, then compute the answer.",
 
   instructions: (pageData) => {

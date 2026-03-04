@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { fetchResultsData } from "../../../../lib/results-data";
+import { resolveGitHub, unauthorized } from "../../../../lib/api-helpers";
 
 /**
  * GET /api/results/[sessionId]
- * Public JSON API for session results. No auth required (results are public).
+ * JSON API for session results. Requires authentication.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
+  const github = await resolveGitHub(request);
+  if (!github) return unauthorized();
+
   const { sessionId } = await params;
 
   try {
@@ -22,7 +26,7 @@ export async function GET(
 
     return NextResponse.json(data, {
       headers: {
-        "Cache-Control": "public, max-age=60, s-maxage=3600",
+        "Cache-Control": "private, max-age=60",
       },
     });
   } catch {

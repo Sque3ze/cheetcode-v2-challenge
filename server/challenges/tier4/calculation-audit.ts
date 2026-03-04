@@ -29,10 +29,9 @@ interface TierBracket {
 
 interface CalculationAuditPageData {
   lineItems: LineItem[];
-  /** Category → bracket label → rate%. E.g. { "Operations": { "≤$500": 6, "$501–$2000": 9, ">$2000": 12 } } */
-  tieredTaxRates: Record<string, Record<string, number>>;
-  brackets: TierBracket[];
   summaryTotal: number;
+  /** Categories present in the tax schedule (agents must fetch full rates via interact) */
+  categories: string[];
   variantIndex: number;
 }
 
@@ -70,7 +69,7 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
   title: "Calculation Audit",
   tier: 4,
   points: 4,
-  dependsOn: ["tier2-sequential-calculator"],
+  dependsOn: ["tier3-data-dashboard", "tier2-config-debugger"],
   description: "Audit an expense report — verify line-item totals using the tiered tax rate schedule, sum only correct rows.",
 
   instructions: (pageData) => {
@@ -183,9 +182,30 @@ export const calculationAuditChallenge: ChallengeDefinition<CalculationAuditPage
     const answer = (Math.round(correctSum * 100) / 100).toFixed(2);
 
     return {
-      pageData: { lineItems, tieredTaxRates, brackets, summaryTotal, variantIndex },
+      pageData: {
+        lineItems,
+        summaryTotal,
+        categories: [...EXPENSE_CATEGORIES],
+        variantIndex,
+      },
+      hiddenData: { tieredTaxRates, brackets },
       answer,
     };
+  },
+
+  interactActions: ["tax_schedule"],
+
+  handleInteract(
+    hiddenData: Record<string, unknown>,
+    action: string,
+  ) {
+    if (action === "tax_schedule") {
+      return {
+        tieredTaxRates: hiddenData.tieredTaxRates,
+        brackets: hiddenData.brackets,
+      };
+    }
+    return { error: `Unknown action: ${action}` };
   },
 
   validateAnswer(submitted: string, correct: string): boolean {

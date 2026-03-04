@@ -277,8 +277,8 @@ export const eventSourcingChallenge: ChallengeDefinition<EventSourcingPageData> 
       question = "How many distinct items are currently in the order?";
       answer = String(currentItems.length);
     } else if (variantIndex === 2) {
-      question = "What is the current order status?";
-      answer = currentStatus;
+      question = "What is the current order status and how many distinct items are in the order? Format: status:count (e.g. shipped:3)";
+      answer = `${currentStatus}:${currentItems.length}`;
     } else {
       question = "What is the current subtotal (sum of quantity × unitPrice for all items, before discounts)?";
       answer = currentState.subtotal.toFixed(2);
@@ -321,10 +321,10 @@ export const eventSourcingChallenge: ChallengeDefinition<EventSourcingPageData> 
     const trimmed = submitted.trim().toLowerCase();
     const expected = correct.trim().toLowerCase();
 
-    // Try exact string match first (for status answers)
+    // Exact string match (handles compound "status:count" and plain status)
     if (trimmed === expected) return true;
 
-    // Try numeric match with tolerance (for totals)
+    // Try numeric match with tolerance (for totals/subtotals)
     const s = parseFloat(trimmed);
     const c = parseFloat(expected);
     if (!isNaN(s) && !isNaN(c)) {

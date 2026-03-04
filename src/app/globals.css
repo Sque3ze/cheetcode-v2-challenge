@@ -93,6 +93,81 @@ body {
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* ─── Top accent gradient line ─── */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(250, 93, 25, 0.3) 20%,
+    #fa5d19 50%,
+    rgba(250, 93, 25, 0.3) 80%,
+    transparent 100%
+  );
+  z-index: 50;
+}
+
+/* ─── Gradient glow orbs ─── */
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  will-change: transform;
+}
+.glow-orb-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(250, 93, 25, 0.12) 0%, rgba(250, 93, 25, 0.04) 40%, transparent 70%);
+  top: -150px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: orb-float-1 12s ease-in-out infinite;
+}
+.glow-orb-2 {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(144, 97, 255, 0.08) 0%, rgba(144, 97, 255, 0.02) 40%, transparent 70%);
+  top: 60px;
+  right: -100px;
+  animation: orb-float-2 15s ease-in-out infinite;
+}
+.glow-orb-3 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(42, 109, 251, 0.06) 0%, rgba(42, 109, 251, 0.02) 40%, transparent 70%);
+  top: 180px;
+  left: -80px;
+  animation: orb-float-3 18s ease-in-out infinite;
+}
+
+@keyframes orb-float-1 {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(20px); }
+}
+@keyframes orb-float-2 {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-15px) translateX(-10px); }
+}
+@keyframes orb-float-3 {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(10px) translateX(15px); }
+}
+
+/* ─── Hero text glow ─── */
+.hero-glow {
+  text-shadow: 0 0 80px rgba(250, 93, 25, 0.1);
+}
+.hero-accent {
+  color: #fa5d19;
+  text-shadow: 0 0 40px rgba(250, 93, 25, 0.2);
+}
+
 /* ─── Firecrawl primary button (from brand spec) ─── */
 .btn-heat {
   background: #ff4c00;
@@ -143,6 +218,11 @@ body {
 .badge-hard { background: rgba(220, 38, 38, 0.10); color: #dc2626; }
 
 /* ─── Card surface (Firecrawl light mode) ─── */
+.glass-surface {
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.85);
+}
+
 .card-surface {
   background: #ffffff;
   border: 1px solid #e8e8e8;
@@ -273,4 +353,102 @@ body {
 }
 .spectate-latest-event {
   animation: latest-event-fade 2s ease-out;
+}
+
+/* ─── Enhanced card hover with gradient border ─── */
+.card-glow {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.card-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(250, 93, 25, 0) 0%,
+    rgba(250, 93, 25, 0) 40%,
+    rgba(250, 93, 25, 0.15) 50%,
+    rgba(250, 93, 25, 0) 60%,
+    rgba(250, 93, 25, 0) 100%
+  );
+  background-size: 300% 300%;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.card-glow:hover::before {
+  opacity: 1;
+  animation: shimmer-border 2s ease infinite;
+}
+
+@keyframes shimmer-border {
+  0% { background-position: 100% 0%; }
+  100% { background-position: -100% 0%; }
+}
+
+/* ─── Staggered fade-up utilities ─── */
+.delay-1 { animation-delay: 80ms !important; }
+.delay-2 { animation-delay: 160ms !important; }
+.delay-3 { animation-delay: 240ms !important; }
+.delay-4 { animation-delay: 320ms !important; }
+.delay-5 { animation-delay: 400ms !important; }
+
+/* ─── Structural grid lines (Firecrawl-inspired) ─── */
+.hero-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.hero-grid-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+  background-size: 120px 120px;
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, black 20%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, black 20%, transparent 70%);
+}
+
+/* ─── Decorative sparkle markers ─── */
+.sparkle-marker {
+  position: absolute;
+  pointer-events: none;
+  color: #fa5d19;
+  opacity: 0.5;
+  animation: sparkle-rotate 8s linear infinite;
+}
+@keyframes sparkle-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ─── Edge labels (floating decorative text) ─── */
+.edge-label {
+  position: absolute;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(38, 38, 38, 0.1);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ─── Score counter glow ─── */
+.score-glow {
+  box-shadow: 0 0 20px rgba(250, 93, 25, 0.15);
+}
+
+/* ─── Pulse ring for CTA button ─── */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(250, 93, 25, 0.3); }
+  70% { box-shadow: 0 0 0 12px rgba(250, 93, 25, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(250, 93, 25, 0); }
+}
+.btn-heat-pulse {
+  animation: pulse-ring 2.5s ease-in-out infinite;
 }

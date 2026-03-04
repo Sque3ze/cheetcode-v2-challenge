@@ -279,11 +279,27 @@ export const fetchSession = action({
   },
 });
 
-/** Authenticated gateway for reading the active session */
-export const fetchActiveSession = action({
-  args: { secret: v.string(), github: v.string() },
-  handler: async (ctx, args): Promise<any> => {
+/** Combined gateway: fetch session + challenge statuses in one action */
+export const fetchSessionWithStatuses = action({
+  args: { secret: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
     assertSecret(args.secret);
-    return await ctx.runQuery(internal.sessions.getActive, { github: args.github });
+    const [session, statuses] = await Promise.all([
+      ctx.runQuery(internal.sessions.get, { sessionId: args.sessionId }),
+      ctx.runQuery(internal.submissions.getSessionChallengeStatuses, { sessionId: args.sessionId }),
+    ]);
+    return { session, statuses };
+  },
+});
+
+/** Combined gateway: fetch active session by github + challenge statuses in one action */
+export const fetchActiveSessionWithStatuses = action({
+  args: { secret: v.string(), github: v.string() },
+  handler: async (ctx, args) => {
+    assertSecret(args.secret);
+    const session = await ctx.runQuery(internal.sessions.getActive, { github: args.github });
+    if (!session) return { session: null as null, statuses: {} as Record<string, never> };
+    const statuses = await ctx.runQuery(internal.submissions.getSessionChallengeStatuses, { sessionId: session._id });
+    return { session, statuses };
   },
 });

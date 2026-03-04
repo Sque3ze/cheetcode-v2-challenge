@@ -34,7 +34,8 @@ export default defineSchema({
     ),
   })
     .index("by_github", ["github"])
-    .index("by_github_status", ["github", "status"]),
+    .index("by_github_status", ["github", "status"])
+    .index("by_status", ["status"]),
 
   // ─── Submissions ─────────────────────────────────────────
   // One per attempt at a challenge (including wrong attempts).

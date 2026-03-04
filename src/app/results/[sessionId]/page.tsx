@@ -114,86 +114,96 @@ export default async function ResultsPage({ params }: PageProps) {
     : "N/A";
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      {/* ── Header ── */}
-      <header
+    <div style={{ minHeight: "100vh", background: "#f5f5f4", padding: "48px 24px 64px" }}>
+      {/* ── Paper ── */}
+      <div
         style={{
           maxWidth: 720,
           margin: "0 auto",
-          padding: "48px 24px 32px",
-          display: "flex",
-          alignItems: "center",
-          gap: 24,
+          background: "#fff",
+          borderRadius: 16,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.04)",
+          overflow: "hidden",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`https://github.com/${session.github}.png`}
-          alt={session.github}
-          width={64}
-          height={64}
-          style={{ borderRadius: 999, flexShrink: 0 }}
-        />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 18, fontWeight: 600 }}>@{session.github}</span>
-            <span style={{ fontSize: 13, color: DIM }}>{formatDate(session.startedAt)}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginTop: 8 }}>
-            <span
-              style={{
-                fontSize: 52,
-                fontWeight: 700,
-                fontFamily: "var(--font-geist-mono), monospace",
-                lineHeight: 1,
-                color: "#262626",
-              }}
-            >
-              {session.score.toFixed(1)}%
-            </span>
-            <span
-              style={{
-                fontSize: 24,
-                fontWeight: 600,
-                color: gradeColor(grades.overall),
-              }}
-            >
-              {grades.overall}
-            </span>
-          </div>
-        </div>
-        <div
+        {/* ── Header ── */}
+        <header
           style={{
-            textAlign: "right",
-            flexShrink: 0,
+            padding: "40px 40px 32px",
+            display: "flex",
+            alignItems: "center",
+            gap: 24,
+            borderBottom: `1px solid ${BORDER}`,
           }}
         >
-          {rank > 0 ? (
-            <>
-              <div
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://github.com/${session.github}.png`}
+            alt={session.github}
+            width={64}
+            height={64}
+            style={{ borderRadius: 999, flexShrink: 0 }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 18, fontWeight: 600 }}>@{session.github}</span>
+              <span style={{ fontSize: 13, color: DIM }}>{formatDate(session.startedAt)}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginTop: 8 }}>
+              <span
                 style={{
-                  fontSize: 32,
+                  fontSize: 52,
                   fontWeight: 700,
                   fontFamily: "var(--font-geist-mono), monospace",
-                  color: ACCENT,
                   lineHeight: 1,
+                  color: "#262626",
                 }}
               >
-                #{rank}
-              </div>
-              <div style={{ fontSize: 13, color: DIM, marginTop: 4 }}>
-                of {totalPlayers}
-              </div>
-            </>
-          ) : (
-            <div style={{ fontSize: 24, color: DIM }}>&mdash;</div>
-          )}
-        </div>
-      </header>
+                {session.score.toFixed(1)}%
+              </span>
+              <span
+                style={{
+                  fontSize: 24,
+                  fontWeight: 600,
+                  color: gradeColor(grades.overall),
+                }}
+              >
+                {grades.overall}
+              </span>
+            </div>
+          </div>
+          <div
+            style={{
+              textAlign: "right",
+              flexShrink: 0,
+            }}
+          >
+            {rank > 0 ? (
+              <>
+                <div
+                  style={{
+                    fontSize: 32,
+                    fontWeight: 700,
+                    fontFamily: "var(--font-geist-mono), monospace",
+                    color: ACCENT,
+                    lineHeight: 1,
+                  }}
+                >
+                  #{rank}
+                </div>
+                <div style={{ fontSize: 13, color: DIM, marginTop: 4 }}>
+                  of {totalPlayers}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 24, color: DIM }}>&mdash;</div>
+            )}
+          </div>
+        </header>
 
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px 64px" }}>
-        {/* ── Report Card ── */}
-        <section style={{ marginBottom: 32 }}>
+        <main style={{ padding: "32px 40px 40px" }}>
+          {/* ── Report Card ── */}
+          <section style={{ marginBottom: 32 }}>
           <h2
             style={{
               fontSize: 14,
@@ -205,8 +215,7 @@ export default async function ResultsPage({ params }: PageProps) {
             Orchestration Grades
           </h2>
           <div
-            className="card-surface"
-            style={{ borderRadius: 12, overflow: "hidden" }}
+            style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${BORDER}` }}
           >
             {gradeRows.map(([label, grade, raw], i) => (
               <div
@@ -279,6 +288,55 @@ export default async function ResultsPage({ params }: PageProps) {
           </div>
         </section>
 
+        {/* ── Timeline Summary ── */}
+        <section style={{ marginBottom: 32 }}>
+          <h2
+            style={{
+              fontSize: 14,
+              fontWeight: 450,
+              color: DIM,
+              marginBottom: 12,
+            }}
+          >
+            Timeline Summary
+          </h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 12,
+            }}
+          >
+            {[
+              ["Duration", formatMs(timeline.totalDurationMs)],
+              ["Challenges", `${timeline.challengesSolved}/${timeline.challengesViewed} solved`],
+              ["Idle Time", formatMs(timeline.idleTimeMs)],
+              ["API Calls", String(session.apiCalls)],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                style={{
+                  padding: "16px",
+                  borderRadius: 10,
+                  textAlign: "center",
+                  border: `1px solid ${BORDER}`,
+                }}
+              >
+                <div style={{ fontSize: 12, color: DIM, marginBottom: 4 }}>{label}</div>
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 600,
+                    fontFamily: "var(--font-geist-mono), monospace",
+                  }}
+                >
+                  {value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* ── Challenge Breakdown ── */}
         <section style={{ marginBottom: 32 }}>
           <h2
@@ -292,8 +350,7 @@ export default async function ResultsPage({ params }: PageProps) {
             Challenge Breakdown
           </h2>
           <div
-            className="card-surface"
-            style={{ borderRadius: 12, overflow: "hidden" }}
+            style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${BORDER}` }}
           >
             <table
               style={{
@@ -403,78 +460,32 @@ export default async function ResultsPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* ── Timeline Summary ── */}
-        <section style={{ marginBottom: 32 }}>
-          <h2
-            style={{
-              fontSize: 14,
-              fontWeight: 450,
-              color: DIM,
-              marginBottom: 12,
-            }}
-          >
-            Timeline Summary
-          </h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 12,
-            }}
-          >
-            {[
-              ["Duration", formatMs(timeline.totalDurationMs)],
-              ["Challenges", `${timeline.challengesSolved}/${timeline.challengesViewed} solved`],
-              ["Idle Time", formatMs(timeline.idleTimeMs)],
-              ["API Calls", String(session.apiCalls)],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="card-surface"
-                style={{
-                  padding: "16px",
-                  borderRadius: 10,
-                  textAlign: "center",
-                }}
-              >
-                <div style={{ fontSize: 12, color: DIM, marginBottom: 4 }}>{label}</div>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 600,
-                    fontFamily: "var(--font-geist-mono), monospace",
-                  }}
-                >
-                  {value}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        </main>
+      </div>
 
-        {/* ── Footer ── */}
-        <footer
+      {/* ── Footer (outside paper) ── */}
+      <footer
+        style={{
+          maxWidth: 720,
+          margin: "24px auto 0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 8px",
+        }}
+      >
+        <Link
+          href="/"
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingTop: 24,
-            borderTop: `1px solid ${BORDER}`,
+            color: DIM,
+            fontSize: 14,
+            textDecoration: "none",
           }}
         >
-          <Link
-            href="/"
-            style={{
-              color: DIM,
-              fontSize: 14,
-              textDecoration: "none",
-            }}
-          >
-            &larr; Back to home
-          </Link>
-          <CopyLinkButton />
-        </footer>
-      </main>
+          &larr; Back to home
+        </Link>
+        <CopyLinkButton />
+      </footer>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { TIER_LABELS } from "../../lib/config";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 interface ChallengeMeta {
   id: string;
@@ -196,7 +197,8 @@ export default function ChallengesPage() {
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ position: "relative" }}>
+      <AnimatedBackground />
       {/* ── Header ── */}
       <header
         className="nav-header"
@@ -301,7 +303,7 @@ export default function ChallengesPage() {
       </header>
 
       {/* ── Challenge list ── */}
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px" }}>
+      <main style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px", position: "relative", zIndex: 1 }}>
         {tiers.map((tier) => {
           const tierChallenges = sessionData.challenges.filter(
             (c) => c.tier === tier
@@ -342,7 +344,7 @@ export default function ChallengesPage() {
                       href={
                         isDisabled ? undefined : `/challenges/${challenge.id}`
                       }
-                      className="card-surface"
+                      className="card-surface card-glow glass-surface"
                       style={{
                         display: "block",
                         padding: "16px 24px",

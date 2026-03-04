@@ -5,19 +5,40 @@ import { useSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 const DEV_USER = process.env.NEXT_PUBLIC_DEV_USER;
 
 const STEPS = [
   {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fa5d19" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+        <circle cx="12" cy="16" r="1" />
+      </svg>
+    ),
     title: "Build an Agent",
     desc: "Use Playwright, Puppeteer, or any browser automation tool to navigate pages and extract answers.",
   },
   {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fa5d19" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="16 18 22 12 16 6" />
+        <polyline points="8 6 2 12 8 18" />
+        <line x1="12" y1="2" x2="12" y2="22" opacity="0.3" />
+      </svg>
+    ),
     title: "Solve Challenges",
     desc: "From simple table reads to multi-step workflows. Submit answers via the challenge page or API.",
   },
   {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fa5d19" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
     title: "Beat the Clock",
     desc: "Fixed time window. Score is the percentage of points earned. Parallel execution wins.",
   },
@@ -26,6 +47,7 @@ const STEPS = [
 export default function Home() {
   const { data: session, status } = useSession();
   const leaderboard = useQuery(api.leaderboard.getAll);
+  const activeSessions = useQuery(api.spectator.getActiveSessions);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,9 +90,33 @@ export default function Home() {
   }, [github]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ position: "relative" }}>
+      <AnimatedBackground />
+
       {/* ── Hero ── */}
-      <section style={{ padding: "140px 0 100px" }}>
+      <section style={{ padding: "140px 0 100px", position: "relative" }}>
+        {/* Grid overlay */}
+        <div className="hero-grid-overlay" />
+
+        {/* Glow orbs */}
+        <div className="glow-orb glow-orb-1" />
+        <div className="glow-orb glow-orb-2" />
+        <div className="glow-orb glow-orb-3" />
+
+        {/* Decorative sparkle markers */}
+        <svg className="sparkle-marker" style={{ top: 120, left: "20%", width: 16, height: 16 }} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
+        </svg>
+        <svg className="sparkle-marker" style={{ top: 200, right: "18%", width: 12, height: 12, animationDelay: "-3s" }} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
+        </svg>
+
+        {/* Edge labels */}
+        <span className="edge-label" style={{ top: 80, left: 32 }}>[ AGENT ]</span>
+        <span className="edge-label" style={{ top: 80, right: 32 }}>[ SOLVE ]</span>
+        <span className="edge-label" style={{ bottom: 20, left: 32 }}>[ SCORE ]</span>
+        <span className="edge-label" style={{ bottom: 20, right: 32 }}>[ TIMER ]</span>
+
         <div
           style={{
             maxWidth: 720,
@@ -80,6 +126,8 @@ export default function Home() {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
+            position: "relative",
+            zIndex: 1,
           }}
         >
           {/* Badge */}
@@ -89,42 +137,47 @@ export default function Home() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                padding: "4px 12px",
+                padding: "5px 14px",
                 borderRadius: 999,
                 fontSize: 12,
                 fontWeight: 450,
                 color: "#fa5d19",
                 background: "rgba(250, 93, 25, 0.08)",
+                border: "1px solid rgba(250, 93, 25, 0.12)",
+                backdropFilter: "blur(8px)",
               }}
             >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#fa5d19">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+              </svg>
               Firecrawl Agent Challenge
             </span>
           </div>
 
           {/* Headline */}
           <h1
-            className="animate-fade-up"
+            className="animate-fade-up hero-glow"
             style={{
-              fontSize: 52,
+              fontSize: 56,
               fontWeight: 500,
-              lineHeight: "56px",
-              letterSpacing: "-0.52px",
+              lineHeight: "60px",
+              letterSpacing: "-1.5px",
               marginBottom: 16,
               color: "#262626",
               animationDelay: "80ms",
             }}
           >
             Build an Agent.{" "}
-            <span style={{ color: "#fa5d19" }}>Beat the Clock.</span>
+            <span className="hero-accent">Beat the Clock.</span>
           </h1>
 
           {/* Description */}
           <p
             className="animate-fade-up"
             style={{
-              fontSize: 16,
-              lineHeight: "24px",
-              color: "rgba(38, 38, 38, 0.6)",
+              fontSize: 17,
+              lineHeight: "26px",
+              color: "rgba(38, 38, 38, 0.55)",
               maxWidth: 480,
               marginBottom: 40,
               animationDelay: "160ms",
@@ -147,26 +200,32 @@ export default function Home() {
             ) : !session && !DEV_USER ? (
               <button
                 onClick={() => signIn("github")}
-                className="btn-heat"
+                className="btn-heat btn-heat-pulse"
                 style={{
                   height: 48,
-                  padding: "12px 24px",
+                  padding: "12px 28px",
                   borderRadius: 10,
                   fontSize: 16,
                   lineHeight: "24px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
                 }}
               >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
                 Sign in with GitHub
               </button>
             ) : hasActiveSession ? (
               <Link
                 href="/challenges"
-                className="btn-heat"
+                className="btn-heat btn-heat-pulse"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   height: 48,
-                  padding: "12px 24px",
+                  padding: "12px 28px",
                   borderRadius: 10,
                   fontSize: 16,
                   lineHeight: "24px",
@@ -181,10 +240,10 @@ export default function Home() {
                 <button
                   onClick={handleStart}
                   disabled={starting}
-                  className="btn-heat"
+                  className={`btn-heat ${!starting ? "btn-heat-pulse" : ""}`}
                   style={{
                     height: 48,
-                    padding: "12px 24px",
+                    padding: "12px 28px",
                     borderRadius: 10,
                     fontSize: 16,
                     lineHeight: "24px",
@@ -224,7 +283,7 @@ export default function Home() {
       </section>
 
       {/* ── How it works ── */}
-      <section style={{ paddingBottom: 96 }}>
+      <section style={{ paddingBottom: 96, position: "relative", zIndex: 1 }}>
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
           <div
             style={{
@@ -236,28 +295,28 @@ export default function Home() {
             {STEPS.map((step, i) => (
               <div
                 key={i}
-                className="card-surface animate-fade-up"
+                className="card-surface card-glow glass-surface animate-fade-up"
                 style={{
                   padding: 24,
                   borderRadius: 12,
                   animationDelay: `${320 + i * 80}ms`,
                 }}
               >
-                {/* Icon box — Firecrawl feature card pattern */}
+                {/* Icon box */}
                 <div
                   style={{
                     width: 40,
                     height: 40,
                     borderRadius: 8,
-                    background: "rgba(250, 93, 25, 0.04)",
+                    background: "rgba(250, 93, 25, 0.06)",
+                    border: "1px solid rgba(250, 93, 25, 0.08)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     marginBottom: 16,
-                    fontSize: 18,
                   }}
                 >
-                  {i === 0 ? "🤖" : i === 1 ? "🧩" : "⏱"}
+                  {step.icon}
                 </div>
                 <div
                   style={{
@@ -286,8 +345,90 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Live Now ── */}
+      {activeSessions && activeSessions.length > 0 && (
+        <section style={{ paddingBottom: 32, position: "relative", zIndex: 1 }}>
+          <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <h2
+                style={{
+                  fontSize: 18,
+                  fontWeight: 500,
+                  lineHeight: "24px",
+                  letterSpacing: "-0.18px",
+                  color: "#262626",
+                  margin: 0,
+                }}
+              >
+                Live Now
+              </h2>
+              <span
+                className="spectate-live-badge"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                  background: "rgba(22, 163, 74, 0.08)",
+                  color: "#16a34a",
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: "#16a34a",
+                    display: "inline-block",
+                  }}
+                />
+                {activeSessions.length}
+              </span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {activeSessions.map((s) => (
+                <Link
+                  key={s._id}
+                  href={`/spectate/${s._id}`}
+                  className="card-surface glass-surface"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 16px",
+                    borderRadius: 10,
+                    textDecoration: "none",
+                    color: "#262626",
+                    fontSize: 13,
+                    transition: "border-color 0.2s ease",
+                  }}
+                >
+                  <span
+                    className="spectate-activity-dot"
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "#16a34a",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span style={{ fontWeight: 500 }}>{s.github}</span>
+                  <span style={{ color: "rgba(38, 38, 38, 0.35)", fontSize: 12 }}>
+                    spectate &rarr;
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Leaderboard ── */}
-      <section style={{ paddingBottom: 120 }}>
+      <section style={{ paddingBottom: 120, position: "relative", zIndex: 1 }}>
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
           <h2
             style={{
@@ -299,7 +440,7 @@ export default function Home() {
               marginBottom: 24,
             }}
           >
-            <span style={{ color: "#fa5d19" }}>Leader</span>board
+            <span className="hero-accent">Leader</span>board
           </h2>
 
           {!leaderboard ? (
@@ -314,7 +455,7 @@ export default function Home() {
             </p>
           ) : leaderboard.length === 0 ? (
             <div
-              className="card-surface"
+              className="card-surface glass-surface"
               style={{
                 padding: "48px 24px",
                 borderRadius: 12,
@@ -334,8 +475,11 @@ export default function Home() {
             </div>
           ) : (
             <div
-              className="card-surface"
-              style={{ borderRadius: 12, overflow: "hidden" }}
+              className="card-surface glass-surface"
+              style={{
+                borderRadius: 12,
+                overflow: "hidden",
+              }}
             >
               <table
                 style={{
@@ -346,16 +490,18 @@ export default function Home() {
                 }}
               >
                 <thead>
-                  <tr style={{ borderBottom: "1px solid #f0f0f0" }}>
+                  <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
                     {["#", "Player", "Score", "Solved", "Orch.", "Wrong", ""].map((label, idx) => (
                       <th
                         key={label}
                         style={{
                           padding: "12px 24px",
-                          fontSize: 13,
-                          fontWeight: 450,
-                          color: "rgba(38, 38, 38, 0.4)",
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: "rgba(38, 38, 38, 0.35)",
                           textAlign: idx < 2 ? "left" : "right",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
                           ...(idx === 0 ? { width: 56 } : {}),
                         }}
                       >
@@ -370,7 +516,7 @@ export default function Home() {
                       key={entry._id}
                       style={{
                         borderTop:
-                          i > 0 ? "1px solid #f0f0f0" : undefined,
+                          i > 0 ? "1px solid rgba(0,0,0,0.04)" : undefined,
                         background:
                           entry.github === github
                             ? "rgba(250, 93, 25, 0.04)"
@@ -380,7 +526,7 @@ export default function Home() {
                       onMouseEnter={(e) => {
                         if (entry.github !== github)
                           e.currentTarget.style.background =
-                            "rgba(0,0,0,0.02)";
+                            "rgba(250, 93, 25, 0.02)";
                       }}
                       onMouseLeave={(e) => {
                         if (entry.github !== github)
@@ -467,7 +613,7 @@ export default function Home() {
                             : "rgba(38, 38, 38, 0.35)",
                         }}
                       >
-                        {entry.orchestrationScore != null ? entry.orchestrationScore : "—"}
+                        {entry.orchestrationScore != null ? entry.orchestrationScore : "\u2014"}
                       </td>
                       <td
                         style={{
@@ -511,9 +657,11 @@ export default function Home() {
       {/* ── Footer ── */}
       <footer
         style={{
-          borderTop: "1px solid #f0f0f0",
+          borderTop: "1px solid rgba(0,0,0,0.06)",
           padding: "32px 0",
           textAlign: "center",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <p

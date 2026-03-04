@@ -33,10 +33,10 @@ export default function SpectatePage() {
   // Must be called before early returns to satisfy hook rules.
   const derivedStats = useMemo(() => {
     if (!events || events.length === 0) {
-      return { lastEventAt: null, solvedChallenges: new Set<string>(), wrongCount: 0, earnedPoints: 0, totalPoints: TOTAL_POINTS, completionPct: 0, currentChallenge: null as string | null };
+      return { lastBucket: null, solvedChallenges: new Set<string>(), wrongCount: 0, earnedPoints: 0, totalPoints: TOTAL_POINTS, completionPct: 0, currentChallenge: null as string | null };
     }
 
-    const lastEventAt = Math.max(...events.map((e) => e.timestamp));
+    const lastBucket = Math.max(...events.map((e) => e.bucket));
 
     const solvedChallenges = new Set<string>();
     let wrongCount = 0;
@@ -60,17 +60,20 @@ export default function SpectatePage() {
       ? Math.round((earnedPoints / TOTAL_POINTS) * 10000) / 100
       : 0;
 
-    return { lastEventAt, solvedChallenges, wrongCount, earnedPoints, totalPoints: TOTAL_POINTS, completionPct, currentChallenge };
+    return { lastBucket, solvedChallenges, wrongCount, earnedPoints, totalPoints: TOTAL_POINTS, completionPct, currentChallenge };
   }, [events]);
 
-  // Convert events for components that expect SessionEvent format
-  // Must be before early returns to satisfy hook rules.
-  const ganttEvents = useMemo(() => (events ?? []).map((e) => ({
-    type: e.type,
-    timestamp: e.timestamp,
-    challengeId: e.challengeId ?? undefined,
-    metadata: e.metadata ?? undefined,
-  })), [events]);
+  // Convert bucket-based events to approximate timestamps for Gantt/EventFeed.
+  // Buckets are 30s windows — use midpoint for rough positioning (hides exact timing).
+  const ganttEvents = useMemo(() => {
+    const startedAt = session?.startedAt ?? 0;
+    return (events ?? []).map((e, i) => ({
+      type: e.type,
+      timestamp: startedAt + e.bucket * 30000 + i * 50, // spread within bucket for ordering
+      challengeId: e.challengeId ?? undefined,
+      metadata: e.metadata ?? undefined,
+    }));
+  }, [events, session?.startedAt]);
 
   if (session === undefined || events === undefined) {
     return (
@@ -225,7 +228,7 @@ export default function SpectatePage() {
             status={session.status}
             startedAt={session.startedAt}
             expiresAt={session.expiresAt}
-            lastEventAt={derivedStats.lastEventAt ?? undefined}
+            lastEventAt={derivedStats.lastBucket != null ? session.startedAt + derivedStats.lastBucket * 30000 : undefined}
             currentChallenge={currentChallenge}
           />
 
@@ -294,7 +297,7 @@ export default function SpectatePage() {
             </span>
           )}
         </div>
-        <EventFeed events={events} startedAt={session.startedAt} live={isLive} />
+        <EventFeed events={ganttEvents} startedAt={session.startedAt} live={isLive} />
       </div>
     </div>
   );

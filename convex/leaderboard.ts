@@ -14,6 +14,8 @@ export const getAll = query({
       .order("desc")
       .collect();
 
-    return entries.sort(compareRank);
+    // Filter out test sessions from public leaderboard
+    const realEntries = entries.filter((e) => !e.isTestSession);
+    return realEntries.sort(compareRank);
   },
 });
