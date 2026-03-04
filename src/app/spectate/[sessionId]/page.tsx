@@ -261,17 +261,19 @@ export default function SpectatePage() {
         </div>
       </div>
 
-      <div
-        className="card-surface"
-        style={{ borderRadius: 10, overflow: "hidden", marginBottom: 20 }}
-      >
-        <SessionGanttChart
-          events={ganttEvents}
-          startedAt={session.startedAt}
-          durationMs={durationMs}
-          live={isLive}
-        />
-      </div>
+      {!(isLive && session.github === "demo-agent") && (
+        <div
+          className="card-surface"
+          style={{ borderRadius: 10, overflow: "hidden", marginBottom: 20 }}
+        >
+          <SessionGanttChart
+            events={ganttEvents}
+            startedAt={session.startedAt}
+            durationMs={durationMs}
+            live={isLive}
+          />
+        </div>
+      )}
 
       <div
         className="card-surface"

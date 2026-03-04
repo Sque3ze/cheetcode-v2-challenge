@@ -45,18 +45,38 @@ const STEPS = [
   },
 ];
 
-function DemoButton() {
-  const [launching, setLaunching] = useState(false);
-  const [done, setDone] = useState(false);
+function DemoButtons() {
+  const [launchingLive, setLaunchingLive] = useState(false);
+  const [launchingResults, setLaunchingResults] = useState(false);
+  const [liveDone, setLiveDone] = useState(false);
+  const [resultsId, setResultsId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const launch = async () => {
-    setLaunching(true);
+  const launchLive = async () => {
+    setLaunchingLive(true);
     setError(null);
     try {
       const res = await fetch("/api/demo", { method: "POST" });
+      if (res.ok) setLiveDone(true);
+      else {
+        const data = await res.json().catch(() => null);
+        setError(data?.error || "Failed to launch");
+      }
+    } catch {
+      setError("Failed to launch");
+    } finally {
+      setLaunchingLive(false);
+    }
+  };
+
+  const launchResults = async () => {
+    setLaunchingResults(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/demo?type=results", { method: "POST" });
       if (res.ok) {
-        setDone(true);
+        const data = await res.json();
+        setResultsId(data.sessionId);
       } else {
         const data = await res.json().catch(() => null);
         setError(data?.error || "Failed to launch");
@@ -64,25 +84,43 @@ function DemoButton() {
     } catch {
       setError("Failed to launch");
     } finally {
-      setLaunching(false);
+      setLaunchingResults(false);
     }
   };
 
-  if (done) return null;
-
   return (
     <section style={{ paddingBottom: 16, position: "relative", zIndex: 1 }}>
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
-        <button
-          onClick={launch}
-          disabled={launching}
-          className="btn-ghost btn-sm"
-          style={{ fontSize: 13, color: "rgba(38, 38, 38, 0.5)" }}
-        >
-          {launching ? "Launching demo..." : "Launch demo session"}
-        </button>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px", display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        {!liveDone && (
+          <button
+            onClick={launchLive}
+            disabled={launchingLive}
+            className="btn-ghost btn-sm"
+            style={{ fontSize: 13, color: "rgba(38, 38, 38, 0.5)" }}
+          >
+            {launchingLive ? "Launching..." : "Launch live demo"}
+          </button>
+        )}
+        {!resultsId ? (
+          <button
+            onClick={launchResults}
+            disabled={launchingResults}
+            className="btn-ghost btn-sm"
+            style={{ fontSize: 13, color: "rgba(38, 38, 38, 0.5)" }}
+          >
+            {launchingResults ? "Generating..." : "View demo report card"}
+          </button>
+        ) : (
+          <Link
+            href={`/results/${resultsId}`}
+            className="btn-ghost btn-sm"
+            style={{ fontSize: 13, color: "#fa5d19", textDecoration: "none" }}
+          >
+            View report card &rarr;
+          </Link>
+        )}
         {error && (
-          <span style={{ fontSize: 12, color: "#dc2626", marginLeft: 10 }}>{error}</span>
+          <span style={{ fontSize: 12, color: "#dc2626" }}>{error}</span>
         )}
       </div>
     </section>
@@ -393,7 +431,7 @@ export default function Home() {
         </div>
       </section>
 
-      <DemoButton />
+      <DemoButtons />
 
       {activeSessions && activeSessions.length > 0 && (
         <section style={{ paddingBottom: 32, position: "relative", zIndex: 1 }}>

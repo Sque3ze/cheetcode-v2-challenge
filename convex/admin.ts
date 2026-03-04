@@ -541,3 +541,107 @@ export const launchDemo = action({
     return await ctx.runMutation(internal.admin.startDemoSession, {});
   },
 });
+
+/**
+ * Instantly create a completed demo session with all submissions, events, and
+ * scores pre-populated so the results page renders immediately.
+ */
+export const createDemoResults = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const startedAt = now - 185_000; // pretend it started ~3 min ago
+
+    const sessionId = await ctx.db.insert("sessions", {
+      github: "demo-agent",
+      startedAt,
+      expiresAt: startedAt + DEMO_DURATION_MS,
+      status: "completed",
+      userAgent: "CheetCode Demo Simulation",
+      isTestSession: true,
+      earnedPoints: 34,
+      totalPoints: 50,
+      wrongAttempts: 4,
+      score: 55.2,
+      completionScore: 68.0,
+      orchestrationScore: 35.8,
+      apiCalls: 47,
+      orchestrationMetrics: {
+        parallelizationScore: 0.72,
+        dagEfficiency: 0.65,
+        criticalPathSpeed: 0.58,
+        submissionConfidence: 0.88,
+        failureRecoveryScore: 0.45,
+        tiersReached: 3,
+      },
+    });
+
+    // Insert all events with realistic timestamps
+    await ctx.db.insert("sessionEvents", {
+      sessionId, type: "session_started", timestamp: startedAt,
+    });
+    for (const event of DEMO_EVENT_TIMELINE) {
+      await ctx.db.insert("sessionEvents", {
+        sessionId,
+        type: event.type,
+        timestamp: startedAt + event.delayMs,
+        challengeId: event.challengeId,
+        metadata: event.metadata,
+      });
+    }
+    await ctx.db.insert("sessionEvents", {
+      sessionId, type: "session_completed", timestamp: startedAt + 185_000,
+    });
+
+    // Insert submission records matching the demo timeline
+    const submissions: Array<{
+      challengeId: string;
+      correct: boolean;
+      attemptNumber: number;
+      submittedAt: number;
+      answer: string;
+    }> = [
+      { challengeId: "tier1-table-sort", correct: true, attemptNumber: 1, submittedAt: startedAt + 12_000, answer: "demo" },
+      { challengeId: "tier1-form-fill", correct: true, attemptNumber: 1, submittedAt: startedAt + 18_000, answer: "demo" },
+      { challengeId: "tier1-dropdown-select", correct: true, attemptNumber: 1, submittedAt: startedAt + 21_000, answer: "demo" },
+      { challengeId: "tier1-tab-navigation", correct: true, attemptNumber: 1, submittedAt: startedAt + 32_000, answer: "demo" },
+      { challengeId: "tier1-filter-search", correct: false, attemptNumber: 1, submittedAt: startedAt + 35_000, answer: "wrong" },
+      { challengeId: "tier1-filter-search", correct: true, attemptNumber: 2, submittedAt: startedAt + 40_000, answer: "demo" },
+      { challengeId: "tier1-modal-interaction", correct: true, attemptNumber: 1, submittedAt: startedAt + 42_000, answer: "demo" },
+      { challengeId: "tier2-multi-step-wizard", correct: true, attemptNumber: 1, submittedAt: startedAt + 60_000, answer: "demo" },
+      { challengeId: "tier2-linked-data-lookup", correct: true, attemptNumber: 1, submittedAt: startedAt + 65_000, answer: "demo" },
+      { challengeId: "tier2-sequential-calculator", correct: false, attemptNumber: 1, submittedAt: startedAt + 68_000, answer: "wrong" },
+      { challengeId: "tier2-sequential-calculator", correct: true, attemptNumber: 2, submittedAt: startedAt + 75_000, answer: "demo" },
+      { challengeId: "tier2-resilient-collector", correct: true, attemptNumber: 1, submittedAt: startedAt + 78_000, answer: "demo" },
+      { challengeId: "tier2-config-debugger", correct: false, attemptNumber: 1, submittedAt: startedAt + 72_000, answer: "wrong" },
+      { challengeId: "tier2-config-debugger", correct: false, attemptNumber: 2, submittedAt: startedAt + 80_000, answer: "wrong" },
+      { challengeId: "tier3-data-dashboard", correct: true, attemptNumber: 1, submittedAt: startedAt + 120_000, answer: "demo" },
+      { challengeId: "tier3-constraint-solver", correct: true, attemptNumber: 1, submittedAt: startedAt + 130_000, answer: "demo" },
+      { challengeId: "tier3-fan-out-aggregator", correct: true, attemptNumber: 1, submittedAt: startedAt + 135_000, answer: "demo" },
+      { challengeId: "tier3-price-negotiator", correct: false, attemptNumber: 1, submittedAt: startedAt + 140_000, answer: "wrong" },
+      { challengeId: "tier3-trace-analyzer", correct: true, attemptNumber: 1, submittedAt: startedAt + 148_000, answer: "demo" },
+      { challengeId: "tier4-red-herring", correct: true, attemptNumber: 1, submittedAt: startedAt + 180_000, answer: "demo" },
+    ];
+
+    for (const sub of submissions) {
+      await ctx.db.insert("submissions", {
+        sessionId,
+        challengeId: sub.challengeId,
+        answer: sub.answer,
+        correct: sub.correct,
+        attemptNumber: sub.attemptNumber,
+        submittedAt: sub.submittedAt,
+      });
+    }
+
+    return { sessionId };
+  },
+});
+
+export const launchDemoResults = action({
+  args: { secret: v.string() },
+  handler: async (ctx, args): Promise<any> => {
+    assertSecret(args.secret);
+    return await ctx.runMutation(internal.admin.createDemoResults, {});
+  },
+});
